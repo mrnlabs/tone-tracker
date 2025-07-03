@@ -19,6 +19,10 @@ export const useWarehouse = defineStore('warehouse', () => {
       return axiosInstance.get(`/api/warehouses/region/${regionId}`);
     }
 
+    const getWarehousesByCampaignId = (campaignId) => {
+      return axiosInstance.get(`/api/warehouses/campaign/${campaignId}`);
+    }
+
     const update = (id,formData) => {
       return axiosInstance.put(`/api/warehouses/${id}`,formData);
     }
@@ -42,5 +46,5 @@ export const useWarehouse = defineStore('warehouse', () => {
     return axiosInstance.post(`/api/stocks/csv`,formData, config);
   }
   
-    return { allWarehouses,setAllWarehouses,exportToExcel,submit,getWarehouses,update,importExcel,deleteWarehouse,getWarehousesByRegionId,viewWarehouse }
+    return { allWarehouses,setAllWarehouses,exportToExcel,submit,getWarehouses,update,importExcel,deleteWarehouse,getWarehousesByRegionId,getWarehousesByCampaignId, viewWarehouse }
   })

@@ -144,7 +144,6 @@ const form = reactive({
 	plannedEndDate: null,
 	timeRecord: null,
     completion: null,
-    jobNumber: null,
     name: null,
     address: null,
     longitude: null,
@@ -160,7 +159,6 @@ const rules = {
     startDate: { required },
     plannedEndDate: { required },
 	timeRecord: { required },
-	jobNumber: { required },
 	completion: { required },
     activation: { required },
     address :  {required}
@@ -184,7 +182,6 @@ const onSubmit = async () => {
         formData.append('latitude', form.latitude);
         formData.append('longitude', form.longitude);
         formData.append('address', form.address);
-        formData.append('jobNumber', form.jobNumber);
         formData.append('completion', form.completion);
         formData.append('activation', form.activation);
         formData.append('address', form.address);
@@ -279,7 +276,6 @@ const openModal = (pos,task) => {
      plannedEndDate: task.plannedEndDate,
      timeRecord: task.timeRecord,
      completion: task.completion,
-     jobNumber: Number(task.jobNumber),
      name: task.name,
      longitude: task.longitude,
      latitude: task.latitude,
@@ -297,7 +293,6 @@ const openModal = (pos,task) => {
      address: null,
      timeRecord: null,
      completion: null,
-     jobNumber: null,
      name:null,
     //  activation: null
     })
@@ -528,7 +523,6 @@ const clientColor = JSON.parse(localStorage.getItem('clientColor'));
                                     <thead>
                                         <tr class="table-dark-color">
                                             <th>Task</th>
-                                            <th>Job Number</th>
                                             <th>Risk</th>
                                             <th>Start Date</th>
                                             <th>End Date</th>
@@ -541,7 +535,6 @@ const clientColor = JSON.parse(localStorage.getItem('clientColor'));
                                     <tbody>
                                         <tr v-if="taskStore.allTasks.length > 0" v-for="task in taskStore.allTasks" :key="task.id" class="table-dark-black">
                                             <td>{{ task.name }}</td>
-                                            <td>{{ task.jobNumber }}</td>
                                             <td  :class="getClass(task.status)">
                                                 {{ getStatus(task.status) }}
                                             </td>
@@ -584,7 +577,7 @@ const clientColor = JSON.parse(localStorage.getItem('clientColor'));
                         </div> 
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-md-12">
                         <div class="card my-card flex justify-center">
                             <label for="input1" class="form-label">Name</label>
                             <InputText v-model="form.name" inputId="withoutgrouping"  :useGrouping="false" fluid />
@@ -595,11 +588,7 @@ const clientColor = JSON.parse(localStorage.getItem('clientColor'));
                     </div>
                     <div class="col-md-6">
                         <div class="card my-card flex justify-center">
-                            <label for="input1" class="form-label">Job Number</label>
-                            <InputNumber v-model="form.jobNumber" inputId="withoutgrouping" :useGrouping="false" fluid />
-                               <div class="input-errors" v-for="error of v$.jobNumber.$errors" :key="error.$uid">
-                               <div class="text-danger">Job Number is required</div>
-                            </div>
+
                     </div>                        
                     </div>
 

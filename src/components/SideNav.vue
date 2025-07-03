@@ -72,16 +72,7 @@ const visible = navStore.isNavVisible;
         <template #container="{ closeCallback }">
           <div class="flex flex-col h-full">
             <div class="flex items-center justify-between shrink-0">
-              <!-- <span>
-                <Button
-                type="button"
-                @click="closeCallback"
-                icon="pi pi-times" 
-                class="close-button"
-                rounded
-                outlined
-              ></Button>
-              </span> -->
+
             </div>
 
             <div class="d-flex justify-content-start">
@@ -114,7 +105,6 @@ const visible = navStore.isNavVisible;
               />
               </div>
                             <!-- <CLIENT /> -->
-
             </div>
           </div>
         </template>

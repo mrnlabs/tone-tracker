@@ -77,11 +77,9 @@ export const useTask = defineStore('task', () => {
       allTasks.value = tasks;
     }
 
-    const isJobNumberUnique = (id,jobNumber) => {
-      return axiosInstance.get(`/api/tasks/job-number/check?id=${id}&jobNumber=${jobNumber}`);
-    }
+
   
-    return { submit,allTasks, setAlltasks,isJobNumberUnique, getSuppliers,getBids, submitPODocument,getAvailablePromotersByTaskId,getTaskImages,getAwardedTasks,
+    return { submit,allTasks, setAlltasks, getSuppliers,getBids, submitPODocument,getAvailablePromotersByTaskId,getTaskImages,getAwardedTasks,
       getTasks,update,deleteTask,getTasksByActivationId,getTasksByPromoterId,getTask,addPromotersToTask,addThirdPartiesToTask,getCheckins }
     
   })

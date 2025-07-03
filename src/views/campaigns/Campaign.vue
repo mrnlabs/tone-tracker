@@ -17,6 +17,8 @@ import InputLabel from '@/components/form-components/InputLabel.vue';
 import Input from '@/components/form-components/Input.vue';
 import InputError from '@/components/form-components/InputError.vue';
 import Column from '@/components/general/Column.vue';
+import SplitButton from "primevue/splitbutton";
+import router from "@/router/index.js";
 
 const route = useRoute();
 const clientId = ref(route.query.client);
@@ -55,6 +57,52 @@ onMounted(() => {
   getCampaignsByClientId();
 });
 
+//dropdown
+const items = (campaign) => [
+  {
+    label: 'Edit',
+    icon: 'bx bxs-edit fs-4 maz-gradient-txt',
+    command: () => {
+      openModal(campaign)
+    }
+  },
+
+  {
+    label: 'View Activations',
+    icon: 'bx bx-building-house fs-4 maz-gradient-txt',
+    command: () => {
+      redirectToActivations(campaign)
+    }
+  },
+  {
+    label: 'View Warehouses',
+    icon: 'bx bx-user fs-4 maz-gradient-txt',
+    command: () => {
+      redirectToCampaign(campaign)
+    }
+  },
+  {
+    label: 'Delete',
+    icon: 'bx bx-trash text-danger fs-4 ',
+    command: () => {
+      deleteClient(campaign)
+    }
+  }
+];
+
+const redirectToCampaign = (campaign) => {
+  router.push({
+    name: 'AdminViewCampaignWarehouse',
+    params: { id: campaign.id } // Use params instead of query
+  });
+};
+
+const redirectToActivations = (campaign) => {
+  router.push({
+    name: 'admin-activations',
+    query: { campaign: campaign.id } // Use params instead of query
+  });
+};
 
 
 //get client color from local storage
@@ -214,10 +262,7 @@ const onInput = () => {
     const searchTerm = searchInput.value.toLowerCase();
     campaigns.value = campaigns.value.filter(campaign => campaign.name?.toLowerCase()?.includes(searchTerm));
     console.log('campaigns',campaigns.value)
-    //    campaignStore.getCampaignsByClientId(clientId.value, searchTerm).then(function (response) {
-    //     campaignStore.setCampaigns(response.data);
-    //     campaigns.value = campaignStore.allCampaigns;
-    // })
+
   } else {
     campaigns.value = [...campaignStore.allCampaigns];
   }
@@ -281,23 +326,32 @@ const onInput = () => {
                                                         </td>
                                                         <td class="pt-4">{{ clientName }}</td>
                                                         <td class="pt-3">
+<!--                                                            <div class="d-flex order-actions">-->
+<!--                                                                <a v-if="!campaign.isEditing" @click="editClient(campaign)" href="javascript:;">-->
+<!--                                                                    <i class='bx bxs-edit ' v-tooltip.bottom="'Edit'"></i>-->
+<!--                                                                </a>-->
+<!--                                                                <a v-else @click="updateCampaign(campaign)" href="javascript:;" class="ms-3">-->
+<!--                                                                    <i class='bx bx-check ' -->
+<!--                                                                    v-tooltip.bottom="'Edit'" ></i>-->
+<!--                                                                </a>-->
+<!--                                                                <router-link :to="`/admin-activations?campaign=${campaign.id}`" -->
+<!--                                                                v-tooltip.bottom="'View Activations'" class="ms-3">-->
+<!--                                                                    <i class='bx bx-show '></i>-->
+<!--                                                                </router-link>-->
+<!--                                                                <a @click="deleteRecord($event,campaign)" href="javascript:;" class="ms-3">-->
+<!--                                                                    <i class='bx bxs-trash text-danger' v-tooltip.bottom="'Delete'"></i>-->
+<!--                                                                </a>-->
+<!--                                                                <ConfirmPopup></ConfirmPopup>-->
+<!--                                                            </div>-->
+
                                                             <div class="d-flex order-actions">
-                                                                <a v-if="!campaign.isEditing" @click="editClient(campaign)" href="javascript:;">
-                                                                    <i class='bx bxs-edit ' v-tooltip.bottom="'Edit'"></i>
-                                                                </a>
-                                                                <a v-else @click="updateCampaign(campaign)" href="javascript:;" class="ms-3">
-                                                                    <i class='bx bx-check ' 
-                                                                    v-tooltip.bottom="'Edit'" ></i>
-                                                                </a>
-                                                                <router-link :to="`/admin-activations?campaign=${campaign.id}`" 
-                                                                v-tooltip.bottom="'View Activations'" class="ms-3">
-                                                                    <i class='bx bx-show '></i>
-                                                                </router-link>
-                                                                <a @click="deleteRecord($event,campaign)" href="javascript:;" class="ms-3">
-                                                                    <i class='bx bxs-trash text-danger' v-tooltip.bottom="'Delete'"></i>
-                                                                </a>
-                                                                <ConfirmPopup></ConfirmPopup>
+                                                              <SplitButton class="text-white" label=""
+                                                                           icon="bx bx-cog fs-4"
+                                                                           dropdownIcon="text-white fs-4 bx bx-chevron-down"
+                                                                           :model="items(campaign)"
+                                                                           />
                                                             </div>
+
                                                         </td>
                                                     </tr>
                                                     <tr v-else>

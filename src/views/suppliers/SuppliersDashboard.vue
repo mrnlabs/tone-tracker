@@ -118,7 +118,6 @@ const getSuppliertasks = () => {
         <thead class="custom-table-bg">
           <tr>
               <th class="text-white border-0">Name</th>
-              <th class="text-white border-0">Job number</th>
               <th class="text-white border-0">Name of quote</th>
               <th class="text-white border-0">Location</th>
               <th class="border-0">

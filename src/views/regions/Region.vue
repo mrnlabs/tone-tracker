@@ -318,7 +318,7 @@ const items = (region) => [
                                                     <tr>
                                                         <th>#</th>
                                                         <th>Region Name</th>
-                                                        <th>Regional Manager</th>
+<!--                                                        <th>Regional Manager</th>-->
                                                         <th>Warehouses</th>
                                                         <th>Action</th>
                                                     </tr>
@@ -330,9 +330,9 @@ const items = (region) => [
                                                         <td v-else>
                                                             <input v-focus type="text" v-model="region.name" @blur="update(region)" @keyup.enter="update(region)" class="form-control no-border-input"/>
                                                         </td>
-                                                        <td>
-                                                            {{ region.firstName ? region.firstName + ' ' + region.lastName : '' }}
-                                                        </td>
+<!--                                                        <td>-->
+<!--                                                            {{ region.firstName ? region.firstName + ' ' + region.lastName : '' }}-->
+<!--                                                        </td>-->
                                                         <td>
                                                             <router-link :to="`/admin-view-warehouses-by-region/${region.id}?name=${region.name}`" type="button" class="btn maz-gradient-btn position-relative me-lg-5"> 
                                                                 <i class='bx bx-building-house align-middle' ></i> 
@@ -341,11 +341,10 @@ const items = (region) => [
                                                             </router-link>
                                                         </td>
                                                         <td>
-
-                                                            <SplitButton v-if="!region.isEditing" @click="editClient(region)" class="text-white" label="Edit" 
-													icon="bx bx-cog fs-4" 
-													dropdownIcon="text-white fs-4 bx bx-chevron-down" 
-													:model="items(region)"/>
+                                                          <SplitButton v-if="!region.isEditing" @click="editClient(region)" class="text-white" label="Edit"
+                                                            icon="bx bx-cog fs-4"
+                                                            dropdownIcon="text-white fs-4 bx bx-chevron-down"
+                                                            :model="items(region)"/>
                                                     <button v-else @click="update(region)" class="btn btn-sm maz-gradient-btn" type="button">
                                                         <i class='bx bx-check text-success'></i>
                                                     </button>                                                            

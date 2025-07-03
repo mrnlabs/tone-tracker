@@ -61,7 +61,6 @@ const form = reactive({
 	plannedEndDate: null,
 	timeRecord: null,
     completion: null,
-    jobNumber: null,
     name: null
 });
 
@@ -322,10 +321,7 @@ const onSubmitPO = () => {
                                 <label for="input1" class="form-label">Activation Name</label>
                                 <input v-model="taskName" type="text" readonly class="form-control" id="input1" >
                             </div>
-                            <div class="col-md-4">
-                                <label for="input2" class="form-label">Job Number</label>
-                                <input v-model="form.jobNumber" type="text" readonly class="form-control" id="input2" >
-                            </div>
+
                             <div class="col-md-4">
                                 <label for="input3" class="form-label">Risk</label>
                                 <input :value="getStatus(form.status)" type="text" readonly class="form-control" id="input3">

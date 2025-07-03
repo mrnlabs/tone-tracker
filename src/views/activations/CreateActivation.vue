@@ -228,7 +228,7 @@ try {
                         v-model="form.budget"
                         inputId="currency-us"
                         mode="currency"
-                        currency="ZAR"
+                        currency="USD"
                         locale="en-US"
                         class="w-100"
                       />

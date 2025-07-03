@@ -121,7 +121,6 @@ const addtask = () => {
         <thead>
             <tr class="table-dark-color">
                 <th>Task</th>
-                <th>Job Number</th>
                 <th>Risk</th>
                 <th>Start Date</th>
                 <th>End Date</th>
@@ -134,7 +133,6 @@ const addtask = () => {
         <tbody>
             <tr v-if="tasks.length > 0" v-for="task in tasks" :key="task.id" class="table-dark-black">
                 <td>{{ task.name }}</td>
-                <td>{{ task.jobNumber }}</td>
                 <td  :class="getClass(task.status)">
                     {{ getStatus(task.status) }}
                 </td>

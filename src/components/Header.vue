@@ -45,33 +45,7 @@
           </a>
         </div>
       </nav>
-      <!-- <div class="search-bar-containe text-center d-lg-flex w-100 justify-content-center">
-          <div class="input-group custom-width-70">
-            <span class="input-group-text" id="addon-wrapping"><i class='bx bx-search'></i></span>
-            <input
-              type="text"
-              class="form-control"
-              aria-label="Text input with dropdown suggestions"
-              placeholder="Search For Activation..."
-              v-model="query"
-              @input="onInput"
-              @keydown.enter="selectFirstSuggestion"
-            />
-            <button class="btn btn-outline-secondary w-20 maz-gradient-btn" @click="search">Search</button>
 
-            <ul v-if="filteredSuggestions.length" class="suggestions-list">
-              <li
-                v-for="(suggestion, index) in filteredSuggestions"
-                :key="index"
-                @click="selectSuggestion(suggestion)"
-              >
-              <router-link :to="`/report?activation=${suggestion.id}`">
-                {{ suggestion.name }} 
-              </router-link>
-              </li>
-            </ul>
-          </div>
-        </div> -->
     </div>
   </header>
 </template>

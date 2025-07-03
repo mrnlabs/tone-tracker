@@ -302,11 +302,6 @@ const items = [
 										<input type="text" class="form-control" id="input1" :value="singleTask?.taskDetails?.name">
 									</div>
 
-									
-									<div class="col-md-6">
-										<label for="input2" class="form-label">Job Number</label>
-										<input type="text" class="form-control" id="input2" :value="singleTask?.taskDetails?.jobNumber">
-									</div>
 									<div class="col-md-6">
 										<label for="input3" class="form-label">Status</label>
 										<input type="text" class="form-control" id="input3" :value="singleTask?.taskDetails?.status">

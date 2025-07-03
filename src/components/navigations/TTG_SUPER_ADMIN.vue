@@ -54,66 +54,36 @@ const getRoleName = () => {
                         data-bs-parent="#accordionExample">
                         <div class="accordion-body">
                             <ul class="nav-list pt-2">
-                                <li :class="{ 'active': currentRoute.path === '/activations' }"><router-link to="/activations"><span class="icon"><i class='bx bx-chat ps-3'></i></span> Map</router-link></li>
-                                <li :class="{ 'active': currentRoute.path === '/clients' }"><router-link to="/clients"><span class="icon"><i class='ps-3 bx bx-user-circle'></i></span> Clients</router-link></li>
-                                <li :class="{ 'active': currentRoute.path === '/users' }" ><router-link to="/users"><span class="icon"><i class='bx bx-user ps-3'></i></span> Staff</router-link></li>
-                                <li :class="{ 'active': currentRoute.path === '/promoters' }"><router-link to="/promoters"><span class="icon"><i class='bx bx-group ps-3'></i> </span>Promoters</router-link></li>
-                                <li :class="{ 'active': currentRoute.path === '/suppliers' }"><router-link to="/suppliers"><span class="icon"><i class='bx bxs-user-detail ps-3'></i></span>Suppliers</router-link></li>
-                                <li :class="{ 'active': currentRoute.path === '/briefs' }"><router-link to="/briefs"><span class="icon"><i class='bx bx-file ps-3'></i></span> Briefs</router-link></li>
-                                <!-- <li :class="{ 'active': currentRoute.path === '/teaching' }"><router-link to="/teaching"><i class='bx bx-book-open ps-3 pe-3'></i> Learning & Teaching</router-link></li> -->
-                                <li :class="{ 'active': currentRoute.path === '/regions'}"><router-link to="/regions"><span class="icon"><i class='bx bx-map ps-3'></i></span> Warehousing</router-link></li>
-                                <li :class="{ 'active': currentRoute.path === '/crm'}"><router-link to="/crm"><span class="icon"><i class='bx bx-briefcase ps-3'></i></span> CRM</router-link></li>
-                                <!-- <li><router-link to="/jobs"><span class="icon"><i class='bx bx-file'></i></span> Jobs</router-link></li> -->
-                                <li :class="{ 'active': currentRoute.path === '/upload' }" ><router-link to="/upload"><span class="icon"><i class='bx bx-upload ps-3'></i></span> Upload contract</router-link></li>
-                                <!-- <li :class="{ 'active': currentRoute.path === `/staff-profile/${user?.activeUserId}/${user?.id}` }">
-                                    <router-link  :to="{ path: `/staff-profile/${user?.activeUserId}/${user?.id}` }">
-                                        <span class="icon ps-3"><i class='bx bx-user-pin'></i></span> Profile </router-link>
-                                </li> -->
+                                <li :class="{ 'active': currentRoute.path === '/activations' }">
+                                  <router-link to="/activations"><span class="icon"><i class='bx bx-chat ps-3'></i></span> Map</router-link>
+                                </li>
+                                <li :class="{ 'active': currentRoute.path === '/clients' }">
+                                  <router-link to="/clients"><span class="icon"><i class='ps-3 bx bx-user-circle'></i></span> Clients</router-link>
+                                </li>
+                                <li :class="{ 'active': currentRoute.path === '/users' }" >
+                                  <router-link to="/users"><span class="icon"><i class='bx bx-user ps-3'></i></span> Staff</router-link>
+                                </li>
+                                <li :class="{ 'active': currentRoute.path === '/promoters' }">
+                                  <router-link to="/promoters"><span class="icon"><i class='bx bx-group ps-3'></i> </span>Promoters</router-link>
+                                </li>
+                                <li :class="{ 'active': currentRoute.path === '/suppliers' }">
+                                  <router-link to="/suppliers"><span class="icon"><i class='bx bxs-user-detail ps-3'></i></span>Suppliers</router-link>
+                                </li>
+                                <li :class="{ 'active': currentRoute.path === '/briefs' }">
+                                  <router-link to="/briefs"><span class="icon"><i class='bx bx-file ps-3'></i></span> Briefs</router-link>
+                                </li>
+                                <li :class="{ 'active': currentRoute.path === '/regions'}">
+                                  <router-link to="/regions"><span class="icon"><i class='bx bx-map ps-3'></i></span> Regions</router-link>
+                                </li>
+                                <li :class="{ 'active': currentRoute.path === '/crm'}">
+                                  <router-link to="/crm"><span class="icon"><i class='bx bx-briefcase ps-3'></i></span> CRM</router-link>
+                                </li>
+                                <li :class="{ 'active': currentRoute.path === '/upload' }" >
+                                  <router-link to="/upload"><span class="icon"><i class='bx bx-upload ps-3'></i></span> Upload contract</router-link>
+                                </li>
+
                             </ul>
 
-                        </div>
-                    </div>
-                </div>
-                <div class="accordion-item d-none">
-                    <h2 class="accordion-header">
-                        <button class="d-flex gap-2 justify-content-end flex-row-reverse accordion-button w-0 collapsed "
-                            type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo"
-                            aria-expanded="false" aria-controls="panelsStayOpen-collapseTwo">
-                            Show more
-                        </button>
-                    </h2>
-                    <div id="panelsStayOpen-collapseTwo" class="accordion-collapse collapse">
-                        <div class="accordion-body">
-                            <div class="sidebar">
-                                <div class="menu-section">
-                                    <h3>Projects</h3>
-                                    <ul>
-                                        <li># Joburg Activations</li>
-                                        <li># Durban Activations</li>
-                                        <li># Cape Town Activations</li>
-                                    </ul>
-                                </div>
-                                <div class="menu-section">
-                                    <h3>Channels</h3>
-                                    <ul>
-                                        <li># Marketing-team</li>
-                                        <li># Competitive</li>
-                                        <li># Announcements</li>
-                                        <li># Quarterly planning</li>
-                                    </ul>
-                                </div>
-                                <div class="menu-section">
-                                    <h3>Direct Messages</h3>
-                                    <ul>
-                                        <li class="active">• Guest (You)</li>
-                                        <li>• Brandley Thomas</li>
-                                        <li>• Michael John</li>
-                                    </ul>
-                                </div>
-                                <div class="menu-section">
-                                    <h3>Communities</h3>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>

@@ -11,7 +11,7 @@
                     api-key="YOUR_API_KEY"
                     style="width: 100%; height: 800px"
                     :center="center"
-                    :zoom="6"
+                    :zoom="7"
                     :options="{ styles: mapStyles }"
                   >
                     <Marker 
@@ -54,7 +54,7 @@ import { GoogleMap, Marker, InfoWindow } from 'vue3-google-map';
 import { useActivation } from '@/stores/activation';
 import { useAuth } from '@/stores/auth';
 
-const center = { lat: -30.5595, lng: 22.9375 };
+const center = { lat: -19.0154, lng: 28.112268};
 const activationStore = useActivation();
 const authStore = useAuth();
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import TabNav from '@/components/general/TabNav.vue';
 import ActivationDetails from './ActivationDetails.vue';
+import ActivationReport from './ActivationReport.vue';
 import ActivationImagesComponent from './ActivationImagesComponent.vue';
 
 const props = defineProps({
@@ -18,6 +19,12 @@ const props = defineProps({
             title="Activation Details"
             active="active"
             />
+            <TabNav
+                tabId="report"
+                icon="bx bx-report"
+                title="Report"
+                active=""
+            />
             <TabNav 
             tabId="images"
             icon="bx bx-images"
@@ -28,6 +35,9 @@ const props = defineProps({
         <div class="tab-content py-3">
             <div class="tab-pane fade show active " id="details" role="tabpanel">
                 <ActivationDetails :activation="activation" :regions="regions" />
+            </div>
+            <div class="tab-pane fade show active " id="report" role="tabpanel">
+              <ActivationReport :activation="activation" :regions="regions" />
             </div>
             <div class="tab-pane fade" id="images" role="tabpanel">
                 <ActivationImagesComponent :activation="activation"/>

@@ -103,11 +103,10 @@ const type = ref(null);
 const form = reactive({
     status: '',
     type: '',
-	plannedEndDate: null,
+	  plannedEndDate: null,
     startDate: null,
-	timeRecord: null,
+	  timeRecord: null,
     completion: null,
-    jobNumber: null,
     name: null,
     address: null,
     longitude: null,
@@ -130,7 +129,6 @@ const rules = {
         }
     },
 	timeRecord: { required },
-	jobNumber: { required },
 	completion: { required },
     activation: { required }
 };
@@ -236,7 +234,6 @@ const openModal = (pos,task) => {
      plannedEndDate: task.plannedEndDate,
      timeRecord: task.timeRecord,
      completion: task.completion,
-     jobNumber: Number(task.jobNumber),
      name: task.name,
     
     })
@@ -249,7 +246,6 @@ const openModal = (pos,task) => {
      plannedEndDate: null,
      timeRecord: null,
      completion: null,
-     jobNumber: null,
      name:null,
     //  activation: null
     })
@@ -359,7 +355,6 @@ const promoterItems = (task) => [    {
                                         <tr class="table-dark-color">
                                             <!-- <th>Activation</th> -->
                                             <th>Task</th>
-                                            <th>Job Number</th>
                                             <th>Risk</th>
                                             <th>End date</th>
                                             <th>Location</th>
@@ -371,7 +366,6 @@ const promoterItems = (task) => [    {
                                         <tr v-if="tasks.length > 0" v-for="task in tasks" :key="task.id" class="table-dark-black">
                                             <!-- <td>{{ activationName }}</td> -->
                                             <td>{{ task.name }}</td>
-                                            <td>{{ task.jobNumber }}</td>
                                             <td  :class="getClass(task.status)">
                                                 {{ getStatus(task.status) }}
                                             </td> 
@@ -404,7 +398,7 @@ const promoterItems = (task) => [    {
             <Dialog v-model:visible="visible" position="top" modal :header="isEdit ? 'Edit Task' : 'Add Task'" :style="{ width: '50rem' }">
                 
                 <form @submit.prevent="onSubmit" class="row g-3">
-                     <div class="col-md-6">
+                     <div class="col-md-12">
                         <div class="card my-card flex justify-center">
                             <label for="input1" class="form-label">Activation</label>
                              <InputText v-model="activationName" disabled />
@@ -422,12 +416,9 @@ const promoterItems = (task) => [    {
                     </div>
                     <div class="col-md-6">
                         <div class="card my-card flex justify-center">
-                            <label for="input1" class="form-label">Job Number</label>
-                            <InputNumber v-model="form.jobNumber" inputId="withoutgrouping" :useGrouping="false" fluid />
-                               <div class="input-errors" v-for="error of v$.jobNumber.$errors" :key="error.$uid">
-                               <div class="text-danger">Job Number is required</div>
-                            </div>
-                    </div>                        
+
+
+                        </div>
                     </div>
 
                     <div class="col-md-6">

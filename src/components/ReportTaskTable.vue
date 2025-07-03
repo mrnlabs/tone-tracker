@@ -30,7 +30,6 @@ const getStatus = (status) => {
                     <tr>
                         <th>Project</th>
                         <th>Task</th>
-                        <th>Job Number</th>
                         <th>Risk</th>
                         <th>Planned End-Date</th>
                         <th>Time Record</th>
@@ -41,7 +40,6 @@ const getStatus = (status) => {
                     <tr v-if="tasks?.length > 0" v-for="task in tasks" :key="task.id" class="maz-table-row-height">
                         <td>{{ activation }}</td>
                     <td>{{ task.name }}</td>
-                    <td>{{ task.jobNumber }}</td>
                     <td  :class="getClass(task.status)">
                         {{ getStatus(task.status) }}
                     </td>

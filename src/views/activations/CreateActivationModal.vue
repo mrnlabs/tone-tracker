@@ -143,7 +143,7 @@ const config = {useMultipartFormData: true};
 
               <Column classes="col-md-4 mb-3">
                 <InputLabel labelText="Budget" classes="form-label" htmlFor="name"/>
-                <InputNumber v-model="form.budget" inputId="currency-us" mode="currency" currency="ZAR" locale="en-US" class="w-100"/>
+                <InputNumber v-model="form.budget" inputId="currency-us" mode="currency" currency="USD" locale="en-US" class="w-100"/>
                 <InputError classes="input-errors" :errors="v$.budget.$errors" message="Budget is required" />
               </Column>
 

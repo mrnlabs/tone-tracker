@@ -58,19 +58,6 @@ import Activation from './svgs/Activation.vue';
                                     <div class="menu-title">Users</div>
                                 </router-link>
                             </li>
-
-                            
-                            <!-- 
-        <li class="side-nav__item">
-            <router-link to="/dashboard">
-                <div class="side-nav__link">
-                    <div class="side-nav__icon"> <i class='bx bx-desktop'></i>
-                    </div>
-                </div>
-                <div class="menu-title">Dashboard</div>
-            </router-link>
-        </li> -->
-
                             <li class="side-nav__item">
                                 <router-link to="/warehouse">
                                     <div class="side-nav__link">

@@ -286,7 +286,7 @@ const onUserChange = (event) => {
 		if(activationId.value){
 			try {
 				try {
-					const response = await activation.update(activationId.value, form);
+					const response = await activation.addActivationManager(activationId.value, form.staff);
 					toaster.success("Activation Manager added successfully");
 					visible.value = false;
 					if (user.role == 'TTG_SUPER_ADMIN' || user.role == 'TTG_HEAD_ADMIN' || user.role == 'TTG_CLIENT') {
@@ -377,7 +377,7 @@ const activationCreated = () => {
 										<td>{{activation.name}}</td>
 										<td>{{ activation.campaignDTO.name }}</td>
 										<td>{{ activation.regionName }}</td>  
-										<td v-if="isNotActivationManager()">R {{activation.budget}}</td>
+										<td v-if="isNotActivationManager()">USD {{activation.budget}}</td>
 										<td>{{activation.startDate}}</td>
 										<td>{{activation.endDate}}</td>
 										<td v-if="activation.firstName != null">

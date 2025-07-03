@@ -98,7 +98,6 @@ const form = reactive({
 	plannedEndDate: null,
 	timeRecord: null,
     completion: null,
-    jobNumber: null,
     name: null,
     address: null,
     longitude: null,
@@ -121,7 +120,6 @@ if(props.isEdit) {//edit
      plannedEndDate: props.viewedTask.plannedEndDate,
      timeRecord: props.viewedTask.timeRecord,
      completion: props.viewedTask.completion,
-     jobNumber: Number(props.viewedTask.jobNumber),
      name: props.viewedTask.name,
      longitude: props.viewedTask.longitude,
      latitude: props.viewedTask.latitude,
@@ -137,7 +135,6 @@ const rules = {
     startDate: { required },
     plannedEndDate: { required },
 	timeRecord: { required },
-	jobNumber: { required },
 	completion: { required },
     activation: { required },
     address :  {required}
@@ -267,30 +264,17 @@ const previewBase64PDF = () => {
     };
 }
 
-const jobNumberValidationError = ref(false);
 
-const isJobNumberUnique = debounce(() => {
-  taskStore.isJobNumberUnique(form.id, form.jobNumber).then((response) => {
-    jobNumberValidationError.value = response.data;
-  });
-}, 400);
-
-watch(
-  () => form.jobNumber,
-  () => {
-    if (form.jobNumber) isJobNumberUnique();
-  }
-);
 
 const isClientFormValid = () => {
-  return showLoading.value == true || jobNumberValidationError.value;
+  return showLoading.value == true;
 };
 
 </script>
 <template>
     <form @submit.prevent="onSubmit" class="row ">
 
-        <div class="col-md-6">
+        <div class="col-md-12">
             <div class="card my-card flex justify-center">
                 <label for="input1" class="form-label">Name</label>
                 <InputText v-model="form.name" inputId="withoutgrouping"  :useGrouping="false" fluid />
@@ -299,15 +283,7 @@ const isClientFormValid = () => {
                 </div>
         </div>                        
         </div>
-        <div class="col-md-6">
-            <div class="card my-card flex justify-center">
-                <label for="input1" class="form-label">Job Number</label>
-                <InputNumber v-model="form.jobNumber" inputId="withoutgrouping" :useGrouping="false" fluid />
-                <span v-if="jobNumberValidationError" class="text-danger">Job Number already exist.</span>
-                 <InputError v-else-if="!jobNumberValidationError" classes="input-errors" :errors="v$.jobNumber.$errors" message="Job Number is required" />
-                
-        </div>                        
-        </div>
+
 
         <div class="col-md-6">
             <div class="card my-card flex justify-center">

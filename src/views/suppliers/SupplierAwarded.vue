@@ -82,8 +82,7 @@ const getClass = (status) => {
                         <table class="table table-dark table-bordered">
                             <thead>
                                 <tr class="table-dark-color">
-                                    <th>Job</th>
-                                    <th>Job Number</th>
+                                    <th>Task</th>
                                     <th>Start Date</th>
                                     <th>End Date</th>
                                     <th>Status</th>

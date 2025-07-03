@@ -184,8 +184,8 @@ const onSubmit = () => {
 
 									
 									<div class="col-md-6">
-										<label for="input2" class="form-label">Job Number</label>
-										<input readonly type="text" class="form-control" id="input2" :value="singleTask?.jobNumber">
+<!--										<label for="input2" class="form-label">Job Number</label>-->
+<!--										<input readonly type="text" class="form-control" id="input2" :value="singleTask?.jobNumber">-->
 									</div>
 									<div class="col-md-6">
 										<label for="input3" class="form-label">Status</label>

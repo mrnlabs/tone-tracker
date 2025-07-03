@@ -189,7 +189,7 @@ const reUpload = () => {
 <template>
     <div class="card">
         <div class="card-body p-4">
-            <h5 class="card-title ">Activation Details</h5>
+            <h5 class="card-title">Activation Details</h5>
             <hr>
              <div class="form-body mt-4">
               <div class="row">
@@ -197,7 +197,7 @@ const reUpload = () => {
                     <div class="border border-3 p-4 rounded">
                       <div class="row g-3">
                           <Column classes="col-lg-6">
-                              <InputLabel labelText="Activation Nasssme" classes="form-label" htmlFor="name"/>
+                              <InputLabel labelText="Activation Name" classes="form-label" htmlFor="name"/>
                               <Input v-model="form.name" type="text" classes="form-control" id="name" placeholder="" />
                               <InputError classes="input-errors" :errors="v$.name.$errors" message="Activation Name is required" />
                             </Column>
