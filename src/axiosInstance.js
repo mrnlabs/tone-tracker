@@ -1,52 +1,39 @@
-/**
- * Author: Mazisi Msebele
- * Date: 2023-06-01 23:58
- * 
- */
-import axios from 'axios';
-import { useAuth } from '@/stores/auth';
-import { useNetworkStatus } from './stores/networkStatus';
-import router from '@/router';
-import useToaster from './composables/useToaster';
+import axios from 'axios'
 
+// Create axios instance
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_SERVER_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+    baseURL: import.meta.env.VITE_SERVER_URL || 'http://localhost:8080',
+    timeout: 10000,
+    headers: {
+        'Content-Type': 'application/json'
+    }
+})
 
+// Request interceptor
 axiosInstance.interceptors.request.use(
-  (config) => {
-    const auth = useAuth();
-    // const user = JSON.parse(auth.user);
-    // if(!user){
-    //   router.push('/');
-    //   window.location.reload();
-    // }
+    (config) => {
+        const token = localStorage.getItem('authToken')
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`
+        }
+        return config
+    },
+    (error) => {
+        return Promise.reject(error)
+    }
+)
 
-    const isOnline = useNetworkStatus();
-    if (!isOnline.online) {
-      const toaster = useToaster();
-      //return toaster.error('Internet connection lost.');
+// Response interceptor
+axiosInstance.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            localStorage.removeItem('authToken')
+            localStorage.removeItem('user')
+            window.location.href = '/'
+        }
+        return Promise.reject(error)
     }
-    
-    if (localStorage.getItem('token')) {
-      config.headers['Authorization'] = `Bearer ${auth.token}`;
-    } else {
-      // const router = useRouter();
-      console.log('no token');
-      router.push('/');
-    }
-    
-    if (config.useMultipartFormData) {
-      config.headers['Content-Type'] = 'multipart/form-data';
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+)
 
-export default axiosInstance;
+export default axiosInstance

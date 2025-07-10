@@ -1,203 +1,138 @@
-<script>
-import { RouterLink, RouterView } from 'vue-router';
-import { useVuelidate } from '@vuelidate/core';
-import { required, email } from '@vuelidate/validators';
-import { reactive, ref } from 'vue';
-import router from '@/router';
-import { useMonitorSize } from '@/composables/useMonitorSize';
-import { useAuth } from '@/stores/auth';
-import useToaster from '@/composables/useToaster';
-import { useStorage } from '@vueuse/core'
-
-export default {
-  setup() {
-    const loading = ref(false);
-
-    const screenSizes = useMonitorSize();
-    const auth = useAuth();
-    const toaster = useToaster();
-
-    const form = reactive({
-      email: '',
-    });
-
-    const rules = {
-      email: { required, email }
-    }
-    const v$ = useVuelidate(rules, form)
-
-    const onSubmit = async () => {
-      loading.value = true;
-      const isFormCorrect = await v$.value.$validate();
-      if (!isFormCorrect) {
-        loading.value = false;
-        return;
-      }
-      auth.sendEmailPassword(form.email)
-        .then(function (response) {
-          toaster.success("Password reset instructions sent to your email");
-          // setTimeout(() => {
-          //   router.push('/');
-          // }, 1000)
-        }).catch(function (error) {
-
-          if (error.response.data == "Email does not exist.") {
-            // Token has expired
-            toaster.error("Email does not exist");
-            return;
-          }
-          toaster.error("Error sending reset instructions");
-          console.log(error);
-        }).finally(function () {
-          loading.value = false;
-        });
-    }
-
-    return {
-      form, v$, onSubmit, screenSizes, loading
-    }
-  }
-}
-</script>
-
 <template>
-  <div class="logo-light"></div>
-  <div class="shoes"></div> 
-  <div class="container-login">
-    <div class="section-authentication-cover">
-      <div class="login-cover">
-        <div class="row g-0">
-          <div class="col-12 col-xl-7 col-xxl-8 auth-cover-left align-items-center d-none d-xl-flex">
-            <div class="card shadow-none bg-transparent shadow-none rounded-0 mb-0">
-              <div class="card-body">
-              </div>
-            </div>
-          </div>
+  <div class="forgot-password">
+    <div class="forgot-password-container">
+      <div class="content-card">
+        <div class="icon">
+          <i class="pi pi-lock"></i>
+        </div>
+        <h2 class="title">Forgot Password</h2>
+        <p class="subtitle">This feature will be implemented soon.</p>
+        <p class="description">
+          For now, please contact your administrator to reset your password.
+        </p>
 
-          <div class="col-12 col-xl-5 col-xxl-4 auth-cover-right align-items-center justify-content-center">
-            <div class="card rounded-0 m-3 shadow-none bg-transparent mb-0">
-              <div class="card-body p-sm-5">
-                <div class="">
-                  <div class="form-body">
-                    <h5 class="mb-3 text-default">Forgot Password</h5>
-                    <form @submit.prevent="onSubmit" class="row g-3">
-                      <div class="mb-3 col-12">
-                        <label for="inputEmailAddress" class="form-label">Email Address</label>
-                        <input v-model="form.email" type="email" class="form-control custom-input" id="inputEmailAddress" autofocus>
-                        <div class="input-errors" v-for="error of v$.email.$errors" :key="error.$uid">
-                          <div class="text-danger">{{ error.$message }}</div>
-                        </div>
-                      </div>
-                      <div class="col-12">
-                        <div class="d-grid">
-                          <button type="submit" 
-                            class="btn p-3 maz-gradient-btn text-white d-flex justify-content-center align-items-center">
-                            <div v-if="loading" class="spinner-border text-white " role="status">
-                              <span class="visually-hidden">Loading...</span>
-                            </div>
-                            {{ loading ? '' : 'Send Reset Instructions' }}
-                          </button>
-                        </div>
-                      </div>
-                      <div class="mt-3 text-center">
-                        <router-link to="/">Back to Login</router-link>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div class="actions">
+          <button @click="goBack" class="back-btn">
+            <i class="pi pi-arrow-left"></i>
+            Back to Login
+          </button>
         </div>
       </div>
     </div>
   </div>
-  <RouterView />
 </template>
 
+<script setup>
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+const goBack = () => {
+  router.push('/')
+}
+</script>
+
 <style scoped>
-.text-default {
-  font-size: 40px;
-  font-weight: 200;
-  color: #fff
+.forgot-password {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem;
 }
 
-.form-label {
-  font-size: 20px;
-  font-weight: 200;
-  margin-bottom: 0;
-  color: #fff;
+.forgot-password-container {
+  width: 100%;
+  max-width: 450px;
 }
 
-input[type=email] {
+.content-card {
+  background: white;
+  padding: 3rem 2rem;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.icon {
+  margin-bottom: 1.5rem;
+}
+
+.icon i {
+  font-size: 4rem;
+  color: #3498db;
+  opacity: 0.8;
+}
+
+.title {
+  color: #2c3e50;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.subtitle {
+  color: #7f8c8d;
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+.description {
+  color: #6c757d;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #17a2b8;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
   border: none;
-  border-bottom: 2px solid #fff;
-  background-color: none;
-  outline: 0;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-input[type=email]:focus {
-  border: none;
-  background-color: none;
+.back-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
 }
 
-.section-authentication-cover {
-  background: url("../../assets/images/login-images/login-cover.png");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: cover;
+.back-btn:active {
+  transform: translateY(0);
 }
 
-.auth-cover-left {
-  position: relative;
-  background-color: transparent;
-}
-
-.logo-light {
-  position: absolute;
-  height: 69px;
-  width: 315px;
-  background-image: url("../../assets/images/logo/white-logo.png");
-  top: 20px;
-  left: 40px;
-}
-
-.shoes {
-  position: absolute;
-  height: 108px;
-  width: 105px;
-  background-image: url("../../assets/images/login-images/Shoes.png");
-  background-repeat: no-repeat;
-  bottom: 20px;
-  left: 40px
-}
-
-.form-control {
-  border-radius: 0;
-  background-color: transparent !important;
-  padding: 0;
-}
-
-.form-control:hover {
-  border: none;
-  box-shadow: none;
-  border-bottom: 2px solid #fff;
-}
-
-.auth-cover-right {
-  background: rgb(34, 36, 35, 0.7);
-  border-left: 1px solid #707070;
-}
-
-@media (max-width: 768px) {
-  .shoes {
-    display: none;
+@media (max-width: 480px) {
+  .forgot-password {
+    padding: 1rem;
   }
-}
 
-@media (max-width: 575.98px) {
-  .shoes {
-    display: none;
+  .content-card {
+    padding: 2rem 1.5rem;
+  }
+
+  .title {
+    font-size: 1.75rem;
+  }
+
+  .icon i {
+    font-size: 3rem;
   }
 }
 </style>
