@@ -30,7 +30,7 @@ export const useActivationsStore = defineStore('activations', () => {
         dateRange: null,
         search: ''
     })
-    const sortBy = ref('created_at')
+    const sortBy = ref('dateCreated')
     const sortOrder = ref('desc')
 
     // Cache for activation details
@@ -68,17 +68,19 @@ export const useActivationsStore = defineStore('activations', () => {
         if (filters.value.search) {
             const searchTerm = filters.value.search.toLowerCase()
             result = result.filter(activation =>
-                activation.name.toLowerCase().includes(searchTerm) ||
-                activation.code.toLowerCase().includes(searchTerm) ||
-                activation.client.toLowerCase().includes(searchTerm) ||
-                activation.location.toLowerCase().includes(searchTerm)
+                activation.name?.toLowerCase().includes(searchTerm) ||
+                activation.id?.toString().includes(searchTerm) ||
+                activation.clientCompanyName?.toLowerCase().includes(searchTerm) ||
+                activation.clientBrandName?.toLowerCase().includes(searchTerm) ||
+                activation.locationName?.toLowerCase().includes(searchTerm) ||
+                activation.city?.toLowerCase().includes(searchTerm)
             )
         }
 
         if (filters.value.dateRange) {
             const { start, end } = filters.value.dateRange
             result = result.filter(activation => {
-                const activationDate = new Date(activation.startDate)
+                const activationDate = new Date(activation.dateCreated)
                 return activationDate >= new Date(start) && activationDate <= new Date(end)
             })
         }
@@ -170,10 +172,9 @@ export const useActivationsStore = defineStore('activations', () => {
             error.value = null
 
             const queryParams = {
-                page: pagination.value.page,
-                limit: pagination.value.limit,
-                sort: sortBy.value,
-                order: sortOrder.value,
+                page: pagination.value.page - 1, // Convert to 0-based for Spring Boot
+                size: pagination.value.limit,
+                sort: [`${sortBy.value},${sortOrder.value}`],
                 ...filters.value,
                 ...params
             }
@@ -187,12 +188,34 @@ export const useActivationsStore = defineStore('activations', () => {
 
             const response = await activationService.getActivations(queryParams)
 
-            activations.value = response.data
-            pagination.value = {
-                total: response.meta.total,
-                page: response.meta.page,
-                limit: response.meta.limit,
-                totalPages: Math.ceil(response.meta.total / response.meta.limit)
+            // Handle both custom and Spring Boot pagination response structures
+            if (response.content) {
+                // Spring Boot pagination response
+                activations.value = response.content
+                pagination.value = {
+                    total: response.page.totalElements,
+                    page: response.page.number + 1, // Convert 0-based to 1-based for UI
+                    limit: response.page.size,
+                    totalPages: response.page.totalPages
+                }
+            } else if (response.data) {
+                // Custom pagination response
+                activations.value = response.data
+                pagination.value = {
+                    total: response.meta.total,
+                    page: response.meta.page,
+                    limit: response.meta.limit,
+                    totalPages: Math.ceil(response.meta.total / response.meta.limit)
+                }
+            } else {
+                // Direct array response
+                activations.value = Array.isArray(response) ? response : [response]
+                pagination.value = {
+                    total: activations.value.length,
+                    page: 1,
+                    limit: 10,
+                    totalPages: 1
+                }
             }
 
             return response

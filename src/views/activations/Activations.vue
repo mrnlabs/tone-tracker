@@ -11,13 +11,23 @@
             </p>
           </div>
           <div class="header-actions">
-            <Button
-                v-if="canCreateActivation"
-                @click="$router.push('/activations/create')"
-                icon="pi pi-plus"
-                label="Create Activation"
-                class="p-button-success"
-            />
+            <div class="header-button-group">
+              <Button
+                  @click="refreshActivations"
+                  icon="pi pi-refresh"
+                  :loading="refreshing"
+                  :disabled="loading"
+                  class="p-button-outlined"
+                  v-tooltip.top="refreshing ? 'Refreshing...' : 'Refresh activation list'"
+              />
+              <Button
+                  v-if="canCreateActivation"
+                  @click="$router.push('/activations/create')"
+                  icon="pi pi-plus"
+                  label="Create Activation"
+                  class="p-button-success"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -108,34 +118,12 @@
               />
             </div>
 
-            <div class="filter-field">
-              <Dropdown
-                  v-model="selectedClient"
-                  :options="clientOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="All Clients"
-                  showClear
-                  filter
-                  @change="handleFilter"
-              />
-            </div>
-
-            <div class="filter-field">
-              <Calendar
-                  v-model="selectedDateRange"
-                  selectionMode="range"
-                  placeholder="Date Range"
-                  :showIcon="true"
-                  @date-select="handleFilter"
-              />
-            </div>
-
             <Button
                 @click="resetFilters"
                 icon="pi pi-filter-slash"
                 label="Reset"
                 class="p-button-outlined"
+                :disabled="!hasActiveFilters"
             />
           </div>
         </template>
@@ -145,20 +133,11 @@
       <Card class="activations-table-card">
         <template #content>
           <DataTable
-              :value="filteredActivations"
-              :loading="loading"
-              responsiveLayout="scroll"
-              :paginator="true"
-              :rows="12"
-              :rowsPerPageOptions="[12, 24, 50]"
-              currentPageReportTemplate="Showing {first} to {last} of {totalRecords} activations"
-              paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+              :value="activations"
               dataKey="id"
-              v-model:selection="selectedActivations"
-              selectionMode="multiple"
-              :metaKeySelection="false"
-              sortField="startDate"
-              :sortOrder="-1"
+              :paginator="true"
+              :rows="10"
+              responsiveLayout="scroll"
           >
             <template #header>
               <div class="table-header">
@@ -184,15 +163,18 @@
                       v-if="selectedActivations.length > 0"
                       @click="bulkAction"
                       icon="pi pi-cog"
-                      label="Bulk Actions"
+                      :label="`Actions (${selectedActivations.length})`"
                       class="p-button-outlined"
                       :disabled="loading"
+                      v-tooltip.top="`Bulk actions for ${selectedActivations.length} selected activations`"
                   />
                   <Button
                       @click="exportData"
                       icon="pi pi-download"
                       label="Export"
                       class="p-button-outlined"
+                      :disabled="loading || !activations?.length"
+                      v-tooltip.top="activations?.length ? `Export ${activations.length} activations` : 'No activations to export'"
                   />
                 </div>
               </div>
@@ -200,141 +182,13 @@
 
             <!-- Table View -->
             <template v-if="viewMode === 'table'">
-              <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
-
-              <Column field="name" header="Activation" sortable>
-                <template #body="{ data }">
-                  <div class="activation-cell">
-                    <router-link
-                        :to="`/activations/${data.id}`"
-                        class="activation-link"
-                    >
-                      {{ data.name }}
-                    </router-link>
-                    <span class="activation-code">{{ data.code }}</span>
-                  </div>
-                </template>
-              </Column>
-
-              <Column field="client" header="Client" sortable>
-                <template #body="{ data }">
-                  <div class="client-cell">
-                    <Avatar
-                        :label="data.client.charAt(0)"
-                        size="small"
-                        shape="circle"
-                        :style="{ backgroundColor: data.clientColor || '#3b82f6', color: 'white' }"
-                    />
-                    <span>{{ data.client }}</span>
-                  </div>
-                </template>
-              </Column>
-
-              <Column field="location" header="Location" sortable>
-                <template #body="{ data }">
-                  <div class="location-cell">
-                    <i class="pi pi-map-marker"></i>
-                    <span>{{ data.location }}</span>
-                  </div>
-                </template>
-              </Column>
-
-              <Column field="dateRange" header="Duration" sortable>
-                <template #body="{ data }">
-                  <div class="date-range-cell">
-                    <div class="date-info">
-                      <span class="start-date">{{ formatDate(data.startDate) }}</span>
-                      <span class="date-separator">to</span>
-                      <span class="end-date">{{ formatDate(data.endDate) }}</span>
-                    </div>
-                    <span class="duration">{{ calculateDuration(data.startDate, data.endDate) }} days</span>
-                  </div>
-                </template>
-              </Column>
-
-              <Column field="manager" header="Manager" sortable>
-                <template #body="{ data }">
-                  <div class="manager-cell">
-                    <Avatar
-                        :label="data.manager.name.split(' ').map(n => n.charAt(0)).join('')"
-                        size="small"
-                        shape="circle"
-                    />
-                    <span>{{ data.manager.name }}</span>
-                  </div>
-                </template>
-              </Column>
-
-              <Column field="promoters" header="Team" sortable>
-                <template #body="{ data }">
-                  <div class="team-cell">
-                    <div class="promoter-avatars">
-                      <Avatar
-                          v-for="promoter in data.promoters.slice(0, 3)"
-                          :key="promoter.id"
-                          :label="promoter.name.charAt(0)"
-                          size="small"
-                          class="promoter-avatar"
-                      />
-                      <span v-if="data.promoters.length > 3" class="promoter-count">
-                        +{{ data.promoters.length - 3 }}
-                      </span>
-                    </div>
-                    <span class="team-size">{{ data.promoters.length }} members</span>
-                  </div>
-                </template>
-              </Column>
-
-              <Column field="budget" header="Budget" sortable>
-                <template #body="{ data }">
-                  <span class="budget-amount">${{ data.budget.toLocaleString() }}</span>
-                </template>
-              </Column>
-
-              <Column field="status" header="Status" sortable>
-                <template #body="{ data }">
-                  <Tag
-                      :value="data.status"
-                      :severity="getStatusSeverity(data.status)"
-                  />
-                </template>
-              </Column>
-
-              <Column field="progress" header="Progress" sortable>
-                <template #body="{ data }">
-                  <div class="progress-cell">
-                    <ProgressBar :value="data.progress" class="progress-bar" />
-                    <span class="progress-text">{{ data.progress }}%</span>
-                  </div>
-                </template>
-              </Column>
-
-              <Column header="Actions" :exportable="false">
-                <template #body="{ data }">
-                  <div class="action-buttons">
-                    <Button
-                        @click="viewActivation(data.id)"
-                        icon="pi pi-eye"
-                        class="p-button-text p-button-rounded p-button-sm"
-                        v-tooltip.top="'View Details'"
-                    />
-                    <Button
-                        v-if="canEditActivation(data)"
-                        @click="editActivation(data.id)"
-                        icon="pi pi-pencil"
-                        class="p-button-text p-button-rounded p-button-sm"
-                        v-tooltip.top="'Edit'"
-                    />
-                    <Button
-                        v-if="canDeleteActivation(data)"
-                        @click="deleteActivation(data)"
-                        icon="pi pi-trash"
-                        class="p-button-text p-button-rounded p-button-sm p-button-danger"
-                        v-tooltip.top="'Delete'"
-                    />
-                  </div>
-                </template>
-              </Column>
+              <Column field="id" header="ID" sortable></Column>
+              <Column field="name" header="Name" sortable></Column>
+              <Column field="clientCompanyName" header="Client" sortable></Column>
+              <Column field="locationName" header="Location" sortable></Column>
+              <Column field="startDate" header="Start Date" sortable></Column>
+              <Column field="endDate" header="End Date" sortable></Column>
+              <Column field="status" header="Status" sortable></Column>
             </template>
 
             <template #empty>
@@ -393,16 +247,16 @@
                 <template #content>
                   <div class="card-content">
                     <h4 class="activation-name">{{ activation.name }}</h4>
-                    <p class="activation-code">{{ activation.code }}</p>
+                    <p class="activation-code">#{{ activation.id }}</p>
 
                     <div class="card-details">
                       <div class="detail-item">
                         <i class="pi pi-building"></i>
-                        <span>{{ activation.client }}</span>
+                        <span>{{ activation.clientCompanyName || activation.clientBrandName || 'N/A' }}</span>
                       </div>
                       <div class="detail-item">
                         <i class="pi pi-map-marker"></i>
-                        <span>{{ activation.location }}</span>
+                        <span>{{ activation.locationName || activation.city || 'N/A' }}</span>
                       </div>
                       <div class="detail-item">
                         <i class="pi pi-calendar"></i>
@@ -410,32 +264,33 @@
                       </div>
                       <div class="detail-item">
                         <i class="pi pi-dollar"></i>
-                        <span>${{ activation.budget.toLocaleString() }}</span>
+                        <span>${{ (activation.totalRevenueUSD || 0).toLocaleString() }}</span>
                       </div>
                     </div>
 
                     <div class="card-progress">
                       <div class="progress-header">
-                        <span>Progress</span>
-                        <span>{{ activation.progress }}%</span>
+                        <span>Performance</span>
+                        <span>{{ (activation.performancePercentage || 0).toFixed(1) }}%</span>
                       </div>
-                      <ProgressBar :value="activation.progress" />
+                      <ProgressBar :value="activation.performancePercentage || 0" />
                     </div>
 
                     <div class="card-team">
                       <span class="team-label">Team:</span>
-                      <div class="team-avatars">
+                      <div class="team-avatars" v-if="activation.assignedPromoters && activation.assignedPromoters.length > 0">
                         <Avatar
-                            v-for="promoter in activation.promoters.slice(0, 4)"
+                            v-for="promoter in activation.assignedPromoters.slice(0, 4)"
                             :key="promoter.id"
                             :label="promoter.name.charAt(0)"
                             size="small"
                             class="team-avatar"
                         />
-                        <span v-if="activation.promoters.length > 4" class="more-count">
-                          +{{ activation.promoters.length - 4 }}
+                        <span v-if="activation.assignedPromoters.length > 4" class="more-count">
+                          +{{ activation.assignedPromoters.length - 4 }}
                         </span>
                       </div>
+                      <span v-else class="no-team">No team assigned</span>
                     </div>
                   </div>
                 </template>
@@ -480,36 +335,29 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
+import { useActivationsStore } from '@/stores/activation'
+import { useLoading } from '@/composables/useLoading'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
 
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const authStore = useAuthStore()
+const activationsStore = useActivationsStore()
+const { withLoading, isLoading } = useLoading()
 
 // State
-const loading = ref(false)
-const activations = ref([])
 const selectedActivations = ref([])
 const searchQuery = ref('')
 const selectedStatus = ref(null)
-const selectedClient = ref(null)
-const selectedDateRange = ref(null)
 const deleteDialogVisible = ref(false)
 const activationToDelete = ref(null)
 const viewMode = ref('table')
-
-// Stats
-const activationStats = ref({
-  total: 0,
-  activeToday: 0,
-  upcoming: 0,
-  totalBudget: 0
-})
+const refreshing = ref(false)
 
 // Options
 const statusOptions = [
@@ -524,186 +372,243 @@ const clientOptions = ref([])
 
 // Computed
 const userRole = computed(() => authStore.user?.role)
+const loading = computed(() => isLoading('fetch-activations') || activationsStore.isLoading)
+const activations = computed(() => activationsStore.activations || [])
+const activationStats = computed(() => {
+  const stats = activationsStore.activationStats
+  return {
+    total: stats.total || 0,
+    activeToday: stats.active || 0,
+    upcoming: stats.upcoming || 0,
+    totalBudget: activations.value.reduce((sum, a) => sum + (a.totalRevenueUSD || 0), 0)
+  }
+})
+const pagination = computed(() => activationsStore.pagination)
 
 const canCreateActivation = computed(() => {
   return ['ADMIN', 'ACTIVATION_MANAGER'].includes(userRole.value)
 })
 
 const hasActiveFilters = computed(() => {
-  return searchQuery.value || selectedStatus.value || selectedClient.value || selectedDateRange.value
+  return searchQuery.value || selectedStatus.value
 })
 
 const filteredActivations = computed(() => {
-  let filtered = activations.value
-
-  // Search filter
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(activation =>
-        activation.name.toLowerCase().includes(query) ||
-        activation.code.toLowerCase().includes(query) ||
-        activation.client.toLowerCase().includes(query) ||
-        activation.location.toLowerCase().includes(query)
-    )
-  }
-
-  // Status filter
-  if (selectedStatus.value) {
-    filtered = filtered.filter(activation => activation.status === selectedStatus.value)
-  }
-
-  // Client filter
-  if (selectedClient.value) {
-    filtered = filtered.filter(activation => activation.client === selectedClient.value)
-  }
-
-  // Date range filter
-  if (selectedDateRange.value && selectedDateRange.value.length === 2) {
-    const [startRange, endRange] = selectedDateRange.value
-    filtered = filtered.filter(activation => {
-      const activationStart = new Date(activation.startDate)
-      const activationEnd = new Date(activation.endDate)
-      return (activationStart >= startRange && activationStart <= endRange) ||
-          (activationEnd >= startRange && activationEnd <= endRange) ||
-          (activationStart <= startRange && activationEnd >= endRange)
-    })
-  }
-
-  // Role-based filtering
-  if (userRole.value === 'CLIENT') {
-    // Clients see only their activations
-    const userEmail = authStore.user?.email
-    filtered = filtered.filter(activation => activation.clientEmail === userEmail)
-  } else if (userRole.value === 'PROMOTER') {
-    // Promoters see only assigned activations
-    const userId = authStore.user?.id
-    filtered = filtered.filter(activation =>
-        activation.promoters.some(promoter => promoter.id === userId)
-    )
-  }
-
-  return filtered
+  // With server-side pagination, we use activations directly from the store
+  // The filtering is done on the server side based on the filters sent in the API request
+  return activations.value
 })
 
 // Methods
-const loadActivations = async () => {
-  loading.value = true
+const loadActivations = async (showLoading = true) => {
   try {
-    // Mock API call - replace with actual API
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // Mock data
-    activations.value = [
-      {
-        id: 1,
-        name: 'Summer Product Launch',
-        code: 'SPL-2024-001',
-        client: 'TechCorp Solutions',
-        clientColor: '#3b82f6',
-        clientEmail: 'john.smith@techcorp.com',
-        location: 'Central Mall, New York',
-        startDate: '2024-07-15',
-        endDate: '2024-07-18',
-        budget: 75000,
-        status: 'Active',
-        progress: 65,
-        manager: { id: 1, name: 'Sarah Johnson' },
-        promoters: [
-          { id: 1, name: 'John Doe' },
-          { id: 2, name: 'Jane Smith' },
-          { id: 3, name: 'Mike Johnson' },
-          { id: 4, name: 'Lisa Brown' }
-        ]
-      },
-      {
-        id: 2,
-        name: 'Brand Awareness Campaign',
-        code: 'BAC-2024-002',
-        client: 'Fashion Forward Inc',
-        clientColor: '#ec4899',
-        clientEmail: 'sarah@fashionforward.com',
-        location: 'Downtown Plaza, LA',
-        startDate: '2024-07-20',
-        endDate: '2024-07-22',
-        budget: 45000,
-        status: 'Planned',
-        progress: 25,
-        manager: { id: 2, name: 'Mike Chen' },
-        promoters: [
-          { id: 5, name: 'Emma Wilson' },
-          { id: 6, name: 'David Lee' }
-        ]
-      },
-      {
-        id: 3,
-        name: 'Holiday Promotion Event',
-        code: 'HPE-2024-003',
-        client: 'Global Foods Ltd',
-        clientColor: '#f59e0b',
-        clientEmail: 'mike.chen@globalfoods.com',
-        location: 'Westfield Shopping Center',
-        startDate: '2024-12-15',
-        endDate: '2024-12-18',
-        budget: 120000,
-        status: 'Planned',
-        progress: 10,
-        manager: { id: 1, name: 'Sarah Johnson' },
-        promoters: [
-          { id: 1, name: 'John Doe' },
-          { id: 2, name: 'Jane Smith' },
-          { id: 7, name: 'Alex Turner' },
-          { id: 8, name: 'Sophie Clark' },
-          { id: 9, name: 'Ryan Miller' }
-        ]
-      }
-    ]
-
-    // Load client options
-    clientOptions.value = [
-      ...new Set(activations.value.map(a => a.client))
-    ].map(client => ({ label: client, value: client }))
-
-    // Calculate stats
-    activationStats.value = {
-      total: activations.value.length,
-      activeToday: activations.value.filter(a => a.status === 'Active').length,
-      upcoming: activations.value.filter(a => a.status === 'Planned').length,
-      totalBudget: activations.value.reduce((sum, a) => sum + a.budget, 0)
+    if (showLoading) {
+      await withLoading('fetch-activations', () => activationsStore.fetchActivations())
+    } else {
+      await activationsStore.fetchActivations()
     }
-
+    
+    // Load client options from activations
+    clientOptions.value = [
+      ...new Set(activations.value.map(a => a.clientCompanyName || a.clientBrandName).filter(Boolean))
+    ].map(client => ({ label: client, value: client }))
+    
+    console.log('Activations loaded:', activations.value)
+    console.log('Activations count:', activations.value?.length)
+    console.log('First activation:', activations.value?.[0])
+    console.log('Pagination:', pagination.value)
   } catch (error) {
+    console.error('Failed to load activations:', error)
+    
+    let errorMessage = 'Failed to load activations'
+    if (error.status === 401) {
+      errorMessage = 'Session expired. Please log in again.'
+    } else if (error.status === 403) {
+      errorMessage = 'You do not have permission to view activations.'
+    } else if (error.status === 404) {
+      errorMessage = 'Activation service not found. Please contact support.'
+    } else if (error.status >= 500) {
+      errorMessage = 'Server error. Please try again later.'
+    } else if (error.code === 'NETWORK_ERROR') {
+      errorMessage = 'Network connection failed. Please check your internet connection.'
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to load activations',
+      summary: 'Error Loading Activations',
+      detail: errorMessage,
+      life: 6000
+    })
+  }
+}
+
+const refreshActivations = async () => {
+  refreshing.value = true
+  try {
+    // Clear any existing errors before refreshing
+    activationsStore.clearError()
+    
+    await loadActivations(false)
+    
+    toast.add({
+      severity: 'success',
+      summary: 'Refreshed',
+      detail: `Loaded ${activations.value.length} activations successfully`,
       life: 3000
     })
+  } catch (error) {
+    console.error('Refresh failed:', error)
   } finally {
-    loading.value = false
+    refreshing.value = false
   }
 }
 
 const handleSearch = () => {
-  // Search is reactive through computed property
+  activationsStore.setFilters({ search: searchQuery.value })
+  debouncedFetch()
 }
 
-const handleFilter = () => {
-  // Filtering is reactive through computed property
+// Enhanced debounced search with pagination reset
+let searchTimeout
+const debouncedFetch = () => {
+  clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(async () => {
+    try {
+      // Reset to first page when searching
+      activationsStore.setPagination({ page: 1 })
+      await loadActivations(true)
+      
+      // Clear selection when search changes
+      selectedActivations.value = []
+    } catch (error) {
+      console.error('Search failed:', error)
+      toast.add({
+        severity: 'error',
+        summary: 'Search Error',
+        detail: 'Failed to search activations',
+        life: 3000
+      })
+    }
+  }, 300)
 }
 
-const resetFilters = () => {
-  searchQuery.value = ''
-  selectedStatus.value = null
-  selectedClient.value = null
-  selectedDateRange.value = null
+const handleFilter = async () => {
+  try {
+    activationsStore.setFilters({ 
+      status: selectedStatus.value
+    })
+    
+    // Reset to first page when filters change
+    activationsStore.setPagination({ page: 1 })
+    await loadActivations(true)
+    
+    // Clear selection when filters change
+    selectedActivations.value = []
+  } catch (error) {
+    console.error('Failed to apply filters:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Filter Error', 
+      detail: 'Failed to apply filters',
+      life: 3000
+    })
+  }
+}
+
+const resetFilters = async () => {
+  try {
+    searchQuery.value = ''
+    selectedStatus.value = null
+    
+    // Clear filters and reset pagination
+    activationsStore.clearFilters()
+    activationsStore.setPagination({ page: 1 })
+    
+    await loadActivations(true)
+    
+    // Clear selection
+    selectedActivations.value = []
+    
+    toast.add({
+      severity: 'info',
+      summary: 'Filters Reset',
+      detail: 'All filters have been cleared',
+      life: 2000
+    })
+  } catch (error) {
+    console.error('Failed to reset filters:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Reset Error',
+      detail: 'Failed to reset filters',
+      life: 3000
+    })
+  }
 }
 
 const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  })
+  if (!dateString) return 'N/A'
+  
+  try {
+    // Handle OffsetDateTime format from backend
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    })
+  } catch (error) {
+    console.warn('Invalid date format:', dateString)
+    return 'Invalid Date'
+  }
+}
+
+const formatDateTime = (dateTimeString) => {
+  if (!dateTimeString) return 'N/A'
+  
+  try {
+    // Handle OffsetDateTime format from backend
+    const date = new Date(dateTimeString)
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })
+  } catch (error) {
+    console.warn('Invalid datetime format:', dateTimeString)
+    return 'Invalid DateTime'
+  }
+}
+
+const formatRelativeTime = (dateTimeString) => {
+  if (!dateTimeString) return 'N/A'
+  
+  try {
+    const date = new Date(dateTimeString)
+    const now = new Date()
+    const diffInMs = now - date
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24))
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60))
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
+    
+    if (diffInDays > 0) {
+      return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`
+    } else if (diffInHours > 0) {
+      return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`
+    } else if (diffInMinutes > 0) {
+      return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`
+    } else {
+      return 'Just now'
+    }
+  } catch (error) {
+    console.warn('Invalid datetime format for relative time:', dateTimeString)
+    return 'Unknown'
+  }
 }
 
 const calculateDuration = (startDate, endDate) => {
@@ -749,23 +654,36 @@ const deleteActivation = (activation) => {
 
 const confirmDelete = async () => {
   try {
-    // Mock API call - replace with actual API
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    activations.value = activations.value.filter(a => a.id !== activationToDelete.value.id)
+    await activationsStore.deleteActivation(activationToDelete.value.id)
 
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: `${activationToDelete.value.name} has been deleted`,
-      life: 3000
+      summary: 'Activation Deleted',
+      detail: `${activationToDelete.value.name} has been deleted successfully`,
+      life: 4000
     })
+    
+    // Refresh the activation list after successful deletion
+    await loadActivations(false)
   } catch (error) {
+    console.error('Failed to delete activation:', error)
+    
+    let errorMessage = 'Failed to delete activation'
+    if (error.status === 409) {
+      errorMessage = 'Cannot delete activation with active team members. Please remove team assignments first.'
+    } else if (error.status === 403) {
+      errorMessage = 'You do not have permission to delete this activation.'
+    } else if (error.status === 404) {
+      errorMessage = 'Activation not found. It may have already been deleted.'
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to delete activation',
-      life: 3000
+      summary: 'Delete Failed',
+      detail: errorMessage,
+      life: 5000
     })
   } finally {
     deleteDialogVisible.value = false
@@ -774,31 +692,210 @@ const confirmDelete = async () => {
 }
 
 const bulkAction = () => {
-  // Implement bulk actions
+  if (!selectedActivations.value.length) return
+  
+  // Show bulk action menu
   toast.add({
     severity: 'info',
     summary: 'Bulk Actions',
-    detail: 'Bulk action functionality will be implemented here',
+    detail: `${selectedActivations.value.length} activations selected. Bulk actions will be implemented.`,
     life: 3000
   })
 }
 
-const exportData = () => {
-  // Mock export functionality
-  toast.add({
-    severity: 'info',
-    summary: 'Export',
-    detail: 'Activation data export started',
-    life: 3000
-  })
+const exportData = async () => {
+  if (!activations.value?.length) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Export Warning',
+      detail: 'No activations available to export',
+      life: 3000
+    })
+    return
+  }
+
+  try {
+    // Prepare data for export
+    const exportData = activations.value.map(activation => ({
+      'Activation Name': activation.name || '',
+      'ID': activation.id || '',
+      'Client Company': activation.clientCompanyName || '',
+      'Client Brand': activation.clientBrandName || '',
+      'Location': activation.locationName || activation.city || '',
+      'Street Address': activation.streetAddress || '',
+      'Start Date': activation.startDate ? formatDate(activation.startDate) : '',
+      'End Date': activation.endDate ? formatDate(activation.endDate) : '',
+      'Start Time': activation.startTime || '',
+      'End Time': activation.endTime || '',
+      'Revenue (USD)': activation.totalRevenueUSD || 0,
+      'Revenue (ZWL)': activation.totalRevenueZWL || 0,
+      'Units Sold': activation.totalUnitsSold || 0,
+      'Customer Engagements': activation.totalCustomerEngagements || 0,
+      'Hours Worked': activation.totalHoursWorked || 0,
+      'Status': activation.status || '',
+      'Performance': `${(activation.performancePercentage || 0).toFixed(1)}%`,
+      'Manager': activation.activationManagerName || 'Unassigned',
+      'Team Size': activation.assignedPromoters?.length || 0,
+      'Duration': activation.startDate && activation.endDate ? 
+        calculateDuration(activation.startDate, activation.endDate) + ' days' : '',
+      'Brief Description': activation.briefDescription || '',
+      'Created Date': activation.dateCreated ? formatDateTime(activation.dateCreated) : '',
+      'Last Updated': activation.lastUpdated ? formatDateTime(activation.lastUpdated) : ''
+    }))
+
+    // Convert to CSV
+    const headers = Object.keys(exportData[0])
+    const csvContent = [
+      headers.join(','),
+      ...exportData.map(row => 
+        headers.map(header => 
+          `"${String(row[header]).replace(/"/g, '""')}"`
+        ).join(',')
+      )
+    ].join('\n')
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `activations_export_${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    toast.add({
+      severity: 'success',
+      summary: 'Export Complete',
+      detail: `Successfully exported ${exportData.length} activations to CSV`,
+      life: 4000
+    })
+  } catch (error) {
+    console.error('Export failed:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Export Failed',
+      detail: 'Failed to export activation data. Please try again.',
+      life: 5000
+    })
+  }
 }
 
-onMounted(() => {
-  loadActivations()
+// Pagination and sorting handlers
+const onPageChange = async (event) => {
+  try {
+    const newPage = event.page + 1 // Convert to 1-based indexing
+    const newLimit = event.rows
+    
+    // Update pagination in store
+    activationsStore.setPagination({
+      page: newPage,
+      limit: newLimit
+    })
+    
+    // Fetch new page data
+    await loadActivations(true)
+    
+    // Clear selection when page changes
+    selectedActivations.value = []
+  } catch (error) {
+    console.error('Failed to change page:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Pagination Error',
+      detail: 'Failed to load page data',
+      life: 3000
+    })
+  }
+}
 
+const onSort = async (event) => {
+  try {
+    // Update sort in store
+    activationsStore.setSorting(
+      event.sortField,
+      event.sortOrder === 1 ? 'asc' : 'desc'
+    )
+    
+    // Reset to first page and fetch data
+    activationsStore.setPagination({ page: 1 })
+    await loadActivations(true)
+    
+    // Clear selection when sorting changes
+    selectedActivations.value = []
+  } catch (error) {
+    console.error('Failed to sort:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Sort Error',
+      detail: 'Failed to sort activation data',
+      life: 3000
+    })
+  }
+}
+
+// Initialize filters from store
+const initializeFilters = () => {
+  const storeFilters = activationsStore.filters || {}
+  searchQuery.value = storeFilters.search || ''
+  selectedStatus.value = storeFilters.status || null
+}
+
+// Enhanced error handling watcher
+watch(() => activationsStore.error, (error) => {
+  if (error) {
+    // Only show toast if we're not already handling the error elsewhere
+    if (!loading.value && !refreshing.value) {
+      toast.add({
+        severity: 'error',
+        summary: 'Activation Service Error',
+        detail: error,
+        life: 6000
+      })
+    }
+    
+    // Auto-clear error after showing
+    setTimeout(() => {
+      activationsStore.clearError()
+    }, 1000)
+  }
+})
+
+onMounted(async () => {
+  initializeFilters()
+  
+  // Add retry logic for initial load
+  let retryCount = 0
+  const maxRetries = 3
+  
+  const attemptLoad = async () => {
+    try {
+      await loadActivations()
+    } catch (error) {
+      retryCount++
+      if (retryCount < maxRetries) {
+        console.log(`Retrying activation load (attempt ${retryCount + 1}/${maxRetries})...`)
+        setTimeout(attemptLoad, 2000 * retryCount) // Exponential backoff
+      } else {
+        console.error('Failed to load activations after maximum retries')
+        toast.add({
+          severity: 'error',
+          summary: 'Connection Failed',
+          detail: 'Unable to load activations after multiple attempts. Please check your connection and try refreshing.',
+          life: 10000
+        })
+      }
+    }
+  }
+  
+  await attemptLoad()
+  
   // Check for client filter from query params
   if (route.query.client) {
     selectedClient.value = route.query.client
+    handleFilter()
   }
 })
 </script>
@@ -829,6 +926,12 @@ onMounted(() => {
 .page-description {
   color: #6b7280;
   margin: 0;
+}
+
+.header-button-group {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
 }
 
 .stats-grid {
@@ -1048,6 +1151,23 @@ onMounted(() => {
   color: #6b7280;
   font-size: 0.875rem;
   min-width: 35px;
+}
+
+.audit-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.last-updated {
+  font-weight: 500;
+  color: #111827;
+  font-size: 0.875rem;
+}
+
+.created-date {
+  font-size: 0.75rem;
+  color: #6b7280;
 }
 
 .action-buttons {

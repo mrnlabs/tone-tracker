@@ -83,5 +83,45 @@ app.component('Timeline', Timeline)
 app.component('Calendar', Calendar)
 app.component('MultiSelect', MultiSelect)
 
+// Global error handler
+app.config.errorHandler = (err, instance, info) => {
+    console.error('Vue error:', err, info)
+    
+    // In production, you might want to send errors to a logging service
+    if (import.meta.env.PROD) {
+        // Example: Send to error tracking service
+        // errorTrackingService.captureException(err, { extra: { info } })
+    }
+    
+    // Show user-friendly error message
+    if (instance && instance.$toast) {
+        instance.$toast.add({
+            severity: 'error',
+            summary: 'Application Error',
+            detail: 'An unexpected error occurred. Please try again.',
+            life: 5000
+        })
+    }
+}
+
+// Global warning handler for development
+if (import.meta.env.DEV) {
+    app.config.warnHandler = (msg, instance, trace) => {
+        console.warn('Vue warning:', msg, trace)
+    }
+}
+
+// Initialize PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', async () => {
+        try {
+            await navigator.serviceWorker.register('/sw.js')
+            console.log('Service Worker registered successfully')
+        } catch (error) {
+            console.error('Service Worker registration failed:', error)
+        }
+    })
+}
+
 // Mount app
 app.mount('#app')

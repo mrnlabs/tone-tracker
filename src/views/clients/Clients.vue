@@ -11,12 +11,22 @@
             </p>
           </div>
           <div class="header-actions">
-            <Button
-                @click="$router.push('/clients/create')"
-                icon="pi pi-plus"
-                label="Add New Client"
-                class="p-button-success"
-            />
+            <div class="header-button-group">
+              <Button
+                  @click="refreshClients"
+                  icon="pi pi-refresh"
+                  :loading="refreshing"
+                  :disabled="loading"
+                  class="p-button-outlined"
+                  v-tooltip.top="refreshing ? 'Refreshing...' : 'Refresh client list'"
+              />
+              <Button
+                  @click="$router.push('/clients/create')"
+                  icon="pi pi-plus"
+                  label="Add New Client"
+                  class="p-button-success"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -73,7 +83,7 @@
               </div>
               <div class="stat-info">
                 <h3>Total Revenue</h3>
-                <p class="stat-number">${{ clientStats.totalRevenue.toLocaleString() }}</p>
+                <p class="stat-number">${{ (clientStats.totalRevenue || 0).toLocaleString() }}</p>
               </div>
             </div>
           </template>
@@ -129,22 +139,106 @@
         </template>
       </Card>
 
+      <!-- Advanced Filters Panel -->
+      <Card v-if="showAdvancedFilters" class="advanced-filters-card">
+        <template #header>
+          <h3>Advanced Filters</h3>
+        </template>
+        <template #content>
+          <div class="advanced-filters-grid">
+            <div class="filter-group">
+              <label>Revenue Range</label>
+              <div class="range-inputs">
+                <InputNumber
+                    v-model="minRevenue"
+                    placeholder="Min revenue"
+                    mode="currency"
+                    currency="USD"
+                    @input="handleAdvancedFilter"
+                />
+                <span class="range-separator">to</span>
+                <InputNumber
+                    v-model="maxRevenue"
+                    placeholder="Max revenue"
+                    mode="currency"
+                    currency="USD"
+                    @input="handleAdvancedFilter"
+                />
+              </div>
+            </div>
+
+            <div class="filter-group">
+              <label>Activation Count</label>
+              <div class="range-inputs">
+                <InputNumber
+                    v-model="minActivations"
+                    placeholder="Min activations"
+                    @input="handleAdvancedFilter"
+                />
+                <span class="range-separator">to</span>
+                <InputNumber
+                    v-model="maxActivations"
+                    placeholder="Max activations"
+                    @input="handleAdvancedFilter"
+                />
+              </div>
+            </div>
+
+            <div class="filter-group">
+              <label>Countries</label>
+              <MultiSelect
+                  v-model="selectedCountries"
+                  :options="countryOptions"
+                  placeholder="Select countries"
+                  @change="handleAdvancedFilter"
+              />
+            </div>
+
+            <div class="filter-group">
+              <label>Has Website</label>
+              <div class="checkbox-group">
+                <Checkbox
+                    v-model="hasWebsite"
+                    :binary="true"
+                    @change="handleAdvancedFilter"
+                />
+                <span>Only clients with website</span>
+              </div>
+            </div>
+          </div>
+        </template>
+      </Card>
+
       <!-- Clients Table -->
       <Card class="clients-table-card">
         <template #content>
           <DataTable
-              :value="filteredClients"
+              :value="clients"
               :loading="loading"
               responsiveLayout="scroll"
               :paginator="true"
-              :rows="10"
-              :rowsPerPageOptions="[10, 25, 50]"
+              :lazy="true"
+              :totalRecords="pagination.total"
+              :rows="pagination.limit"
+              :first="(pagination.page - 1) * pagination.limit"
+              :rowsPerPageOptions="[5, 10, 25, 50, 100]"
               currentPageReportTemplate="Showing {first} to {last} of {totalRecords} clients"
               paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
               dataKey="id"
               v-model:selection="selectedClients"
               selectionMode="multiple"
               :metaKeySelection="false"
+              loadingIcon="pi pi-spin pi-spinner"
+              emptyMessage="No clients found matching your criteria"
+              :globalFilterFields="['companyName', 'brandName', 'primaryContactEmail', 'businessType']"
+              :breakpoint="'768px'"
+              :scrollable="true"
+              scrollHeight="60vh"
+              class="responsive-table"
+              @page="onPageChange"
+              @sort="onSort"
+              :sortField="sortField"
+              :sortOrder="sortOrder"
           >
             <template #header>
               <div class="table-header">
@@ -154,15 +248,19 @@
                       v-if="selectedClients.length > 0"
                       @click="bulkDelete"
                       icon="pi pi-trash"
-                      label="Delete Selected"
+                      :label="`Delete Selected (${selectedClients.length})`"
                       class="p-button-danger p-button-outlined"
-                      :disabled="loading"
+                      :disabled="loading || bulkDeleting"
+                      :loading="bulkDeleting"
+                      v-tooltip.top="`Delete ${selectedClients.length} selected clients`"
                   />
                   <Button
                       @click="exportData"
                       icon="pi pi-download"
                       label="Export"
                       class="p-button-outlined"
+                      :disabled="loading || !clients?.length"
+                      v-tooltip.top="clients?.length ? `Export ${clients.length} clients` : 'No clients to export'"
                   />
                 </div>
               </div>
@@ -170,54 +268,60 @@
 
             <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
 
+            <Column field="id" header="ID" sortable>
+              <template #body="{ data }">
+                <span>{{ data.id }}</span>
+              </template>
+            </Column>
+
             <Column field="companyName" header="Company" sortable>
               <template #body="{ data }">
                 <div class="company-cell">
                   <Avatar
-                      :label="data.companyName.charAt(0)"
+                      :label="(data.companyName || data.brandName || '?').charAt(0)"
                       size="normal"
                       shape="circle"
                       :style="{ backgroundColor: data.brandColor || '#3b82f6', color: 'white' }"
                   />
                   <div class="company-info">
-                    <span class="company-name">{{ data.companyName }}</span>
-                    <span class="industry">{{ data.industry }}</span>
+                    <span class="company-name">{{ data.companyName || data.brandName }}</span>
+                    <span class="industry">{{ data.businessType || 'N/A' }}</span>
                   </div>
                 </div>
               </template>
             </Column>
 
-            <Column field="contactPerson" header="Primary Contact" sortable>
+            <Column field="primaryContactEmail" header="Primary Contact" sortable>
               <template #body="{ data }">
                 <div class="contact-cell">
-                  <span class="contact-name">{{ data.contactPerson.name }}</span>
-                  <span class="contact-email">{{ data.contactPerson.email }}</span>
-                  <span class="contact-phone">{{ data.contactPerson.phone }}</span>
+                  <span class="contact-name">{{ data.primaryContactName || 'N/A' }}</span>
+                  <span class="contact-email">{{ data.primaryContactEmail || 'N/A' }}</span>
+                  <span class="contact-phone">{{ data.primaryContactPhone || 'N/A' }}</span>
                 </div>
               </template>
             </Column>
 
-            <Column field="location" header="Location" sortable>
+            <Column field="city" header="Location" sortable>
               <template #body="{ data }">
                 <div class="location-cell">
                   <i class="pi pi-map-marker"></i>
-                  <span>{{ data.location }}</span>
+                  <span>{{ data.city }}, {{ data.country }}</span>
                 </div>
               </template>
             </Column>
 
-            <Column field="activationsCount" header="Activations" sortable>
+            <Column field="totalActivations" header="Activations" sortable>
               <template #body="{ data }">
                 <div class="activations-cell">
-                  <Badge :value="data.activationsCount" severity="info" />
-                  <span class="activation-text">{{ data.activationsCount === 1 ? 'activation' : 'activations' }}</span>
+                  <Badge :value="data.totalActivations || 0" severity="info" />
+                  <span class="activation-text">{{ (data.totalActivations || 0) === 1 ? 'activation' : 'activations' }}</span>
                 </div>
               </template>
             </Column>
 
-            <Column field="totalRevenue" header="Total Revenue" sortable>
+            <Column field="totalContacts" header="Total Contacts" sortable>
               <template #body="{ data }">
-                <span class="revenue-amount">${{ data.totalRevenue.toLocaleString() }}</span>
+                <span class="contacts-amount">{{ data.totalContacts || 0 }}</span>
               </template>
             </Column>
 
@@ -230,9 +334,14 @@
               </template>
             </Column>
 
-            <Column field="lastActivity" header="Last Activity" sortable>
+            <Column field="lastUpdated" header="Last Updated" sortable>
               <template #body="{ data }">
-                <span class="last-activity">{{ formatDate(data.lastActivity) }}</span>
+                <div class="audit-cell">
+                  <span class="last-updated">{{ formatRelativeTime(data.lastUpdated) }}</span>
+                  <span class="created-date" v-if="data.dateCreated">
+                    Created: {{ formatDate(data.dateCreated) }}
+                  </span>
+                </div>
               </template>
             </Column>
 
@@ -269,15 +378,47 @@
 
             <template #empty>
               <div class="empty-state">
-                <i class="pi pi-building empty-icon"></i>
-                <h3>No clients found</h3>
-                <p>Start by adding your first client to begin managing activations.</p>
-                <Button
-                    @click="$router.push('/clients/create')"
-                    label="Add Your First Client"
-                    icon="pi pi-plus"
-                    class="p-button-outlined"
-                />
+                <div v-if="hasError" class="error-state">
+                  <i class="pi pi-exclamation-triangle error-icon"></i>
+                  <h3>Unable to Load Clients</h3>
+                  <p>There was an error loading your client data. Please try refreshing the page.</p>
+                  <div class="error-actions">
+                    <Button
+                        @click="loadClients()"
+                        label="Retry"
+                        icon="pi pi-refresh"
+                        class="p-button-outlined"
+                    />
+                    <Button
+                        @click="$router.push('/dashboard')"
+                        label="Go to Dashboard"
+                        icon="pi pi-home"
+                        class="p-button-text"
+                    />
+                  </div>
+                </div>
+                <div v-else-if="searchQuery || selectedStatus || selectedIndustry" class="no-results-state">
+                  <i class="pi pi-search no-results-icon"></i>
+                  <h3>No Matching Clients</h3>
+                  <p>No clients found matching your current filters. Try adjusting your search criteria.</p>
+                  <Button
+                      @click="resetFilters"
+                      label="Clear Filters"
+                      icon="pi pi-filter-slash"
+                      class="p-button-outlined"
+                  />
+                </div>
+                <div v-else class="empty-clients-state">
+                  <i class="pi pi-building empty-icon"></i>
+                  <h3>No Clients Yet</h3>
+                  <p>Start by adding your first client to begin managing activations and tracking performance.</p>
+                  <Button
+                      @click="$router.push('/clients/create')"
+                      label="Add Your First Client"
+                      icon="pi pi-plus"
+                      class="p-button-success"
+                  />
+                </div>
               </div>
             </template>
           </DataTable>
@@ -295,7 +436,7 @@
       <div class="delete-dialog-content">
         <i class="pi pi-exclamation-triangle delete-warning-icon"></i>
         <span v-if="clientToDelete">
-          Are you sure you want to delete <strong>{{ clientToDelete.companyName }}</strong>?
+          Are you sure you want to delete <strong>{{ clientToDelete.companyName || clientToDelete.brandName }}</strong>?
           This action cannot be undone and will also remove all associated activations.
         </span>
       </div>
@@ -311,6 +452,7 @@
             icon="pi pi-check"
             @click="confirmDelete"
             class="p-button-danger"
+            :loading="deleting"
             autofocus
         />
       </template>
@@ -319,31 +461,47 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
+import { useClientsStore } from '@/stores/client'
+import { useLoading } from '@/composables/useLoading'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
 
 const router = useRouter()
 const toast = useToast()
+const clientsStore = useClientsStore()
+const { withLoading, isLoading } = useLoading()
 
 // State
-const loading = ref(false)
-const clients = ref([])
 const selectedClients = ref([])
 const searchQuery = ref('')
 const selectedStatus = ref(null)
 const selectedIndustry = ref(null)
 const deleteDialogVisible = ref(false)
 const clientToDelete = ref(null)
-
-// Mock data
-const clientStats = ref({
-  total: 24,
-  active: 18,
-  activeActivations: 42,
-  totalRevenue: 1250000
+const refreshing = ref(false)
+const deleting = ref(false)
+const bulkDeleting = ref(false)
+const dateRange = ref(null)
+const selectedStatuses = ref([])
+const showAdvancedFilters = ref(false)
+const rowActionRefs = ref({})
+const confirmationDialog = ref({
+  visible: false,
+  title: '',
+  message: '',
+  icon: 'pi pi-question-circle',
+  severity: 'info',
+  action: null
 })
+// Advanced filter state
+const minRevenue = ref(null)
+const maxRevenue = ref(null)
+const minActivations = ref(null)
+const maxActivations = ref(null)
+const selectedCountries = ref([])
+const hasWebsite = ref(false)
 
 const statusOptions = [
   { label: 'Active', value: 'Active' },
@@ -362,119 +520,264 @@ const industryOptions = [
   { label: 'Entertainment', value: 'Entertainment' }
 ]
 
+// Country options
+const countryOptions = [
+  'United States', 'Canada', 'United Kingdom', 'Germany', 'France', 
+  'Australia', 'Japan', 'South Korea', 'Brazil', 'Mexico'
+]
+
+// Bulk action menu items
+const bulkActionItems = [
+  {
+    label: 'Set Active',
+    icon: 'pi pi-check',
+    command: () => bulkUpdateStatus('ACTIVE')
+  },
+  {
+    label: 'Set Inactive', 
+    icon: 'pi pi-times',
+    command: () => bulkUpdateStatus('INACTIVE')
+  },
+  {
+    label: 'Set Pending',
+    icon: 'pi pi-clock',
+    command: () => bulkUpdateStatus('PENDING')
+  },
+  {
+    separator: true
+  },
+  {
+    label: 'Export Selected',
+    icon: 'pi pi-download',
+    command: () => exportSelectedClients()
+  }
+]
+
+// Export options menu
+const exportOptions = [
+  {
+    label: 'Export as CSV',
+    icon: 'pi pi-file',
+    command: () => exportData('csv')
+  },
+  {
+    label: 'Export as Excel',
+    icon: 'pi pi-file-excel',
+    command: () => exportData('excel')
+  },
+  {
+    label: 'Export Selected Only',
+    icon: 'pi pi-filter',
+    command: () => exportSelectedClients()
+  }
+]
+
 // Computed
-const filteredClients = computed(() => {
-  let filtered = clients.value
-
-  // Search filter
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(client =>
-        client.companyName.toLowerCase().includes(query) ||
-        client.contactPerson.name.toLowerCase().includes(query) ||
-        client.contactPerson.email.toLowerCase().includes(query) ||
-        client.industry.toLowerCase().includes(query)
-    )
+const loading = computed(() => isLoading('fetch-clients') || clientsStore.isLoading)
+const clientStats = computed(() => clientsStore.clientStats || { total: 0, active: 0, activeActivations: 0, totalRevenue: 0 })
+const clients = computed(() => clientsStore.clients || [])
+const pagination = computed(() => {
+  const storePagination = clientsStore.pagination || {}
+  return {
+    total: storePagination.total || 0,
+    page: storePagination.page || 1,
+    limit: storePagination.limit || 10,
+    totalPages: storePagination.totalPages || 0
   }
-
-  // Status filter
-  if (selectedStatus.value) {
-    filtered = filtered.filter(client => client.status === selectedStatus.value)
-  }
-
-  // Industry filter
-  if (selectedIndustry.value) {
-    filtered = filtered.filter(client => client.industry === selectedIndustry.value)
-  }
-
-  return filtered
 })
+const hasError = computed(() => !!clientsStore.error)
+const sortField = ref('companyName')
+const sortOrder = ref(1)
+const hasActiveFilters = computed(() => 
+  searchQuery.value || 
+  selectedStatus.value || 
+  selectedIndustry.value || 
+  dateRange.value || 
+  selectedStatuses.value?.length > 0
+)
 
 // Methods
-const loadClients = async () => {
-  loading.value = true
+const loadClients = async (showLoading = true) => {
   try {
-    // Mock API call - replace with actual API
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    clients.value = [
-      {
-        id: 1,
-        companyName: 'TechCorp Solutions',
-        industry: 'Technology',
-        contactPerson: {
-          name: 'John Smith',
-          email: 'john.smith@techcorp.com',
-          phone: '+1 (555) 123-4567'
-        },
-        location: 'New York, NY',
-        activationsCount: 8,
-        totalRevenue: 450000,
-        status: 'Active',
-        lastActivity: '2024-07-05',
-        brandColor: '#3b82f6'
-      },
-      {
-        id: 2,
-        companyName: 'Fashion Forward Inc',
-        industry: 'Fashion & Beauty',
-        contactPerson: {
-          name: 'Sarah Johnson',
-          email: 'sarah@fashionforward.com',
-          phone: '+1 (555) 987-6543'
-        },
-        location: 'Los Angeles, CA',
-        activationsCount: 12,
-        totalRevenue: 680000,
-        status: 'Active',
-        lastActivity: '2024-07-06',
-        brandColor: '#ec4899'
-      },
-      {
-        id: 3,
-        companyName: 'Global Foods Ltd',
-        industry: 'Food & Beverage',
-        contactPerson: {
-          name: 'Mike Chen',
-          email: 'mike.chen@globalfoods.com',
-          phone: '+1 (555) 456-7890'
-        },
-        location: 'Chicago, IL',
-        activationsCount: 5,
-        totalRevenue: 120000,
-        status: 'Inactive',
-        lastActivity: '2024-06-15',
-        brandColor: '#f59e0b'
-      }
-    ]
+    if (showLoading) {
+      await withLoading('fetch-clients', () => clientsStore.fetchClients())
+    } else {
+      await clientsStore.fetchClients()
+    }
+    
+    console.log('Clients loaded:', clients.value)
+    console.log('Pagination:', pagination.value)
   } catch (error) {
+    console.error('Failed to load clients:', error)
+    
+    // More specific error handling
+    let errorMessage = 'Failed to load clients'
+    if (error.status === 401) {
+      errorMessage = 'Session expired. Please log in again.'
+    } else if (error.status === 403) {
+      errorMessage = 'You do not have permission to view clients.'
+    } else if (error.status === 404) {
+      errorMessage = 'Client service not found. Please contact support.'
+    } else if (error.status >= 500) {
+      errorMessage = 'Server error. Please try again later.'
+    } else if (error.code === 'NETWORK_ERROR') {
+      errorMessage = 'Network connection failed. Please check your internet connection.'
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to load clients',
+      summary: 'Error Loading Clients',
+      detail: errorMessage,
+      life: 6000
+    })
+  }
+}
+
+const refreshClients = async () => {
+  refreshing.value = true
+  try {
+    // Clear any existing errors before refreshing
+    clientsStore.clearError()
+    
+    await loadClients(false)
+    
+    toast.add({
+      severity: 'success',
+      summary: 'Refreshed',
+      detail: `Loaded ${clients.value?.length || 0} clients successfully`,
       life: 3000
     })
+  } catch (error) {
+    // Error already handled in loadClients, but we can add specific refresh error handling
+    console.error('Refresh failed:', error)
   } finally {
-    loading.value = false
+    refreshing.value = false
   }
 }
 
 const handleSearch = () => {
-  // Search is reactive through computed property
+  clientsStore.setFilters({ search: searchQuery.value })
+  debouncedFetch()
 }
 
 const handleFilter = () => {
-  // Filtering is reactive through computed property
+  clientsStore.setFilters({ 
+    status: selectedStatus.value,
+    industry: selectedIndustry.value 
+  })
+  loadClients(false)
 }
 
-const resetFilters = () => {
-  searchQuery.value = ''
-  selectedStatus.value = null
-  selectedIndustry.value = null
+const resetFilters = async () => {
+  try {
+    searchQuery.value = ''
+    selectedStatus.value = null
+    selectedIndustry.value = null
+    
+    // Clear filters and reset pagination
+    clientsStore.clearFilters()
+    clientsStore.setPagination({ page: 1 })
+    
+    await loadClients(true)
+    
+    // Clear selection
+    selectedClients.value = []
+    
+    toast.add({
+      severity: 'info',
+      summary: 'Filters Reset',
+      detail: 'All filters have been cleared',
+      life: 2000
+    })
+  } catch (error) {
+    console.error('Failed to reset filters:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Reset Error',
+      detail: 'Failed to reset filters',
+      life: 3000
+    })
+  }
+}
+
+const handleAdvancedFilter = async () => {
+  try {
+    clientsStore.setFilters({ 
+      statuses: selectedStatuses.value,
+      minRevenue: minRevenue.value,
+      maxRevenue: maxRevenue.value,
+      minActivations: minActivations.value,
+      maxActivations: maxActivations.value,
+      countries: selectedCountries.value,
+      hasWebsite: hasWebsite.value
+    })
+    
+    // Reset to first page when filters change
+    clientsStore.setPagination({ page: 1 })
+    await loadClients(true)
+    
+    // Clear selection when filters change
+    selectedClients.value = []
+  } catch (error) {
+    console.error('Failed to apply advanced filters:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Filter Error', 
+      detail: 'Failed to apply advanced filters',
+      life: 3000
+    })
+  }
+}
+
+const handleDateFilter = async () => {
+  if (dateRange.value && dateRange.value.length === 2) {
+    const [startDate, endDate] = dateRange.value
+    clientsStore.setFilters({ 
+      dateStart: startDate?.toISOString(),
+      dateEnd: endDate?.toISOString()
+    })
+    
+    // Reset to first page when filters change
+    clientsStore.setPagination({ page: 1 })
+    await loadClients(true)
+    
+    // Clear selection
+    selectedClients.value = []
+  }
+}
+
+const clearDateFilter = async () => {
+  dateRange.value = null
+  clientsStore.setFilters({ dateStart: null, dateEnd: null })
+  
+  // Reset to first page
+  clientsStore.setPagination({ page: 1 })
+  await loadClients(true)
+  
+  // Clear selection
+  selectedClients.value = []
+}
+
+const toggleAdvancedFilters = () => {
+  showAdvancedFilters.value = !showAdvancedFilters.value
+}
+
+// Debounced search
+let searchTimeout
+const debouncedFetch = () => {
+  clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    loadClients(false)
+  }, 300)
 }
 
 const getStatusSeverity = (status) => {
   const severityMap = {
+    'ACTIVE': 'success',
+    'INACTIVE': 'danger', 
+    'PENDING': 'warning',
     'Active': 'success',
     'Inactive': 'danger',
     'Pending': 'warning'
@@ -483,11 +786,66 @@ const getStatusSeverity = (status) => {
 }
 
 const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  })
+  if (!dateString) return 'N/A'
+  
+  try {
+    // Handle OffsetDateTime format from backend
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  } catch (error) {
+    console.warn('Invalid date format:', dateString)
+    return 'Invalid Date'
+  }
+}
+
+const formatDateTime = (dateTimeString) => {
+  if (!dateTimeString) return 'N/A'
+  
+  try {
+    // Handle OffsetDateTime format from backend
+    const date = new Date(dateTimeString)
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })
+  } catch (error) {
+    console.warn('Invalid datetime format:', dateTimeString)
+    return 'Invalid DateTime'
+  }
+}
+
+const formatRelativeTime = (dateTimeString) => {
+  if (!dateTimeString) return 'N/A'
+  
+  try {
+    const date = new Date(dateTimeString)
+    const now = new Date()
+    const diffInMs = now - date
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24))
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60))
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
+    
+    if (diffInDays > 0) {
+      return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`
+    } else if (diffInHours > 0) {
+      return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`
+    } else if (diffInMinutes > 0) {
+      return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`
+    } else {
+      return 'Just now'
+    }
+  } catch (error) {
+    console.warn('Invalid datetime format for relative time:', dateTimeString)
+    return 'Unknown'
+  }
 }
 
 const viewClient = (clientId) => {
@@ -508,69 +866,419 @@ const deleteClient = (client) => {
 }
 
 const confirmDelete = async () => {
+  const deleting = ref(true)
+  
   try {
-    // Mock API call - replace with actual API
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    clients.value = clients.value.filter(c => c.id !== clientToDelete.value.id)
+    await clientsStore.deleteClient(clientToDelete.value.id)
 
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: `${clientToDelete.value.companyName} has been deleted`,
-      life: 3000
+      summary: 'Client Deleted',
+      detail: `${clientToDelete.value.companyName || clientToDelete.value.brandName} has been deleted successfully`,
+      life: 4000
     })
+    
+    // Refresh the client list after successful deletion
+    await loadClients(false)
   } catch (error) {
+    console.error('Failed to delete client:', error)
+    
+    let errorMessage = 'Failed to delete client'
+    if (error.status === 409) {
+      errorMessage = 'Cannot delete client with active activations. Please complete or cancel all activations first.'
+    } else if (error.status === 403) {
+      errorMessage = 'You do not have permission to delete this client.'
+    } else if (error.status === 404) {
+      errorMessage = 'Client not found. It may have already been deleted.'
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to delete client',
-      life: 3000
+      summary: 'Delete Failed',
+      detail: errorMessage,
+      life: 5000
     })
   } finally {
     deleteDialogVisible.value = false
     clientToDelete.value = null
+    deleting.value = false
   }
 }
 
 const bulkDelete = async () => {
+  if (!selectedClients.value.length) return
+  
+  const bulkDeleting = ref(true)
+  const clientCount = selectedClients.value.length
+  
   try {
-    // Mock API call - replace with actual API
-    await new Promise(resolve => setTimeout(resolve, 500))
+    const deletePromises = selectedClients.value.map(client => 
+      clientsStore.deleteClient(client.id).catch(error => ({ error, client }))
+    )
+    
+    const results = await Promise.allSettled(deletePromises)
+    
+    // Count successful and failed deletions
+    const successful = results.filter(result => 
+      result.status === 'fulfilled' && !result.value?.error
+    ).length
+    
+    const failed = clientCount - successful
+    
+    if (successful === clientCount) {
+      toast.add({
+        severity: 'success',
+        summary: 'Bulk Delete Successful',
+        detail: `All ${clientCount} clients have been deleted successfully`,
+        life: 4000
+      })
+    } else if (successful > 0) {
+      toast.add({
+        severity: 'warn',
+        summary: 'Partial Success',
+        detail: `${successful} clients deleted successfully, ${failed} failed`,
+        life: 5000
+      })
+    } else {
+      toast.add({
+        severity: 'error',
+        summary: 'Bulk Delete Failed',
+        detail: 'Failed to delete any of the selected clients',
+        life: 5000
+      })
+    }
 
-    const selectedIds = selectedClients.value.map(c => c.id)
-    clients.value = clients.value.filter(c => !selectedIds.includes(c.id))
+    selectedClients.value = []
+    
+    // Refresh the client list
+    await loadClients(false)
+  } catch (error) {
+    console.error('Failed to delete clients:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Bulk Delete Error',
+      detail: 'An unexpected error occurred during bulk deletion',
+      life: 5000
+    })
+  } finally {
+    bulkDeleting.value = false
+  }
+}
+
+const exportSelectedClients = async () => {
+  if (!selectedClients.value.length) {
+    toast.add({
+      severity: 'warn',
+      summary: 'No Selection',
+      detail: 'Please select clients to export',
+      life: 3000
+    })
+    return
+  }
+  
+  await exportClientsData(selectedClients.value, 'selected_clients')
+}
+
+const exportClientsData = async (clientsToExport, filenamePrefix = 'clients') => {
+  try {
+    const exportData = clientsToExport.map(client => ({
+      'Company Name': client.companyName || '',
+      'Brand Name': client.brandName || '',
+      'Business Type': client.businessType || '',
+      'Primary Contact': client.primaryContactName || '',
+      'Email': client.primaryContactEmail || '',
+      'Phone': client.primaryContactPhone || '',
+      'City': client.city || '',
+      'Country': client.country || '',
+      'Status': client.status || '',
+      'Total Activations': client.totalActivations || 0,
+      'Total Contacts': client.totalContacts || 0,
+      'Website': client.website || '',
+      'Created Date': client.dateCreated ? formatDateTime(client.dateCreated) : '',
+      'Last Updated': client.lastUpdated ? formatDateTime(client.lastUpdated) : ''
+    }))
+
+    // Convert to CSV
+    const headers = Object.keys(exportData[0])
+    const csvContent = [
+      headers.join(','),
+      ...exportData.map(row => 
+        headers.map(header => 
+          `"${String(row[header]).replace(/"/g, '""')}"`
+        ).join(',')
+      )
+    ].join('\n')
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `${filenamePrefix}_${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
 
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: `${selectedClients.value.length} clients have been deleted`,
-      life: 3000
+      summary: 'Export Complete',
+      detail: `Successfully exported ${exportData.length} clients to CSV`,
+      life: 4000
     })
-
-    selectedClients.value = []
   } catch (error) {
+    console.error('Export failed:', error)
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to delete clients',
+      summary: 'Export Failed',
+      detail: 'Failed to export client data. Please try again.',
+      life: 5000
+    })
+  }
+}
+
+const exportData = async (format = 'csv') => {
+  if (!clients.value?.length) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Export Warning',
+      detail: 'No clients available to export',
+      life: 3000
+    })
+    return
+  }
+
+  await exportClientsData(clients.value, `clients_${format}`)
+}
+
+// Confirmation dialog actions
+const executeConfirmedAction = async () => {
+  if (confirmationDialog.value.action) {
+    await confirmationDialog.value.action()
+  }
+  confirmationDialog.value.visible = false
+}
+
+// Enhanced bulk status update with confirmation
+const bulkUpdateStatus = (newStatus) => {
+  if (!selectedClients.value.length) return
+  
+  const statusLabels = {
+    'ACTIVE': 'Active',
+    'INACTIVE': 'Inactive', 
+    'PENDING': 'Pending'
+  }
+  
+  confirmationDialog.value = {
+    visible: true,
+    title: `Update Client Status`,
+    message: `Are you sure you want to set ${selectedClients.value.length} selected clients to <strong>${statusLabels[newStatus]}</strong> status?`,
+    icon: 'pi pi-users',
+    severity: 'info',
+    action: () => performBulkStatusUpdate(newStatus)
+  }
+}
+
+const performBulkStatusUpdate = async (newStatus) => {
+  if (!selectedClients.value.length) return
+  
+  const updating = ref(true)
+  
+  try {
+    const updatePromises = selectedClients.value.map(client => 
+      clientsStore.updateClient(client.id, { status: newStatus })
+        .catch(error => ({ error, client }))
+    )
+    
+    const results = await Promise.allSettled(updatePromises)
+    
+    const successful = results.filter(result => 
+      result.status === 'fulfilled' && !result.value?.error
+    ).length
+    
+    const failed = selectedClients.value.length - successful
+    
+    if (successful === selectedClients.value.length) {
+      toast.add({
+        severity: 'success',
+        summary: 'Bulk Update Successful',
+        detail: `Updated ${successful} clients to ${newStatus}`,
+        life: 4000
+      })
+    } else if (successful > 0) {
+      toast.add({
+        severity: 'warn',
+        summary: 'Partial Success',
+        detail: `${successful} clients updated, ${failed} failed`,
+        life: 5000
+      })
+    } else {
+      toast.add({
+        severity: 'error',
+        summary: 'Bulk Update Failed',
+        detail: 'Failed to update any of the selected clients',
+        life: 5000
+      })
+    }
+    
+    selectedClients.value = []
+    await loadClients(false)
+  } catch (error) {
+    console.error('Bulk update failed:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Update Error',
+      detail: 'An unexpected error occurred during bulk update',
+      life: 5000
+    })
+  } finally {
+    updating.value = false
+  }
+}
+
+// Mobile action menu handling
+const setRowActionRef = (id, ref) => {
+  if (ref) {
+    rowActionRefs.value[id] = ref
+  }
+}
+
+const toggleRowActions = (clientId) => {
+  const ref = rowActionRefs.value[clientId]
+  if (ref) {
+    ref.toggle(event)
+  }
+}
+
+const onPageChange = async (event) => {
+  try {
+    const newPage = event.page + 1 // Convert to 1-based indexing
+    const newLimit = event.rows
+    
+    // Update pagination in store
+    clientsStore.setPagination({
+      page: newPage,
+      limit: newLimit
+    })
+    
+    // Fetch new page data
+    await loadClients(true)
+    
+    // Clear selection when page changes
+    selectedClients.value = []
+  } catch (error) {
+    console.error('Failed to change page:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Pagination Error',
+      detail: 'Failed to load page data',
       life: 3000
     })
   }
 }
 
-const exportData = () => {
-  // Mock export functionality
-  toast.add({
-    severity: 'info',
-    summary: 'Export',
-    detail: 'Client data export started',
-    life: 3000
-  })
+const onSort = async (event) => {
+  try {
+    sortField.value = event.sortField
+    sortOrder.value = event.sortOrder
+    
+    // Update sort in store
+    clientsStore.setSorting({
+      field: event.sortField,
+      order: event.sortOrder === 1 ? 'asc' : 'desc'
+    })
+    
+    // Reset to first page and fetch data
+    clientsStore.setPagination({ page: 1 })
+    await loadClients(true)
+    
+    // Clear selection when sorting changes
+    selectedClients.value = []
+  } catch (error) {
+    console.error('Failed to sort:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Sort Error',
+      detail: 'Failed to sort client data',
+      life: 3000
+    })
+  }
 }
 
-onMounted(() => {
-  loadClients()
+// Watchers
+watch(searchQuery, (newValue) => {
+  if (newValue !== clientsStore.filters.search) {
+    handleSearch()
+  }
+})
+
+// Initialize filters from store
+const initializeFilters = () => {
+  const storeFilters = clientsStore.filters || {}
+  searchQuery.value = storeFilters.search || ''
+  selectedStatus.value = storeFilters.status || null
+  selectedIndustry.value = storeFilters.industry || null
+  selectedStatuses.value = storeFilters.statuses || []
+  dateRange.value = storeFilters.dateRange || null
+  minRevenue.value = storeFilters.minRevenue || null
+  maxRevenue.value = storeFilters.maxRevenue || null
+  minActivations.value = storeFilters.minActivations || null
+  maxActivations.value = storeFilters.maxActivations || null
+  selectedCountries.value = storeFilters.countries || []
+  hasWebsite.value = storeFilters.hasWebsite || false
+}
+
+// Enhanced error handling watcher
+watch(() => clientsStore.error, (error) => {
+  if (error) {
+    // Only show toast if we're not already handling the error elsewhere
+    if (!loading.value && !refreshing.value) {
+      toast.add({
+        severity: 'error',
+        summary: 'Client Service Error',
+        detail: error,
+        life: 6000
+      })
+    }
+    
+    // Auto-clear error after showing
+    setTimeout(() => {
+      clientsStore.clearError()
+    }, 1000)
+  }
+})
+
+onMounted(async () => {
+  initializeFilters()
+  
+  // Add retry logic for initial load
+  let retryCount = 0
+  const maxRetries = 3
+  
+  const attemptLoad = async () => {
+    try {
+      await loadClients()
+    } catch (error) {
+      retryCount++
+      if (retryCount < maxRetries) {
+        console.log(`Retrying client load (attempt ${retryCount + 1}/${maxRetries})...`)
+        setTimeout(attemptLoad, 2000 * retryCount) // Exponential backoff
+      } else {
+        console.error('Failed to load clients after maximum retries')
+        toast.add({
+          severity: 'error',
+          summary: 'Connection Failed',
+          detail: 'Unable to load clients after multiple attempts. Please check your connection and try refreshing.',
+          life: 10000
+        })
+      }
+    }
+  }
+  
+  await attemptLoad()
 })
 </script>
 
@@ -601,6 +1309,12 @@ onMounted(() => {
 .page-description {
   color: #6b7280;
   margin: 0;
+}
+
+.header-button-group {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
 }
 
 .stats-grid {
@@ -672,6 +1386,128 @@ onMounted(() => {
 
 .filter-field {
   min-width: 200px;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.advanced-filters-card {
+  margin-bottom: 1.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.advanced-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-group label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.range-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.range-separator {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Touch-friendly interactions */
+.p-button {
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+.p-inputtext,
+.p-dropdown,
+.p-multiselect {
+  min-height: 44px;
+}
+
+/* Responsive table utilities */
+.responsive-table {
+  font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+  .responsive-table {
+    font-size: 0.8rem;
+  }
+  
+  .responsive-table .p-datatable-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Loading and skeleton states for better UX */
+.loading-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Enhanced accessibility */
+.p-button:focus,
+.p-inputtext:focus,
+.p-dropdown:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Better visual hierarchy on mobile */
+@media (max-width: 768px) {
+  .page-title {
+    line-height: 1.2;
+  }
+  
+  .page-description {
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+  
+  .stat-card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .filters-card,
+  .clients-table-card,
+  .advanced-filters-card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+  }
 }
 
 .clients-table-card {
@@ -761,6 +1597,23 @@ onMounted(() => {
   font-size: 0.875rem;
 }
 
+.audit-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.last-updated {
+  font-weight: 500;
+  color: #111827;
+  font-size: 0.875rem;
+}
+
+.created-date {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
 .action-buttons {
   display: flex;
   gap: 0.25rem;
@@ -771,20 +1624,44 @@ onMounted(() => {
   padding: 3rem 1rem;
 }
 
-.empty-icon {
+.empty-clients-state .empty-icon {
   font-size: 4rem;
   color: #d1d5db;
+  margin-bottom: 1rem;
+}
+
+.error-state .error-icon {
+  font-size: 4rem;
+  color: #ef4444;
+  margin-bottom: 1rem;
+}
+
+.no-results-state .no-results-icon {
+  font-size: 4rem;
+  color: #f59e0b;
   margin-bottom: 1rem;
 }
 
 .empty-state h3 {
   color: #111827;
   margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
 .empty-state p {
   color: #6b7280;
   margin-bottom: 1.5rem;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.error-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .delete-dialog-content {
@@ -798,6 +1675,55 @@ onMounted(() => {
   color: #f59e0b;
 }
 
+/* Confirmation dialog styles */
+.confirmation-dialog-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+.confirmation-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.confirmation-icon.info {
+  color: #3b82f6;
+}
+
+.confirmation-icon.danger {
+  color: #dc2626;
+}
+
+.confirmation-icon.warning {
+  color: #f59e0b;
+}
+
+.confirmation-icon.success {
+  color: #10b981;
+}
+
+.confirmation-dialog .p-dialog-content {
+  padding: 1.5rem;
+}
+
+.confirmation-dialog .p-dialog-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Enhanced responsive design */
+@media (max-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .advanced-filters-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
   .clients-page {
     padding: 1rem;
@@ -806,20 +1732,57 @@ onMounted(() => {
   .header-content {
     flex-direction: column;
     align-items: stretch;
+    gap: 1.5rem;
+  }
+
+  .header-button-group {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .header-button-group .p-button {
+    width: 100%;
+    justify-content: center;
   }
 
   .stats-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
   .filters-row {
     flex-direction: column;
     align-items: stretch;
+    gap: 1rem;
   }
 
   .search-field,
   .filter-field {
     min-width: auto;
+    width: 100%;
+  }
+
+  .filter-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .filter-actions .p-button {
+    width: 100%;
+  }
+
+  .advanced-filters-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .range-inputs {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .range-separator {
+    align-self: center;
   }
 
   .table-header {
@@ -829,7 +1792,117 @@ onMounted(() => {
   }
 
   .table-actions {
-    justify-content: stretch;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .bulk-actions,
+  .export-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .bulk-actions .p-button,
+  .export-actions .p-button {
+    width: 100%;
+  }
+
+  /* DataTable mobile optimizations */
+  .p-datatable .p-datatable-thead > tr > th,
+  .p-datatable .p-datatable-tbody > tr > td {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .company-cell {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .contact-cell {
+    gap: 0.125rem;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .action-buttons .p-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Card responsive adjustments */
+  .stat-content {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .stat-icon {
+    align-self: center;
+  }
+
+  .empty-state {
+    padding: 2rem 1rem;
+  }
+
+  .error-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .error-actions .p-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .clients-page {
+    padding: 0.75rem;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  .stats-grid {
+    gap: 0.75rem;
+  }
+
+  .stat-number {
+    font-size: 1.5rem;
+  }
+
+  .filters-card,
+  .clients-table-card,
+  .advanced-filters-card {
+    margin-bottom: 1rem;
+  }
+
+  /* Hide less important columns on very small screens */
+  .p-datatable .p-column-header-content,
+  .p-datatable .p-datatable-tbody td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+
+  /* Stack action buttons vertically on very small screens */
+  .action-buttons {
+    max-width: 100px;
+  }
+
+  .action-buttons .p-button {
+    padding: 0.375rem;
+    min-width: auto;
+  }
+
+  .action-buttons .p-button .p-button-label {
+    display: none;
   }
 }
 </style>

@@ -1,21 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-// Import components
+// Auth views - keep these non-lazy for faster initial load
 import Login from '@/views/auth/Login.vue'
 import ForgotPassword from '@/views/auth/ForgotPassword.vue'
+
+// Dashboard - keep this non-lazy as it's frequently accessed
 import Dashboard from '@/views/dashboard/Dashboard.vue'
 
-// Client Management Views
-import Clients from '@/views/clients/Clients.vue'
-import CreateClient from '@/views/clients/CreateClient.vue'
-import ClientDetails from '@/views/clients/ClientDetails.vue'
-import EditClient from '@/views/clients/EditClient.vue'
-
-// Activation Management Views
-import Activations from '@/views/activations/Activations.vue'
-import CreateActivation from '@/views/activations/CreateActivation.vue'
-import ActivationDetails from '@/views/activations/ActivationDetails.vue'
-import EditActivation from '@/views/activations/EditActivation.vue'
+// All other views will be lazy-loaded
 
 const routes = [
     // Auth Routes
@@ -38,15 +30,15 @@ const routes = [
         }
     },
 
-    // Dashboard Routes
+    // Dashboard Routes - No role restrictions
     {
         path: '/dashboard',
         name: 'dashboard',
         component: Dashboard,
         meta: {
             requiresAuth: true,
-            title: 'Dashboard - Activation Tracker',
-            roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT', 'WAREHOUSE_MANAGER', 'PROMOTER']
+            title: 'Dashboard - Activation Tracker'
+            // No roles restriction - accessible to all authenticated users
         }
     },
 
@@ -54,7 +46,7 @@ const routes = [
     {
         path: '/clients',
         name: 'clients',
-        component: Clients,
+        component: () => import('@/views/clients/Clients.vue'),
         meta: {
             requiresAuth: true,
             title: 'Clients - Activation Tracker',
@@ -64,7 +56,7 @@ const routes = [
     {
         path: '/clients/create',
         name: 'create-client',
-        component: CreateClient,
+        component: () => import('@/views/clients/CreateClient.vue'),
         meta: {
             requiresAuth: true,
             title: 'Add New Client - Activation Tracker',
@@ -74,7 +66,7 @@ const routes = [
     {
         path: '/clients/:id',
         name: 'client-details',
-        component: ClientDetails,
+        component: () => import('@/views/clients/ClientDetails.vue'),
         meta: {
             requiresAuth: true,
             title: 'Client Details - Activation Tracker',
@@ -84,7 +76,7 @@ const routes = [
     {
         path: '/clients/:id/edit',
         name: 'edit-client',
-        component: EditClient,
+        component: () => import('@/views/clients/EditClient.vue'),
         meta: {
             requiresAuth: true,
             title: 'Edit Client - Activation Tracker',
@@ -96,7 +88,7 @@ const routes = [
     {
         path: '/activations',
         name: 'activations',
-        component: Activations,
+        component: () => import('@/views/activations/Activations.vue'),
         meta: {
             requiresAuth: true,
             title: 'Activations - Activation Tracker',
@@ -106,7 +98,7 @@ const routes = [
     {
         path: '/activations/create',
         name: 'create-activation',
-        component: CreateActivation,
+        component: () => import('@/views/activations/CreateActivation.vue'),
         meta: {
             requiresAuth: true,
             title: 'Create Activation - Activation Tracker',
@@ -116,7 +108,7 @@ const routes = [
     {
         path: '/activations/:id',
         name: 'activation-details',
-        component: ActivationDetails,
+        component: () => import('@/views/activations/ActivationDetails.vue'),
         meta: {
             requiresAuth: true,
             title: 'Activation Details - Activation Tracker',
@@ -126,7 +118,7 @@ const routes = [
     {
         path: '/activations/:id/edit',
         name: 'edit-activation',
-        component: EditActivation,
+        component: () => import('@/views/activations/EditActivation.vue'),
         meta: {
             requiresAuth: true,
             title: 'Edit Activation - Activation Tracker',
@@ -152,305 +144,9 @@ const routes = [
         meta: {
             requiresAuth: true,
             title: 'Warehouses - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    }, {
-        path: '/warehouses',
-        name: 'warehouses',
-        component: () => import('@/views/warehouses/Warehouses.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Warehouses - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/create',
-        name: 'create-warehouse',
-        component: () => import('@/views/warehouses/CreateWarehouse.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Create Warehouse - Activation Tracker',
             roles: ['ADMIN', 'WAREHOUSE_MANAGER']
         }
     },
-    {
-        path: '/warehouses/:id',
-        name: 'warehouse-details',
-        component: () => import('@/views/warehouses/WarehouseDetails.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Warehouse Details - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/:id/edit',
-        name: 'edit-warehouse',
-        component: () => import('@/views/warehouses/EditWarehouse.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Edit Warehouse - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/:id/inventory',
-        name: 'warehouse-inventory',
-        component: () => import('@/views/warehouses/WarehouseInventory.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Warehouse Inventory - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/inventory',
-        name: 'inventory-management',
-        component: () => import('@/views/warehouses/InventoryManagement.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Inventory Management - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/inventory/create',
-        name: 'create-inventory-item',
-        component: () => import('@/views/warehouses/CreateInventoryItem.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Add Inventory Item - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/inventory/:sku',
-        name: 'inventory-item-details',
-        component: () => import('@/views/warehouses/InventoryItemDetails.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Inventory Item Details - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/inventory/:sku/edit',
-        name: 'edit-inventory-item',
-        component: () => import('@/views/warehouses/EditInventoryItem.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Edit Inventory Item - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/inventory/:sku/history',
-        name: 'inventory-history',
-        component: () => import('@/views/warehouses/InventoryHistory.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Inventory History - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/inventory/:sku/allocate',
-        name: 'allocate-inventory',
-        component: () => import('@/views/warehouses/AllocateInventory.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Allocate Inventory - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-
-// Stock Management Routes
-    {
-        path: '/warehouses/stock',
-        name: 'stock-management',
-        component: () => import('@/views/warehouses/StockManagement.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Stock Management - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/stock/movements',
-        name: 'stock-movements',
-        component: () => import('@/views/warehouses/StockMovements.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Stock Movements - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/stock/movements/:id',
-        name: 'stock-movement-details',
-        component: () => import('@/views/warehouses/StockMovementDetails.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Stock Movement Details - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/stock/transfers',
-        name: 'stock-transfers',
-        component: () => import('@/views/warehouses/StockTransfers.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Stock Transfers - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/stock/transfers/create',
-        name: 'create-stock-transfer',
-        component: () => import('@/views/warehouses/CreateStockTransfer.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Create Stock Transfer - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/stock/adjustments',
-        name: 'stock-adjustments',
-        component: () => import('@/views/warehouses/StockAdjustments.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Stock Adjustments - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/stock/adjustments/create',
-        name: 'create-stock-adjustment',
-        component: () => import('@/views/warehouses/CreateStockAdjustment.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Create Stock Adjustment - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/stock/allocations',
-        name: 'stock-allocations',
-        component: () => import('@/views/warehouses/StockAllocations.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Stock Allocations - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/stock/allocations/create',
-        name: 'create-stock-allocation',
-        component: () => import('@/views/warehouses/CreateStockAllocation.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Create Stock Allocation - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/stock/allocations/:id',
-        name: 'stock-allocation-details',
-        component: () => import('@/views/warehouses/StockAllocationDetails.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Stock Allocation Details - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-
-// Warehouse Reports Routes
-    {
-        path: '/warehouses/reports',
-        name: 'warehouse-reports',
-        component: () => import('@/views/warehouses/WarehouseReports.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Warehouse Reports - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/reports/inventory',
-        name: 'inventory-reports',
-        component: () => import('@/views/warehouses/InventoryReports.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Inventory Reports - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/reports/movements',
-        name: 'movement-reports',
-        component: () => import('@/views/warehouses/MovementReports.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Movement Reports - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/reports/performance',
-        name: 'warehouse-performance-reports',
-        component: () => import('@/views/warehouses/PerformanceReports.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Warehouse Performance Reports - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-
-// SKU Management Routes
-    {
-        path: '/warehouses/skus',
-        name: 'sku-management',
-        component: () => import('@/views/warehouses/SKUManagement.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'SKU Management - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/skus/create',
-        name: 'create-sku',
-        component: () => import('@/views/warehouses/CreateSKU.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Create SKU - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/skus/:sku',
-        name: 'sku-details',
-        component: () => import('@/views/warehouses/SKUDetails.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'SKU Details - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
-        }
-    },
-    {
-        path: '/warehouses/skus/:sku/edit',
-        name: 'edit-sku',
-        component: () => import('@/views/warehouses/EditSKU.vue'),
-        meta: {
-            requiresAuth: true,
-            title: 'Edit SKU - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER']
-        }
-    },
-
     {
         path: '/reports',
         name: 'reports',
@@ -458,7 +154,7 @@ const routes = [
         meta: {
             requiresAuth: true,
             title: 'Reports - Activation Tracker',
-            roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT', 'WAREHOUSE_MANAGER']
+            roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT']
         }
     },
     {
@@ -472,7 +168,7 @@ const routes = [
         }
     },
 
-    // Catch-all route for 404
+    // Catch-all route
     {
         path: '/:pathMatch(.*)*',
         name: 'not-found',
@@ -485,34 +181,56 @@ const router = createRouter({
     routes
 })
 
-// Enhanced navigation guard with role-based access
+// Enhanced navigation guard with proper token checking
 router.beforeEach((to, from, next) => {
+    console.log(`🚦 Router Guard: Navigating to ${to.path}`)
+
     // Set page title
     document.title = to.meta.title || 'Activation Tracker'
 
     // Check if route requires authentication
     if (to.meta.requiresAuth) {
-        const token = localStorage.getItem('authToken')
+        // Check for authentication token
+        const token = localStorage.getItem('activation_auth_token')
         const user = JSON.parse(localStorage.getItem('user') || 'null')
 
-        if (!token || !user) {
+        console.log(`🔍 Auth check - Token: ${token ? 'EXISTS' : 'MISSING'}, User: ${user ? 'EXISTS' : 'MISSING'}`)
+
+        if (!token) {
+            console.log('❌ No token found, redirecting to login')
             next('/')
             return
         }
 
-        // Check role-based access
-        if (to.meta.roles && !to.meta.roles.includes(user.role)) {
-            // Redirect to dashboard if user doesn't have required role
+        // Dashboard route has no role restrictions
+        if (to.name === 'dashboard') {
+            console.log('✅ Dashboard access granted')
+            next()
+            return
+        }
+
+        // Check role-based access for other routes
+        if (to.meta.roles && user && !to.meta.roles.includes(user.role)) {
+            console.log(`❌ Role ${user.role} not allowed for ${to.path}, redirecting to dashboard`)
             next('/dashboard')
             return
         }
-    } else if (to.path === '/' && localStorage.getItem('authToken')) {
-        // Redirect to dashboard if already logged in and trying to access login
-        next('/dashboard')
-        return
-    }
 
-    next()
+        console.log('✅ Access granted')
+        next()
+    } else {
+        // Public routes (login, forgot password)
+        const token = localStorage.getItem('activation_auth_token')
+
+        if (to.path === '/' && token) {
+            console.log('🔄 Already authenticated, redirecting to dashboard')
+            next('/dashboard')
+            return
+        }
+
+        console.log('✅ Public route access granted')
+        next()
+    }
 })
 
 export default router

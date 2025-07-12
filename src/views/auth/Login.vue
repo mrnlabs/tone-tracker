@@ -1,108 +1,104 @@
-<!-- LoginForm.vue - Fixed to use email field -->
 <template>
   <div class="login-form-container">
+    <!-- Main Login Card -->
     <div class="login-card">
-      <!-- Logo and Header -->
+      <!-- Header Section -->
       <div class="login-header">
         <div class="logo-section">
           <i class="pi pi-chart-line logo-icon"></i>
           <h1 class="app-title">Activation Tracker</h1>
         </div>
-        <p class="login-subtitle">Sign in to your account</p>
+        <p class="app-subtitle">
+          Sign in to access your dashboard
+        </p>
       </div>
 
       <!-- Login Form -->
       <form @submit.prevent="handleSubmit" class="login-form">
         <!-- Email/Username Field -->
         <div class="form-group">
-          <label for="email" class="form-label">
-            Email or Username
-            <span class="required">*</span>
-          </label>
-          <div class="input-container">
-            <i class="pi pi-user input-icon"></i>
-            <InputText
-                id="email"
-                v-model="formData.email"
-                :class="{ 'p-invalid': errors.email }"
-                placeholder="Enter your email or username"
-                autocomplete="username"
-                :disabled="isLoading"
-            />
-          </div>
-          <div v-if="errors.email" class="error-message">
-            <i class="pi pi-exclamation-circle"></i>
+          <label for="email" class="form-label">Email or Username</label>
+          <InputText
+              id="email"
+              v-model="formData.email"
+              :class="{ 'p-invalid': errors.email }"
+              placeholder="Enter your email or username"
+              autocomplete="email"
+              :disabled="isLoading"
+              class="form-input"
+          />
+          <small v-if="errors.email" class="error-message">
             {{ errors.email }}
-          </div>
+          </small>
         </div>
 
         <!-- Password Field -->
         <div class="form-group">
-          <label for="password" class="form-label">
-            Password
-            <span class="required">*</span>
-          </label>
-          <div class="input-container">
-            <i class="pi pi-lock input-icon"></i>
-            <Password
-                id="password"
-                v-model="formData.password"
-                :class="{ 'p-invalid': errors.password }"
-                placeholder="Enter your password"
-                :feedback="false"
-                toggleMask
-                autocomplete="current-password"
-                :disabled="isLoading"
-            />
-          </div>
-          <div v-if="errors.password" class="error-message">
-            <i class="pi pi-exclamation-circle"></i>
+          <label for="password" class="form-label">Password</label>
+          <Password
+              id="password"
+              v-model="formData.password"
+              :class="{ 'p-invalid': errors.password }"
+              placeholder="Enter your password"
+              :feedback="false"
+              toggleMask
+              autocomplete="current-password"
+              :disabled="isLoading"
+              class="form-input"
+              inputClass="w-full"
+          />
+          <small v-if="errors.password" class="error-message">
             {{ errors.password }}
-          </div>
+          </small>
         </div>
 
-        <!-- Remember Me and Forgot Password -->
-        <div class="form-options">
-          <div class="remember-me">
+        <!-- Remember Me -->
+        <div class="form-group">
+          <div class="checkbox-wrapper">
             <Checkbox
                 id="rememberMe"
                 v-model="formData.rememberMe"
                 :binary="true"
                 :disabled="isLoading"
             />
-            <label for="rememberMe" class="remember-label">Remember me</label>
+            <label for="rememberMe" class="checkbox-label">
+              Remember me for 30 days
+            </label>
           </div>
-          <router-link to="/forgot-password" class="forgot-link">
-            Forgot password?
-          </router-link>
+        </div>
+
+        <!-- General Error Message -->
+        <div v-if="generalError" class="error-alert">
+          <i class="pi pi-exclamation-triangle error-icon"></i>
+          <span>{{ generalError }}</span>
         </div>
 
         <!-- Submit Button -->
         <Button
             type="submit"
-            :label="isLoading ? 'Signing In...' : 'Sign In'"
-            icon="pi pi-sign-in"
             :loading="isLoading"
             :disabled="!isFormValid || isLoading"
+            label="Sign In"
             class="login-button"
+            icon="pi pi-sign-in"
         />
 
-        <!-- General Error Display -->
-        <div v-if="generalError" class="error-message general-error">
-          <i class="pi pi-exclamation-circle"></i>
-          {{ generalError }}
+        <!-- Forgot Password Link -->
+        <div class="forgot-password-section">
+          <router-link to="/forgot-password" class="forgot-link">
+            Forgot your password?
+          </router-link>
         </div>
       </form>
 
-      <!-- Loading Overlay -->
-      <div v-if="isLoading" class="loading-overlay">
-        <div class="spinner">
-          <div class="spinner-circle"></div>
-        </div>
-        <span class="loading-text">Signing you in...</span>
+      <!-- Divider -->
+      <div class="divider">
+        <hr class="divider-line">
+        <span class="divider-text">New to Activation Tracker?</span>
+        <hr class="divider-line">
       </div>
 
-      <!-- Sign Up Link -->
+      <!-- Sign Up Section -->
       <div class="signup-section">
         <p class="signup-text">
           Don't have an account?
@@ -147,7 +143,7 @@ const route = useRoute()
 const toast = useToast()
 const authStore = useAuthStore()
 
-// Form data - Fixed to use 'email' instead of 'identifier'
+// Form data
 const formData = ref({
   email: '',
   password: '',
@@ -193,21 +189,26 @@ const clearFieldError = (field) => {
 }
 
 const handleSubmit = async () => {
-  console.log('Form submitted with data:', formData.value) // Debug log
+  console.log('🚀 Form submitted with data:', {
+    email: formData.value.email,
+    rememberMe: formData.value.rememberMe
+  })
 
   // Clear previous errors
   generalError.value = ''
-  authStore.clearLoginError()
+  if (authStore.clearLoginError) {
+    authStore.clearLoginError()
+  }
 
   // Validate form
   if (!validateForm()) {
-    console.log('Form validation failed:', errors.value)
+    console.log('❌ Form validation failed:', errors.value)
     return
   }
 
   try {
     isLoading.value = true
-    console.log('Starting login process...')
+    console.log('🔄 Starting login process...')
 
     // Prepare login credentials
     const credentials = {
@@ -216,15 +217,17 @@ const handleSubmit = async () => {
       rememberMe: formData.value.rememberMe
     }
 
-    console.log('Sending login request with credentials:', {
-      email: credentials.email,
-      rememberMe: credentials.rememberMe
-      // Don't log password for security
-    })
-
     // Attempt login
     const response = await authStore.login(credentials)
-    console.log('Login response:', response)
+    console.log('✅ Login response received:', response)
+
+    // Verify stored data
+    const storedToken = localStorage.getItem('activation_auth_token')
+    const storedUser = localStorage.getItem('user')
+
+    console.log('🔍 Verification - Token stored:', storedToken ? 'YES' : 'NO')
+    console.log('🔍 Verification - User stored:', storedUser ? 'YES' : 'NO')
+    console.log('🔍 Verification - Auth state:', authStore.isAuthenticated)
 
     // Success handling
     toast.add({
@@ -236,13 +239,15 @@ const handleSubmit = async () => {
 
     emit('login-success', response)
 
-    // Redirect to intended page or dashboard
-    const redirectPath = route.query.redirect || props.redirectTo
-    console.log('Redirecting to:', redirectPath)
-    await router.push(redirectPath)
+    // Small delay to ensure storage is complete
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    // Navigate to dashboard
+    console.log('🏠 Redirecting to dashboard...')
+    await router.push('/dashboard')
 
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('❌ Login error:', error)
 
     generalError.value = error.message || 'Login failed. Please check your credentials and try again.'
 
@@ -261,12 +266,12 @@ const handleSubmit = async () => {
 
 // Lifecycle
 onMounted(() => {
-  console.log('LoginForm mounted')
+  console.log('🔧 LoginForm mounted')
 
   // Check if user is already logged in
   if (authStore.isAuthenticated) {
-    console.log('User already authenticated, redirecting...')
-    router.push(props.redirectTo)
+    console.log('🔄 User already authenticated, redirecting to dashboard...')
+    router.push('/dashboard')
     return
   }
 
@@ -343,11 +348,11 @@ watch(() => formData.value.password, () => clearFieldError('password'))
 .app-title {
   font-size: 2rem;
   font-weight: 700;
-  color: #111827;
+  color: #1f2937;
   margin: 0;
 }
 
-.login-subtitle {
+.app-subtitle {
   color: #6b7280;
   font-size: 1rem;
   margin: 0;
@@ -366,152 +371,97 @@ watch(() => formData.value.password, () => clearFieldError('password'))
 }
 
 .form-label {
-  font-weight: 500;
+  font-weight: 600;
   color: #374151;
   font-size: 0.875rem;
 }
 
-.required {
-  color: #ef4444;
-  margin-left: 0.25rem;
-}
-
-.input-container {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.input-icon {
-  position: absolute;
-  left: 1rem;
-  color: #6b7280;
-  z-index: 1;
-  font-size: 0.875rem;
-}
-
-:deep(.p-inputtext),
-:deep(.p-password .p-inputtext) {
-  width: 100%;
-  padding: 1rem 1rem 1rem 3rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  font-size: 1rem;
-  transition: all 0.2s ease-in-out;
-}
-
-:deep(.p-inputtext:focus),
-:deep(.p-password .p-inputtext:focus) {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-:deep(.p-password) {
+.form-input {
   width: 100%;
 }
 
-:deep(.p-password .p-password-toggle) {
-  right: 1rem;
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.checkbox-label {
   color: #6b7280;
-}
-
-.form-options {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 0.5rem 0;
-}
-
-.remember-me {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.remember-label {
   font-size: 0.875rem;
-  color: #6b7280;
   cursor: pointer;
 }
 
-.forgot-link {
-  font-size: 0.875rem;
-  color: #3b82f6;
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.forgot-link:hover {
-  text-decoration: underline;
-}
-
-.login-button {
-  margin-top: 0.5rem;
-  padding: 1rem;
-  font-size: 1rem;
-  font-weight: 600;
-  width: 100%;
-}
-
 .error-message {
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.error-alert {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #ef4444;
+  padding: 0.75rem;
+  background-color: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 0.5rem;
+  color: #dc2626;
   font-size: 0.875rem;
-  margin-top: 0.25rem;
-  padding: 0.5rem;
-  background-color: rgba(239, 68, 68, 0.1);
-  border-radius: 0.375rem;
 }
 
-.general-error {
+.error-icon {
+  font-size: 1rem;
+}
+
+.login-button {
+  width: 100%;
+  height: 3rem;
+  font-weight: 600;
+  font-size: 1rem;
   margin-top: 0.5rem;
 }
 
-.loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.9);
+.forgot-password-section {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.forgot-link {
+  color: #3b82f6;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.forgot-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.divider {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  z-index: 999;
-  border-radius: 1rem;
+  margin: 2rem 0;
   gap: 1rem;
 }
 
-.spinner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background-color: #e5e7eb;
+  border: none;
 }
 
-.spinner-circle {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #3b82f6;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-.loading-text {
-  color: #6b7280;
+.divider-text {
+  color: #9ca3af;
   font-size: 0.875rem;
-  font-weight: 500;
+  white-space: nowrap;
 }
 
 .signup-section {
   text-align: center;
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #e5e7eb;
 }
 
 .signup-text {
@@ -523,11 +473,12 @@ watch(() => formData.value.password, () => clearFieldError('password'))
 .signup-link {
   color: #3b82f6;
   text-decoration: none;
-  font-weight: 500;
-  margin-left: 0.25rem;
+  font-weight: 600;
+  transition: color 0.2s;
 }
 
 .signup-link:hover {
+  color: #1d4ed8;
   text-decoration: underline;
 }
 
@@ -537,7 +488,7 @@ watch(() => formData.value.password, () => clearFieldError('password'))
 }
 
 .footer-text {
-  color: rgba(255, 255, 255, 0.8);
+  color: #d1d5db;
   font-size: 0.75rem;
   margin: 0 0 1rem 0;
 }
@@ -550,26 +501,21 @@ watch(() => formData.value.password, () => clearFieldError('password'))
 }
 
 .footer-link {
-  color: rgba(255, 255, 255, 0.9);
+  color: #d1d5db;
   text-decoration: none;
   font-size: 0.75rem;
   transition: color 0.2s;
 }
 
 .footer-link:hover {
-  color: white;
+  color: #ffffff;
   text-decoration: underline;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
 
 @keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(-20px);
   }
   to {
     opacity: 1;
@@ -577,34 +523,23 @@ watch(() => formData.value.password, () => clearFieldError('password'))
   }
 }
 
-/* Responsive design */
-@media (max-width: 768px) {
+/* Responsive Design */
+@media (max-width: 640px) {
   .login-form-container {
     padding: 1rem;
   }
 
   .login-card {
     padding: 2rem;
+    max-width: 100%;
   }
 
   .app-title {
     font-size: 1.75rem;
   }
 
-  .logo-section {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .form-options {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-
   .footer-links {
-    flex-direction: column;
-    gap: 0.75rem;
+    gap: 1rem;
   }
 }
 </style>

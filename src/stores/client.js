@@ -28,8 +28,8 @@ export const useClientsStore = defineStore('clients', () => {
         search: '',
         dateRange: null
     })
-    const sortBy = ref('created_at')
-    const sortOrder = ref('desc')
+    const sortBy = ref('companyName')
+    const sortOrder = ref('asc')
 
     // Client activations cache
     const clientActivations = ref(new Map())
@@ -55,17 +55,18 @@ export const useClientsStore = defineStore('clients', () => {
         if (filters.value.search) {
             const searchTerm = filters.value.search.toLowerCase()
             result = result.filter(client =>
-                client.name.toLowerCase().includes(searchTerm) ||
-                client.company.toLowerCase().includes(searchTerm) ||
-                client.email.toLowerCase().includes(searchTerm) ||
-                client.contactPerson?.toLowerCase().includes(searchTerm)
+                client.companyName?.toLowerCase().includes(searchTerm) ||
+                client.brandName?.toLowerCase().includes(searchTerm) ||
+                client.primaryContactEmail?.toLowerCase().includes(searchTerm) ||
+                client.primaryContactName?.toLowerCase().includes(searchTerm) ||
+                client.description?.toLowerCase().includes(searchTerm)
             )
         }
 
         if (filters.value.dateRange) {
             const { start, end } = filters.value.dateRange
             result = result.filter(client => {
-                const clientDate = new Date(client.createdAt)
+                const clientDate = new Date(client.dateCreated)
                 return clientDate >= new Date(start) && clientDate <= new Date(end)
             })
         }
@@ -105,7 +106,9 @@ export const useClientsStore = defineStore('clients', () => {
             verified,
             inactive,
             activeRate: total > 0 ? Math.round((active / total) * 100) : 0,
-            verificationRate: total > 0 ? Math.round((verified / total) * 100) : 0
+            verificationRate: total > 0 ? Math.round((verified / total) * 100) : 0,
+            totalRevenue: clients.value.reduce((sum, client) => sum + (client.totalRevenue || 0), 0),
+            activeActivations: clients.value.reduce((sum, client) => sum + (client.totalActivations || 0), 0)
         }
     })
 
@@ -136,10 +139,9 @@ export const useClientsStore = defineStore('clients', () => {
             error.value = null
 
             const queryParams = {
-                page: pagination.value.page,
-                limit: pagination.value.limit,
-                sort: sortBy.value,
-                order: sortOrder.value,
+                page: pagination.value.page - 1, // API uses 0-based pagination
+                size: pagination.value.limit,
+                sort: [`${sortBy.value},${sortOrder.value}`],
                 ...filters.value,
                 ...params
             }
@@ -153,13 +155,26 @@ export const useClientsStore = defineStore('clients', () => {
 
             const response = await clientService.getClients(queryParams)
 
-            clients.value = response.data
+
+            clients.value = response.data || []
+            
+            // Handle different response structures safely
+            const meta = response.meta || {}
+            const total = meta.total || response.data?.length || 0
+            const currentPage = meta.page !== undefined ? meta.page + 1 : pagination.value.page // Convert back to 1-based for UI
+            const pageSize = meta.size || meta.limit || pagination.value.limit || 10
+            const totalPages = meta.totalPages || Math.ceil(total / pageSize)
+            
             pagination.value = {
-                total: response.meta.total,
-                page: response.meta.page,
-                limit: response.meta.limit,
-                totalPages: Math.ceil(response.meta.total / response.meta.limit)
+                total,
+                page: currentPage,
+                limit: pageSize,
+                totalPages
             }
+            
+            console.log('API Response:', response)
+            console.log('Updated pagination:', pagination.value)
+
 
             return response
         } catch (err) {
@@ -463,9 +478,15 @@ export const useClientsStore = defineStore('clients', () => {
     /**
      * Set sorting
      */
-    const setSorting = (field, order = 'desc') => {
-        sortBy.value = field
-        sortOrder.value = order
+    const setSorting = (sortConfig) => {
+        if (typeof sortConfig === 'object') {
+            sortBy.value = sortConfig.field
+            sortOrder.value = sortConfig.order || 'desc'
+        } else {
+            // Backward compatibility
+            sortBy.value = sortConfig
+            sortOrder.value = arguments[1] || 'desc'
+        }
         pagination.value.page = 1 // Reset to first page
     }
 

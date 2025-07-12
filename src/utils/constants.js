@@ -143,11 +143,11 @@ export const STOCK_STATUS_LABELS = {
 
 // Client Statuses
 export const CLIENT_STATUS = {
-    NEW: 'new',
-    ACTIVE: 'active',
-    VERIFIED: 'verified',
-    INACTIVE: 'inactive',
-    SUSPENDED: 'suspended'
+    NEW: 'NEW',
+    ACTIVE: 'ACTIVE',
+    VERIFIED: 'VERIFIED',
+    INACTIVE: 'INACTIVE',
+    SUSPENDED: 'SUSPENDED'
 }
 
 export const CLIENT_STATUS_LABELS = {

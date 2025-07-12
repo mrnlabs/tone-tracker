@@ -1,5 +1,5 @@
 // src/stores/auth.js
-// Authentication store for the Activation Tracking System
+// Authentication store for the Activation Tracking System - DEBUG VERSION
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
@@ -95,18 +95,45 @@ export const useAuthStore = defineStore('auth', () => {
 
             const response = await authService.login(credentials)
 
-            user.value = response.user
-            isAuthenticated.value = true
-            permissions.value = response.permissions || []
+            // Extract tokens using helper function
+            const accessToken = getNestedValue(response, [
+                'accessToken', 'access_token', 'token',
+                'data.accessToken', 'data.access_token', 'data.token'
+            ])
+            
+            const refreshToken = getNestedValue(response, [
+                'refreshToken', 'refresh_token',
+                'data.refreshToken', 'data.refresh_token'
+            ])
 
+            if (accessToken) {
+                localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, accessToken)
+            }
+
+            if (refreshToken) {
+                localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken)
+            }
+
+            // Extract user data
+            const userData = getNestedValue(response, [
+                'user', 'data.user', 'data'
+            ], (value) => value && (value.id || value.email || value.firstName))
+
+            if (userData) {
+                user.value = userData
+                isAuthenticated.value = true
+                localStorage.setItem('user', JSON.stringify(userData))
+            }
+
+            permissions.value = response.permissions || []
             updateLastActivity()
             startSessionTimer()
 
             // Store user preferences if available
-            if (response.user.preferences) {
+            if (userData?.preferences) {
                 localStorage.setItem(
                     STORAGE_KEYS.USER_PREFERENCES,
-                    JSON.stringify(response.user.preferences)
+                    JSON.stringify(userData.preferences)
                 )
             }
 
@@ -117,6 +144,24 @@ export const useAuthStore = defineStore('auth', () => {
         } finally {
             isLoading.value = false
         }
+    }
+
+    /**
+     * Helper function to get nested object values
+     */
+    const getNestedValue = (obj, paths, validator = null) => {
+        const pathArray = Array.isArray(paths) ? paths : [paths]
+        
+        for (const path of pathArray) {
+            const value = path.split('.').reduce((current, key) => {
+                return current && current[key] !== undefined ? current[key] : null
+            }, obj)
+            
+            if (value && (!validator || validator(value))) {
+                return value
+            }
+        }
+        return null
     }
 
     /**
@@ -131,9 +176,24 @@ export const useAuthStore = defineStore('auth', () => {
 
             // Auto-login after successful registration
             if (response.auto_login) {
+                // Store tokens
+                const accessToken = response.accessToken || response.access_token || response.token
+                const refreshToken = response.refreshToken || response.refresh_token
+
+                if (accessToken) {
+                    localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, accessToken)
+                }
+                if (refreshToken) {
+                    localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken)
+                }
+
                 user.value = response.user
                 isAuthenticated.value = true
                 permissions.value = response.permissions || []
+
+                // Store user in localStorage
+                localStorage.setItem('user', JSON.stringify(response.user))
+
                 updateLastActivity()
                 startSessionTimer()
             }
@@ -168,33 +228,36 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     /**
-     * Get current user data
+     * Get current user from API
      */
     const getCurrentUser = async () => {
         try {
-            const userData = await authService.getCurrentUser()
-            user.value = userData
-            isAuthenticated.value = true
-            permissions.value = userData.permissions || []
-            return userData
+            const response = await authService.getCurrentUser()
+            user.value = response.user
+            permissions.value = response.permissions || []
+
+            // Update user in localStorage
+            localStorage.setItem('user', JSON.stringify(response.user))
+
+            return response
         } catch (error) {
-            console.error('Failed to get current user:', error)
             throw error
         }
     }
 
     /**
-     * Update user profile
+     * Update current user profile
      */
     const updateProfile = async (profileData) => {
         try {
             isLoading.value = true
-            const updatedUser = await authService.updateProfile(profileData)
+            const response = await authService.updateProfile(profileData)
 
-            // Update local user data
-            user.value = { ...user.value, ...updatedUser }
+            user.value = response.user
+            // Update user in localStorage
+            localStorage.setItem('user', JSON.stringify(response.user))
 
-            return updatedUser
+            return response
         } catch (error) {
             throw error
         } finally {
@@ -203,12 +266,13 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     /**
-     * Change password
+     * Change user password
      */
     const changePassword = async (passwordData) => {
         try {
             isLoading.value = true
-            return await authService.changePassword(passwordData)
+            const response = await authService.changePassword(passwordData)
+            return response
         } catch (error) {
             throw error
         } finally {
@@ -219,10 +283,11 @@ export const useAuthStore = defineStore('auth', () => {
     /**
      * Request password reset
      */
-    const forgotPassword = async (email) => {
+    const requestPasswordReset = async (email) => {
         try {
             isLoading.value = true
-            return await authService.forgotPassword(email)
+            const response = await authService.requestPasswordReset(email)
+            return response
         } catch (error) {
             throw error
         } finally {
@@ -233,10 +298,11 @@ export const useAuthStore = defineStore('auth', () => {
     /**
      * Reset password with token
      */
-    const resetPassword = async (token, newPassword) => {
+    const resetPassword = async (token, password) => {
         try {
             isLoading.value = true
-            return await authService.resetPassword(token, newPassword)
+            const response = await authService.resetPassword(token, password)
+            return response
         } catch (error) {
             throw error
         } finally {
@@ -245,7 +311,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     /**
-     * Verify email with token
+     * Verify email address
      */
     const verifyEmail = async (token) => {
         try {
@@ -255,6 +321,7 @@ export const useAuthStore = defineStore('auth', () => {
             // Update user verification status
             if (user.value) {
                 user.value.emailVerified = true
+                localStorage.setItem('user', JSON.stringify(user.value))
             }
 
             return response
@@ -315,8 +382,26 @@ export const useAuthStore = defineStore('auth', () => {
      * Clear stored user data
      */
     const clearStoredData = () => {
-        localStorage.removeItem(STORAGE_KEYS.USER_PREFERENCES)
-        // Note: Auth tokens are cleared by the API service
+        // Clear all possible token storage keys for security
+        const keysToRemove = [
+            STORAGE_KEYS.AUTH_TOKEN,
+            STORAGE_KEYS.REFRESH_TOKEN,
+            STORAGE_KEYS.USER_PREFERENCES,
+            'user',
+            'authToken', // Legacy key from axiosInstance
+            'activation_auth_token' // Ensure consistency
+        ]
+        
+        keysToRemove.forEach(key => {
+            localStorage.removeItem(key)
+        })
+    }
+
+    /**
+     * Clear login error
+     */
+    const clearLoginError = () => {
+        loginError.value = null
     }
 
     /**
@@ -327,93 +412,25 @@ export const useAuthStore = defineStore('auth', () => {
             const stored = localStorage.getItem(STORAGE_KEYS.USER_PREFERENCES)
             return stored ? JSON.parse(stored) : {}
         } catch (error) {
-            console.error('Failed to get user preferences:', error)
+            console.error('Failed to parse user preferences:', error)
             return {}
         }
     }
 
     /**
-     * Update user preferences
+     * Save user preferences
      */
-    const updateUserPreferences = (preferences) => {
+    const saveUserPreferences = (preferences) => {
         try {
-            const current = getUserPreferences()
-            const updated = { ...current, ...preferences }
-            localStorage.setItem(STORAGE_KEYS.USER_PREFERENCES, JSON.stringify(updated))
-
-            // Update user object if available
-            if (user.value) {
-                user.value.preferences = updated
-            }
-
-            return updated
+            localStorage.setItem(STORAGE_KEYS.USER_PREFERENCES, JSON.stringify(preferences))
+            return true
         } catch (error) {
-            console.error('Failed to update user preferences:', error)
-            throw error
+            console.error('Failed to save user preferences:', error)
+            return false
         }
     }
 
-    /**
-     * Check if user is online/active
-     */
-    const isUserActive = computed(() => {
-        if (!lastActivity.value) return false
-
-        const now = new Date()
-        const lastActive = new Date(lastActivity.value)
-        const timeDiff = now - lastActive
-
-        // Consider user active if last activity was within 5 minutes
-        return timeDiff < 5 * 60 * 1000
-    })
-
-    /**
-     * Refresh authentication state
-     */
-    const refreshAuth = async () => {
-        if (!isAuthenticated.value) return
-
-        try {
-            await getCurrentUser()
-            updateLastActivity()
-        } catch (error) {
-            console.error('Failed to refresh auth:', error)
-            // Don't logout on refresh failure, just log the error
-        }
-    }
-
-    /**
-     * Clear login error
-     */
-    const clearLoginError = () => {
-        loginError.value = null
-    }
-
-    // === COMPUTED HELPERS ===
-    const userDisplayName = computed(() => {
-        if (!user.value) return 'Unknown User'
-        if (userFullName.value) return userFullName.value
-        if (user.value.username) return user.value.username
-        if (user.value.email) return user.value.email
-        return 'User'
-    })
-
-    const userAvatar = computed(() => {
-        return user.value?.avatar || null
-    })
-
-    const roleDisplayName = computed(() => {
-        const roleMap = {
-            [USER_ROLES.ADMIN]: 'Administrator',
-            [USER_ROLES.ACTIVATION_MANAGER]: 'Activation Manager',
-            [USER_ROLES.WAREHOUSE_MANAGER]: 'Warehouse Manager',
-            [USER_ROLES.PROMOTER]: 'Promoter',
-            [USER_ROLES.CLIENT]: 'Client'
-        }
-        return roleMap[userRole.value] || userRole.value
-    })
-
-    // Return store interface
+    // Return all the state, getters, and actions
     return {
         // State
         user,
@@ -422,14 +439,12 @@ export const useAuthStore = defineStore('auth', () => {
         loginError,
         permissions,
         lastActivity,
+        sessionTimeout,
 
         // Getters
         userRole,
         userFullName,
         userInitials,
-        userDisplayName,
-        userAvatar,
-        roleDisplayName,
         isAdmin,
         isActivationManager,
         isWarehouseManager,
@@ -439,7 +454,6 @@ export const useAuthStore = defineStore('auth', () => {
         canManageActivations,
         canManageWarehouse,
         canViewReports,
-        isUserActive,
 
         // Actions
         initializeAuth,
@@ -449,18 +463,17 @@ export const useAuthStore = defineStore('auth', () => {
         getCurrentUser,
         updateProfile,
         changePassword,
-        forgotPassword,
+        requestPasswordReset,
         resetPassword,
         verifyEmail,
         checkPermission,
         canAccessRoute,
         updateLastActivity,
+        startSessionTimer,
+        clearSessionTimer,
+        clearStoredData,
+        clearLoginError,
         getUserPreferences,
-        updateUserPreferences,
-        refreshAuth,
-        clearLoginError
+        saveUserPreferences
     }
 })
-
-// Export for use in router guards and other composables
-export default useAuthStore

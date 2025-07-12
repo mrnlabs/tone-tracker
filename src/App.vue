@@ -2,11 +2,12 @@
   <div id="app">
     <router-view />
     <Toast position="top-right" />
+    <GlobalLoader />
   </div>
 </template>
 
 <script setup>
-// Simple app component - no complex dependencies
+import GlobalLoader from '@/components/ui/GlobalLoader.vue'
 </script>
 
 <style>

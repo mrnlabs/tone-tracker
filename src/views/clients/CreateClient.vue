@@ -499,10 +499,14 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
+import { useClientsStore } from '@/stores/client'
+import { useLoading } from '@/composables/useLoading'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
 
 const router = useRouter()
 const toast = useToast()
+const clientsStore = useClientsStore()
+const { withLoading } = useLoading()
 
 // State
 const currentStep = ref(1)
@@ -623,63 +627,163 @@ const isCurrentStepValid = computed(() => {
 })
 
 // Methods
+// Enhanced validation with better error messages
 const validateStep = (step) => {
   errors.value = {}
   let isValid = true
 
   if (step === 1) {
-    if (!formData.value.companyName) {
+    // Company name validation
+    if (!formData.value.companyName?.trim()) {
       errors.value.companyName = 'Company name is required'
       isValid = false
+    } else if (formData.value.companyName.trim().length < 2) {
+      errors.value.companyName = 'Company name must be at least 2 characters'
+      isValid = false
+    } else if (formData.value.companyName.trim().length > 100) {
+      errors.value.companyName = 'Company name must be less than 100 characters'
+      isValid = false
     }
+
+    // Industry validation
     if (!formData.value.industry) {
       errors.value.industry = 'Industry is required'
       isValid = false
     }
+
+    // Website validation (optional but if provided, must be valid)
+    if (formData.value.website && formData.value.website.trim()) {
+      const urlPattern = /^(https?:\/\/)?(([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?)?$/
+      if (!urlPattern.test(formData.value.website.trim())) {
+        errors.value.website = 'Please enter a valid website URL'
+        isValid = false
+      }
+    }
   }
 
   if (step === 2) {
-    if (!formData.value.contactPerson.firstName) {
+    // First name validation
+    if (!formData.value.contactPerson.firstName?.trim()) {
       errors.value.contactFirstName = 'First name is required'
       isValid = false
+    } else if (formData.value.contactPerson.firstName.trim().length < 1) {
+      errors.value.contactFirstName = 'First name is required'
+      isValid = false
+    } else if (formData.value.contactPerson.firstName.trim().length > 50) {
+      errors.value.contactFirstName = 'First name must be less than 50 characters'
+      isValid = false
     }
-    if (!formData.value.contactPerson.lastName) {
+
+    // Last name validation
+    if (!formData.value.contactPerson.lastName?.trim()) {
       errors.value.contactLastName = 'Last name is required'
       isValid = false
+    } else if (formData.value.contactPerson.lastName.trim().length > 50) {
+      errors.value.contactLastName = 'Last name must be less than 50 characters'
+      isValid = false
     }
-    if (!formData.value.contactPerson.email) {
+
+    // Email validation
+    if (!formData.value.contactPerson.email?.trim()) {
       errors.value.contactEmail = 'Email is required'
       isValid = false
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.value.contactPerson.email)) {
-      errors.value.contactEmail = 'Please enter a valid email address'
-      isValid = false
+    } else {
+      const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+      if (!emailPattern.test(formData.value.contactPerson.email.trim())) {
+        errors.value.contactEmail = 'Please enter a valid email address (e.g., name@company.com)'
+        isValid = false
+      }
     }
-    if (!formData.value.contactPerson.phone) {
+
+    // Phone validation
+    if (!formData.value.contactPerson.phone?.trim()) {
       errors.value.contactPhone = 'Phone number is required'
       isValid = false
+    } else {
+      const phonePattern = /^[+]?[\d\s\-\(\)]{10,}$/
+      if (!phonePattern.test(formData.value.contactPerson.phone.trim())) {
+        errors.value.contactPhone = 'Please enter a valid phone number (min 10 digits)'
+        isValid = false
+      }
     }
   }
 
   if (step === 3) {
-    if (!formData.value.businessInfo.address) {
+    // Address validation
+    if (!formData.value.businessInfo.address?.trim()) {
       errors.value.businessAddress = 'Business address is required'
       isValid = false
-    }
-    if (!formData.value.businessInfo.city) {
-      errors.value.city = 'City is required'
+    } else if (formData.value.businessInfo.address.trim().length < 5) {
+      errors.value.businessAddress = 'Address must be at least 5 characters'
       isValid = false
     }
-    if (!formData.value.businessInfo.state) {
+
+    // City validation
+    if (!formData.value.businessInfo.city?.trim()) {
+      errors.value.city = 'City is required'
+      isValid = false
+    } else if (formData.value.businessInfo.city.trim().length < 2) {
+      errors.value.city = 'City must be at least 2 characters'
+      isValid = false
+    }
+
+    // State validation
+    if (!formData.value.businessInfo.state?.trim()) {
       errors.value.state = 'State/Province is required'
       isValid = false
     }
+
+    // Country validation
     if (!formData.value.businessInfo.country) {
       errors.value.country = 'Country is required'
       isValid = false
     }
+
+    // Zip code validation (optional but if provided, basic check)
+    if (formData.value.businessInfo.zipCode && formData.value.businessInfo.zipCode.trim()) {
+      const zipPattern = /^[\w\d\s-]{3,}$/
+      if (!zipPattern.test(formData.value.businessInfo.zipCode.trim())) {
+        errors.value.zipCode = 'Please enter a valid zip/postal code'
+        isValid = false
+      }
+    }
   }
 
   return isValid
+}
+
+// Real-time field validation
+const validateField = (field, value) => {
+  switch (field) {
+    case 'companyName':
+      if (!value?.trim()) return 'Company name is required'
+      if (value.trim().length < 2) return 'Must be at least 2 characters'
+      if (value.trim().length > 100) return 'Must be less than 100 characters'
+      break
+    case 'email':
+      if (!value?.trim()) return 'Email is required'
+      const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+      if (!emailPattern.test(value.trim())) return 'Please enter a valid email'
+      break
+    case 'phone':
+      if (!value?.trim()) return 'Phone is required'
+      const phonePattern = /^[+]?[\d\s\-\(\)]{10,}$/
+      if (!phonePattern.test(value.trim())) return 'Please enter a valid phone number'
+      break
+    case 'website':
+      if (value?.trim()) {
+        const urlPattern = /^(https?:\/\/)?(([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?)?$/
+        if (!urlPattern.test(value.trim())) return 'Please enter a valid website URL'
+      }
+      break
+  }
+  return null
+}
+
+// Input sanitization
+const sanitizeInput = (value) => {
+  if (typeof value !== 'string') return value
+  return value.trim().replace(/[<>"'&]/g, '') // Basic XSS protection
 }
 
 const nextStep = () => {
@@ -694,33 +798,124 @@ const previousStep = () => {
 }
 
 const handleSubmit = async () => {
-  if (!validateStep(currentStep.value)) {
-    return
+  // Validate all steps before submission
+  for (let step = 1; step <= 4; step++) {
+    if (!validateStep(step)) {
+      currentStep.value = step
+      toast.add({
+        severity: 'warn',
+        summary: 'Validation Error',
+        detail: `Please fix the errors in step ${step} before continuing`,
+        life: 3000
+      })
+      return
+    }
   }
 
-  loading.value = true
-
   try {
-    // Mock API call - replace with actual API
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    // Sanitize and transform form data to match API structure
+    const clientData = {
+      companyName: sanitizeInput(formData.value.companyName),
+      brandName: sanitizeInput(formData.value.companyName), // Use company name as brand name fallback
+      description: sanitizeInput(formData.value.description) || '',
+      businessType: formData.value.companySize || '', // Map company size to business type
+      streetAddress: sanitizeInput(formData.value.businessInfo.address),
+      city: sanitizeInput(formData.value.businessInfo.city),
+      zipCode: sanitizeInput(formData.value.businessInfo.zipCode) || null,
+      country: formData.value.businessInfo.country,
+      website: formData.value.website ? formatWebsiteUrl(formData.value.website) : '',
+      registrationNumber: sanitizeInput(formData.value.businessInfo.taxId) || '', // Map tax ID to registration number
+      taxNumber: sanitizeInput(formData.value.businessInfo.taxId) || '',
+      status: 'ACTIVE',
+      primaryContactName: `${sanitizeInput(formData.value.contactPerson.firstName)} ${sanitizeInput(formData.value.contactPerson.lastName)}`.trim(),
+      primaryContactEmail: sanitizeInput(formData.value.contactPerson.email).toLowerCase(),
+      primaryContactPhone: sanitizeInput(formData.value.contactPerson.phone),
+      primaryContactJobTitle: sanitizeInput(formData.value.contactPerson.position) || ''
+    }
+
+    // Validate final data structure
+    if (!clientData.companyName || !clientData.primaryContactEmail) {
+      throw new Error('Missing required fields')
+    }
+
+    await withLoading('create-client', () => clientsStore.createClient(clientData))
 
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: `${formData.value.companyName} has been created successfully`,
-      life: 3000
+      summary: 'Client Created',
+      detail: `${clientData.companyName} has been created successfully`,
+      life: 4000
     })
 
+    // Reset form data
+    resetForm()
+    
     router.push('/clients')
   } catch (error) {
+    console.error('Failed to create client:', error)
+    
+    // Handle specific error cases
+    let errorMessage = 'Failed to create client'
+    if (error.response?.status === 409) {
+      errorMessage = 'A client with this name or email already exists'
+    } else if (error.response?.status === 400) {
+      errorMessage = 'Invalid client data. Please check all fields.'
+    } else if (clientsStore.error) {
+      errorMessage = clientsStore.error
+    }
+    
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to create client',
-      life: 3000
+      summary: 'Creation Failed',
+      detail: errorMessage,
+      life: 5000
     })
-  } finally {
-    loading.value = false
+  }
+}
+
+// Helper function to format website URL
+const formatWebsiteUrl = (url) => {
+  if (!url) return ''
+  const trimmed = url.trim()
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+    return `https://${trimmed}`
+  }
+  return trimmed
+}
+
+// Reset form function
+const resetForm = () => {
+  currentStep.value = 1
+  errors.value = {}
+  formData.value = {
+    companyName: '',
+    industry: '',
+    companySize: '',
+    website: '',
+    description: '',
+    brandColor: '#3b82f6',
+    contactPerson: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      position: '',
+      department: '',
+      alternatePhone: '',
+      preferredContactMethod: ''
+    },
+    businessInfo: {
+      address: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: '',
+      timezone: '',
+      taxId: '',
+      annualBudget: null,
+      specialRequirements: '',
+      contractSigned: false
+    }
   }
 }
 </script>

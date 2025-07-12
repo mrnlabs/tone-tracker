@@ -23,14 +23,14 @@
           <div class="header-main">
             <div class="client-avatar-section">
               <Avatar
-                  :label="client.companyName.charAt(0)"
+                  :label="(client.companyName || client.brandName || '?').charAt(0)"
                   size="xlarge"
                   shape="circle"
-                  :style="{ backgroundColor: client.brandColor, color: 'white' }"
+                  :style="{ backgroundColor: client.brandColor || '#3b82f6', color: 'white' }"
               />
               <div class="client-basic-info">
-                <h1 class="client-name">{{ client.companyName }}</h1>
-                <p class="client-industry">{{ client.industry }}</p>
+                <h1 class="client-name">{{ client.companyName || client.brandName }}</h1>
+                <p class="client-industry">{{ client.businessType }}</p>
                 <Tag
                     :value="client.status"
                     :severity="getStatusSeverity(client.status)"
@@ -72,8 +72,8 @@
                   </div>
                   <div class="stat-info">
                     <h3>Total Activations</h3>
-                    <p class="stat-number">{{ client.totalActivations }}</p>
-                    <span class="stat-change positive">+{{ client.activationsThisMonth }} this month</span>
+                    <p class="stat-number">{{ client.totalActivations || 0 }}</p>
+                    <span class="stat-change positive">{{ client.activeActivations || 0 }} active</span>
                   </div>
                 </div>
               </template>
@@ -87,8 +87,8 @@
                   </div>
                   <div class="stat-info">
                     <h3>Total Revenue</h3>
-                    <p class="stat-number">${{ client.totalRevenue.toLocaleString() }}</p>
-                    <span class="stat-change positive">+${{ client.revenueThisMonth.toLocaleString() }} this month</span>
+                    <p class="stat-number">${{ (client.totalRevenue || 0).toLocaleString() }}</p>
+                    <span class="stat-change positive">+${{ (client.revenueThisMonth || 0).toLocaleString() }} this month</span>
                   </div>
                 </div>
               </template>
@@ -145,12 +145,12 @@
                           <span>{{ client.companyName }}</span>
                         </div>
                         <div class="info-item">
-                          <label>Industry</label>
-                          <span>{{ client.industry }}</span>
+                          <label>Business Type</label>
+                          <span>{{ client.businessType }}</span>
                         </div>
                         <div class="info-item">
-                          <label>Company Size</label>
-                          <span>{{ client.companySize || 'Not specified' }}</span>
+                          <label>Registration Number</label>
+                          <span>{{ client.registrationNumber || 'Not specified' }}</span>
                         </div>
                         <div class="info-item">
                           <label>Website</label>
@@ -179,46 +179,36 @@
                       <div class="contact-info">
                         <div class="contact-header">
                           <Avatar
-                              :label="client.contactPerson.name.split(' ').map(n => n.charAt(0)).join('')"
+                              :label="(client.primaryContactName || '?').split(' ').map(n => n.charAt(0)).join('')"
                               size="large"
                               shape="circle"
                           />
                           <div class="contact-details">
-                            <h4>{{ client.contactPerson.name }}</h4>
-                            <p>{{ client.contactPerson.position }}</p>
-                            <p>{{ client.contactPerson.department }}</p>
+                            <h4>{{ client.primaryContactName || 'No Contact Name' }}</h4>
+                            <p v-if="client.primaryContactJobTitle">{{ client.primaryContactJobTitle }}</p>
                           </div>
                         </div>
 
                         <div class="contact-methods">
                           <div class="contact-method">
                             <i class="pi pi-envelope"></i>
-                            <span>{{ client.contactPerson.email }}</span>
+                            <span>{{ client.primaryContactEmail || 'No Email' }}</span>
                             <Button
-                                @click="sendEmail(client.contactPerson.email)"
+                                v-if="client.primaryContactEmail"
+                                @click="sendEmail(client.primaryContactEmail)"
                                 icon="pi pi-send"
                                 class="p-button-text p-button-sm"
                                 v-tooltip.top="'Send Email'"
                             />
                           </div>
-                          <div class="contact-method">
+                          <div class="contact-method" v-if="client.primaryContactPhone">
                             <i class="pi pi-phone"></i>
-                            <span>{{ client.contactPerson.phone }}</span>
+                            <span>{{ client.primaryContactPhone }}</span>
                             <Button
-                                @click="callContact(client.contactPerson.phone)"
+                                @click="callContact(client.primaryContactPhone)"
                                 icon="pi pi-phone"
                                 class="p-button-text p-button-sm"
                                 v-tooltip.top="'Call'"
-                            />
-                          </div>
-                          <div class="contact-method" v-if="client.contactPerson.alternatePhone">
-                            <i class="pi pi-mobile"></i>
-                            <span>{{ client.contactPerson.alternatePhone }}</span>
-                            <Button
-                                @click="callContact(client.contactPerson.alternatePhone)"
-                                icon="pi pi-phone"
-                                class="p-button-text p-button-sm"
-                                v-tooltip.top="'Call Mobile'"
                             />
                           </div>
                         </div>
@@ -235,26 +225,26 @@
                       <div class="info-grid">
                         <div class="info-item full-width">
                           <label>Address</label>
-                          <span>{{ client.businessInfo.fullAddress }}</span>
+                          <span>{{ client.streetAddress }}, {{ client.city }}, {{ client.country }}</span>
+                        </div>
+                        <div class="info-item" v-if="client.zipCode">
+                          <label>Zip Code</label>
+                          <span>{{ client.zipCode || 'Not specified' }}</span>
+                        </div>
+                        <div class="info-item" v-if="client.taxNumber">
+                          <label>Tax Number</label>
+                          <span>{{ client.taxNumber || 'Not specified' }}</span>
                         </div>
                         <div class="info-item">
-                          <label>Timezone</label>
-                          <span>{{ client.businessInfo.timezone || 'Not specified' }}</span>
-                        </div>
-                        <div class="info-item">
-                          <label>Annual Budget</label>
-                          <span>{{ client.businessInfo.annualBudget ? `${client.businessInfo.annualBudget.toLocaleString()}` : 'Not specified' }}</span>
-                        </div>
-                        <div class="info-item">
-                          <label>Contract Status</label>
+                          <label>Status</label>
                           <Tag
-                              :value="client.businessInfo.contractSigned ? 'Signed' : 'Pending'"
-                              :severity="client.businessInfo.contractSigned ? 'success' : 'warning'"
+                              :value="client.status"
+                              :severity="getStatusSeverity(client.status)"
                           />
                         </div>
-                        <div class="info-item full-width" v-if="client.businessInfo.specialRequirements">
-                          <label>Special Requirements</label>
-                          <span>{{ client.businessInfo.specialRequirements }}</span>
+                        <div class="info-item full-width" v-if="client.notes">
+                          <label>Notes</label>
+                          <span>{{ client.notes }}</span>
                         </div>
                       </div>
                     </template>
@@ -538,23 +528,30 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
+import { useClientsStore } from '@/stores/client'
+import { useLoading } from '@/composables/useLoading'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
 
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
+const clientsStore = useClientsStore()
+const { withLoading, isLoading } = useLoading()
 
 // State
-const loading = ref(true)
-const activationsLoading = ref(false)
-const client = ref(null)
 const activations = ref([])
 const activityLog = ref([])
 const selectedActivationStatus = ref(null)
 const showActions = ref(false)
+
+// Computed
+const loading = computed(() => isLoading('fetch-client') || clientsStore.isLoading)
+const client = computed(() => clientsStore.currentClient)
+const clientActivations = computed(() => clientsStore.getCachedClientActivations(route.params.id))
+const activationsLoading = computed(() => isLoading('fetch-client-activations'))
 
 // Options
 const activationStatusOptions = [
@@ -564,7 +561,6 @@ const activationStatusOptions = [
   { label: 'Cancelled', value: 'Cancelled' }
 ]
 
-// Computed
 const filteredActivations = computed(() => {
   if (!selectedActivationStatus.value) {
     return activations.value
@@ -576,110 +572,34 @@ const filteredActivations = computed(() => {
 
 // Methods
 const loadClientData = async () => {
-  loading.value = true
   try {
-    const clientId = route.params.id
-
-    // Mock API call - replace with actual API
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // Mock client data
-    client.value = {
-      id: clientId,
-      companyName: 'TechCorp Solutions',
-      industry: 'Technology',
-      companySize: 'Large (201-1000 employees)',
-      website: 'https://www.techcorp.com',
-      description: 'Leading technology solutions provider specializing in enterprise software and digital transformation services.',
-      brandColor: '#3b82f6',
-      status: 'Active',
-      contactPerson: {
-        name: 'John Smith',
-        email: 'john.smith@techcorp.com',
-        phone: '+1 (555) 123-4567',
-        alternatePhone: '+1 (555) 123-4568',
-        position: 'Marketing Director',
-        department: 'Marketing'
-      },
-      businessInfo: {
-        fullAddress: '123 Business Street, New York, NY 10001, United States',
-        timezone: 'America/New_York',
-        annualBudget: 500000,
-        contractSigned: true,
-        specialRequirements: 'Requires 48-hour advance notice for all activations'
-      },
-      totalActivations: 12,
-      activationsThisMonth: 3,
-      totalRevenue: 450000,
-      revenueThisMonth: 75000,
-      successRate: 92,
-      completedActivations: 11,
-      avgEngagement: '87%',
-      totalCustomersReached: 15420,
-      avgActivationDuration: 5,
-      engagementRate: 87,
-      roi: 145,
-      repeatRate: 75
-    }
-
-    // Load activations
-    await loadActivations()
-
-    // Load activity log
-    await loadActivityLog()
-
+    await withLoading('fetch-client', () => clientsStore.getClient(route.params.id))
   } catch (error) {
+    console.error('Failed to load client:', error)
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: 'Failed to load client data',
+      detail: clientsStore.error || 'Failed to load client details',
       life: 3000
     })
-  } finally {
-    loading.value = false
   }
 }
 
 const loadActivations = async () => {
-  activationsLoading.value = true
   try {
-    // Mock activations data
-    activations.value = [
-      {
-        id: 1,
-        name: 'Summer Product Launch',
-        location: 'New York Mall',
-        startDate: '2024-07-15',
-        endDate: '2024-07-18',
-        status: 'Active',
-        budget: 50000,
-        performance: 85
-      },
-      {
-        id: 2,
-        name: 'Brand Awareness Campaign',
-        location: 'Central Plaza',
-        startDate: '2024-06-20',
-        endDate: '2024-06-22',
-        status: 'Completed',
-        budget: 35000,
-        performance: 92
-      },
-      {
-        id: 3,
-        name: 'Holiday Promotion',
-        location: 'Downtown Square',
-        startDate: '2024-12-15',
-        endDate: '2024-12-18',
-        status: 'Planned',
-        budget: 75000,
-        performance: 0
-      }
-    ]
+    const response = await withLoading('fetch-client-activations', () => 
+      clientsStore.getClientActivations(route.params.id)
+    )
+    // Update local activations if needed for additional processing
+    activations.value = response.data || []
   } catch (error) {
     console.error('Failed to load activations:', error)
-  } finally {
-    activationsLoading.value = false
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: clientsStore.error || 'Failed to load client activations',
+      life: 3000
+    })
   }
 }
 
@@ -719,6 +639,9 @@ const loadActivityLog = async () => {
 
 const getStatusSeverity = (status) => {
   const severityMap = {
+    'ACTIVE': 'success',
+    'INACTIVE': 'danger', 
+    'PENDING': 'warning',
     'Active': 'success',
     'Inactive': 'danger',
     'Pending': 'warning'
@@ -801,8 +724,33 @@ const exportClientReport = (format) => {
   })
 }
 
-onMounted(() => {
-  loadClientData()
+// Watch for route parameter changes
+watch(() => route.params.id, (newId) => {
+  if (newId) {
+    loadClientData()
+    loadActivations()
+  }
+}, { immediate: false })
+
+// Error handling watcher
+watch(() => clientsStore.error, (error) => {
+  if (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: error,
+      life: 5000
+    })
+    clientsStore.clearError()
+  }
+})
+
+onMounted(async () => {
+  await Promise.all([
+    loadClientData(),
+    loadActivations(),
+    loadActivityLog()
+  ])
 })
 </script>
 

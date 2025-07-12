@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.min.js
+public/
+.nuxt/
+coverage/
+.env*
+*.config.js
+vite.config.js

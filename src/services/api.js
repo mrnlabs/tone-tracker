@@ -10,8 +10,8 @@ import { API_ENDPOINTS, STORAGE_KEYS, ERROR_MESSAGES } from '@/utils/constants'
 class ApiService {
     constructor() {
         this.client = axios.create({
-            baseURL:  'http://localhost:8080/api',
-            timeout: 30000, // 30 seconds
+            baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
+            timeout: parseInt(import.meta.env.VITE_APP_TIMEOUT) || 30000,
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
@@ -326,23 +326,46 @@ class ApiService {
     async getPaginated(url, params = {}) {
         try {
             const defaultParams = {
-                page: 1,
-                limit: 10,
-                sort: 'created_at',
-                order: 'desc'
+                page: 0,
+                size: 10,
+                sort: ['companyName,asc']
             }
 
             const queryParams = { ...defaultParams, ...params }
             const response = await this.client.get(url, { params: queryParams })
 
-            return {
-                data: response.data.data || response.data,
-                meta: response.data.meta || {
-                    total: response.data.length,
+            // Handle different response structures
+            let data, meta
+            
+            if (response.data.content) {
+                // Spring Boot pagination response
+                data = response.data.content
+                meta = {
+                    total: response.data.totalElements,
+                    page: response.data.number,
+                    size: response.data.size,
+                    totalPages: response.data.totalPages
+                }
+            } else if (response.data.data) {
+                // Custom pagination response
+                data = response.data.data
+                meta = response.data.meta || {
+                    total: response.data.total || data.length,
                     page: queryParams.page,
-                    limit: queryParams.limit
+                    size: queryParams.size
+                }
+            } else {
+                // Direct array response
+                data = Array.isArray(response.data) ? response.data : [response.data]
+                meta = {
+                    total: data.length,
+                    page: queryParams.page,
+                    size: queryParams.size
                 }
             }
+
+
+            return { data, meta }
         } catch (error) {
             throw error
         }
