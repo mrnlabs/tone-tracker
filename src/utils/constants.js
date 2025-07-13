@@ -346,9 +346,14 @@ export const API_ENDPOINTS = {
     ACTIVATION_REPORTS: '/activations/:id/reports',
 
     // Warehouse/Inventory
+    WAREHOUSES: '/warehouses',
+    WAREHOUSE_INVENTORY: '/warehouses/:id/inventory',
+    WAREHOUSE_STATS: '/warehouses/:id/stats',
+    WAREHOUSE_REPORTS: '/warehouses/:id/reports',
     INVENTORY: '/inventory',
     STOCK_ALLOCATION: '/inventory/allocate',
     STOCK_MOVEMENTS: '/inventory/movements',
+    STOCK_TRANSFERS: '/warehouses/transfers',
 
     // Reports
     REPORTS: '/reports',

@@ -2,132 +2,26 @@
   <DashboardLayout>
     <div class="activations-page">
       <!-- Page Header -->
-      <div class="page-header">
-        <div class="header-content">
-          <div class="header-info">
-            <h1 class="page-title">Activation Management</h1>
-            <p class="page-description">
-              Manage and monitor all brand activations across locations
-            </p>
-          </div>
-          <div class="header-actions">
-            <div class="header-button-group">
-              <Button
-                  @click="refreshActivations"
-                  icon="pi pi-refresh"
-                  :loading="refreshing"
-                  :disabled="loading"
-                  class="p-button-outlined"
-                  v-tooltip.top="refreshing ? 'Refreshing...' : 'Refresh activation list'"
-              />
-              <Button
-                  v-if="canCreateActivation"
-                  @click="$router.push('/activations/create')"
-                  icon="pi pi-plus"
-                  label="Create Activation"
-                  class="p-button-success"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      <PageHeader 
+        title="Activation Management"
+        description="Manage and monitor all brand activations across locations"
+        :actions="headerActions"
+        :loading="loading"
+      />
 
       <!-- Stats Cards -->
-      <div class="stats-grid">
-        <Card class="stat-card">
-          <template #content>
-            <div class="stat-content">
-              <div class="stat-icon total">
-                <i class="pi pi-calendar"></i>
-              </div>
-              <div class="stat-info">
-                <h3>Total Activations</h3>
-                <p class="stat-number">{{ activationStats.total }}</p>
-              </div>
-            </div>
-          </template>
-        </Card>
-
-        <Card class="stat-card">
-          <template #content>
-            <div class="stat-content">
-              <div class="stat-icon active">
-                <i class="pi pi-play-circle"></i>
-              </div>
-              <div class="stat-info">
-                <h3>Active Today</h3>
-                <p class="stat-number">{{ activationStats.activeToday }}</p>
-              </div>
-            </div>
-          </template>
-        </Card>
-
-        <Card class="stat-card">
-          <template #content>
-            <div class="stat-content">
-              <div class="stat-icon upcoming">
-                <i class="pi pi-clock"></i>
-              </div>
-              <div class="stat-info">
-                <h3>Upcoming</h3>
-                <p class="stat-number">{{ activationStats.upcoming }}</p>
-              </div>
-            </div>
-          </template>
-        </Card>
-
-        <Card class="stat-card">
-          <template #content>
-            <div class="stat-content">
-              <div class="stat-icon revenue">
-                <i class="pi pi-dollar"></i>
-              </div>
-              <div class="stat-info">
-                <h3>Total Budget</h3>
-                <p class="stat-number">${{ activationStats.totalBudget.toLocaleString() }}</p>
-              </div>
-            </div>
-          </template>
-        </Card>
-      </div>
+      <StatsGrid :stats="statsData" :loading="loading" />
 
       <!-- Quick Filters -->
-      <Card class="filters-card">
-        <template #content>
-          <div class="filters-row">
-            <div class="search-field">
-              <span class="p-input-icon-left">
-                <i class="pi pi-search" />
-                <InputText
-                    v-model="searchQuery"
-                    placeholder="Search activations..."
-                    @input="handleSearch"
-                />
-              </span>
-            </div>
-
-            <div class="filter-field">
-              <Dropdown
-                  v-model="selectedStatus"
-                  :options="statusOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="All Status"
-                  showClear
-                  @change="handleFilter"
-              />
-            </div>
-
-            <Button
-                @click="resetFilters"
-                icon="pi pi-filter-slash"
-                label="Reset"
-                class="p-button-outlined"
-                :disabled="!hasActiveFilters"
-            />
-          </div>
-        </template>
-      </Card>
+      <FilterBar
+        v-model:search="searchQuery"
+        v-model:filter-values="filterValues"
+        search-placeholder="Search activations..."
+        :filters="filterConfig"
+        @search="handleSearch"
+        @filter="handleFilter"
+        @reset="resetFilters"
+      />
 
       <!-- Activations Table -->
       <Card class="activations-table-card">
@@ -188,7 +82,25 @@
               <Column field="locationName" header="Location" sortable></Column>
               <Column field="startDate" header="Start Date" sortable></Column>
               <Column field="endDate" header="End Date" sortable></Column>
-              <Column field="status" header="Status" sortable></Column>
+              <Column field="status" header="Status" sortable>
+                <template #body="{ data }">
+                  <Tag
+                      :value="data.status"
+                      :severity="getStatusSeverity(data.status)"
+                  />
+                </template>
+              </Column>
+              <Column header="Actions" :exportable="false">
+                <template #body="{ data }">
+                  <EntityActionButtons
+                    :entity="data"
+                    :actions="tableActions"
+                    :permissions="userPermissions"
+                    variant="table"
+                    @action="handleTableAction"
+                  />
+                </template>
+              </Column>
             </template>
 
             <template #empty>
@@ -236,10 +148,30 @@
                     </div>
                     <div class="card-actions">
                       <Button
+                          @click.stop="viewActivation(activation.id)"
+                          icon="pi pi-eye"
+                          class="p-button-text p-button-sm"
+                          v-tooltip.top="'View Details'"
+                      />
+                      <Button
+                          v-if="canEditActivation(activation)"
                           @click.stop="editActivation(activation.id)"
                           icon="pi pi-pencil"
                           class="p-button-text p-button-sm"
                           v-tooltip.top="'Edit'"
+                      />
+                      <Button
+                          @click.stop="manageTeam(activation.id)"
+                          icon="pi pi-users"
+                          class="p-button-text p-button-sm"
+                          v-tooltip.top="'Manage Team'"
+                      />
+                      <Button
+                          v-if="canDeleteActivation(activation)"
+                          @click.stop="deleteActivation(activation)"
+                          icon="pi pi-trash"
+                          class="p-button-text p-button-sm p-button-danger"
+                          v-tooltip.top="'Delete'"
                       />
                     </div>
                   </div>
@@ -342,6 +274,11 @@ import { useAuthStore } from '@/stores/auth'
 import { useActivationsStore } from '@/stores/activation'
 import { useLoading } from '@/composables/useLoading'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatsGrid from '@/components/ui/StatsGrid.vue'
+import FilterBar from '@/components/ui/FilterBar.vue'
+import EntityActionButtons from '@/components/ui/EntityActionButtons.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -359,7 +296,28 @@ const activationToDelete = ref(null)
 const viewMode = ref('table')
 const refreshing = ref(false)
 
-// Options
+// Filter state
+const filterValues = ref({
+  status: null
+})
+
+// Filter configuration
+const filterConfig = [
+  {
+    key: 'status',
+    type: 'dropdown',
+    placeholder: 'All Status',
+    options: [
+      { label: 'Active', value: 'Active' },
+      { label: 'Completed', value: 'Completed' },
+      { label: 'Planned', value: 'Planned' },
+      { label: 'On Hold', value: 'On Hold' },
+      { label: 'Cancelled', value: 'Cancelled' }
+    ]
+  }
+]
+
+// Legacy options (keeping for backward compatibility)
 const statusOptions = [
   { label: 'Active', value: 'Active' },
   { label: 'Completed', value: 'Completed' },
@@ -398,6 +356,93 @@ const filteredActivations = computed(() => {
   // The filtering is done on the server side based on the filters sent in the API request
   return activations.value
 })
+
+const headerActions = computed(() => [
+  {
+    key: 'refresh',
+    icon: 'pi pi-refresh',
+    class: 'p-button-outlined',
+    loading: refreshing.value,
+    disabled: loading.value,
+    tooltip: refreshing.value ? 'Refreshing...' : 'Refresh activation list',
+    handler: refreshActivations
+  },
+  ...(canCreateActivation.value ? [{
+    key: 'create',
+    icon: 'pi pi-plus',
+    label: 'Create Activation',
+    class: 'p-button-success',
+    handler: () => router.push('/activations/create')
+  }] : [])
+])
+
+const statsData = computed(() => [
+  {
+    key: 'total',
+    title: 'Total Activations',
+    value: activationStats.value.total,
+    icon: 'pi pi-calendar',
+    type: 'total'
+  },
+  {
+    key: 'activeToday',
+    title: 'Active Today',
+    value: activationStats.value.activeToday,
+    icon: 'pi pi-play-circle',
+    type: 'active'
+  },
+  {
+    key: 'upcoming',
+    title: 'Upcoming',
+    value: activationStats.value.upcoming,
+    icon: 'pi pi-clock',
+    type: 'upcoming'
+  },
+  {
+    key: 'totalBudget',
+    title: 'Total Budget',
+    value: activationStats.value.totalBudget,
+    format: 'currency',
+    icon: 'pi pi-dollar',
+    type: 'revenue'
+  }
+])
+
+const userPermissions = computed(() => ({
+  canEdit: canEditActivation,
+  canDelete: canDeleteActivation,
+  canManageTeam: ['ADMIN', 'ACTIVATION_MANAGER'].includes(userRole.value)
+}))
+
+const tableActions = [
+  {
+    key: 'view',
+    icon: 'pi pi-eye',
+    tooltip: 'View Details',
+    handler: (entity) => viewActivation(entity.id)
+  },
+  {
+    key: 'edit',
+    icon: 'pi pi-pencil',
+    tooltip: 'Edit Activation',
+    visible: (entity) => canEditActivation(entity),
+    handler: (entity) => editActivation(entity.id)
+  },
+  {
+    key: 'team',
+    icon: 'pi pi-users',
+    tooltip: 'Manage Team',
+    handler: (entity) => manageTeam(entity.id)
+  },
+  {
+    key: 'delete',
+    icon: 'pi pi-trash',
+    tooltip: 'Delete Activation',
+    severity: 'danger',
+    visible: (entity) => canDeleteActivation(entity),
+    handler: (entity) => deleteActivation(entity)
+  }
+]
 
 // Methods
 const loadActivations = async (showLoading = true) => {
@@ -645,6 +690,16 @@ const viewActivation = (activationId) => {
 
 const editActivation = (activationId) => {
   router.push(`/activations/${activationId}/edit`)
+}
+
+const manageTeam = (activationId) => {
+  router.push(`/activations/${activationId}/team`)
+}
+
+const handleTableAction = ({ action, entity }) => {
+  // This is handled by individual action handlers
+  // The EntityActionButtons component calls the handler directly
+  console.log('Table action:', action, entity)
 }
 
 const deleteActivation = (activation) => {

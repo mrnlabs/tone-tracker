@@ -2,142 +2,26 @@
   <DashboardLayout>
     <div class="clients-page">
       <!-- Page Header -->
-      <div class="page-header">
-        <div class="header-content">
-          <div class="header-info">
-            <h1 class="page-title">Client Management</h1>
-            <p class="page-description">
-              Manage your brand activation clients and their contact information
-            </p>
-          </div>
-          <div class="header-actions">
-            <div class="header-button-group">
-              <Button
-                  @click="refreshClients"
-                  icon="pi pi-refresh"
-                  :loading="refreshing"
-                  :disabled="loading"
-                  class="p-button-outlined"
-                  v-tooltip.top="refreshing ? 'Refreshing...' : 'Refresh client list'"
-              />
-              <Button
-                  @click="$router.push('/clients/create')"
-                  icon="pi pi-plus"
-                  label="Add New Client"
-                  class="p-button-success"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      <PageHeader 
+        title="Client Management"
+        description="Manage your brand activation clients and their contact information"
+        :actions="headerActions"
+        :loading="loading"
+      />
 
       <!-- Stats Cards -->
-      <div class="stats-grid">
-        <Card class="stat-card">
-          <template #content>
-            <div class="stat-content">
-              <div class="stat-icon total">
-                <i class="pi pi-building"></i>
-              </div>
-              <div class="stat-info">
-                <h3>Total Clients</h3>
-                <p class="stat-number">{{ clientStats.total }}</p>
-              </div>
-            </div>
-          </template>
-        </Card>
-
-        <Card class="stat-card">
-          <template #content>
-            <div class="stat-content">
-              <div class="stat-icon active">
-                <i class="pi pi-check-circle"></i>
-              </div>
-              <div class="stat-info">
-                <h3>Active Clients</h3>
-                <p class="stat-number">{{ clientStats.active }}</p>
-              </div>
-            </div>
-          </template>
-        </Card>
-
-        <Card class="stat-card">
-          <template #content>
-            <div class="stat-content">
-              <div class="stat-icon activations">
-                <i class="pi pi-calendar"></i>
-              </div>
-              <div class="stat-info">
-                <h3>Active Activations</h3>
-                <p class="stat-number">{{ clientStats.activeActivations }}</p>
-              </div>
-            </div>
-          </template>
-        </Card>
-
-        <Card class="stat-card">
-          <template #content>
-            <div class="stat-content">
-              <div class="stat-icon revenue">
-                <i class="pi pi-dollar"></i>
-              </div>
-              <div class="stat-info">
-                <h3>Total Revenue</h3>
-                <p class="stat-number">${{ (clientStats.totalRevenue || 0).toLocaleString() }}</p>
-              </div>
-            </div>
-          </template>
-        </Card>
-      </div>
+      <StatsGrid :stats="statsData" :loading="loading" />
 
       <!-- Filters and Search -->
-      <Card class="filters-card">
-        <template #content>
-          <div class="filters-row">
-            <div class="search-field">
-              <span class="p-input-icon-left">
-                <i class="pi pi-search" />
-                <InputText
-                    v-model="searchQuery"
-                    placeholder="Search clients..."
-                    @input="handleSearch"
-                />
-              </span>
-            </div>
-
-            <div class="filter-field">
-              <Dropdown
-                  v-model="selectedStatus"
-                  :options="statusOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="All Status"
-                  showClear
-                  @change="handleFilter"
-              />
-            </div>
-
-            <div class="filter-field">
-              <Dropdown
-                  v-model="selectedIndustry"
-                  :options="industryOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="All Industries"
-                  showClear
-                  @change="handleFilter"
-              />
-            </div>
-
-            <Button
-                @click="resetFilters"
-                icon="pi pi-filter-slash"
-                label="Reset"
-                class="p-button-outlined"
-            />
-          </div>
-        </template>
-      </Card>
+      <FilterBar
+        v-model:search="searchQuery"
+        v-model:filter-values="filterValues"
+        search-placeholder="Search clients..."
+        :filters="filterConfig"
+        @search="handleSearch"
+        @filter="handleFilter"
+        @reset="resetFilters"
+      />
 
       <!-- Advanced Filters Panel -->
       <Card v-if="showAdvancedFilters" class="advanced-filters-card">
@@ -347,79 +231,23 @@
 
             <Column header="Actions" :exportable="false">
               <template #body="{ data }">
-                <div class="action-buttons">
-                  <Button
-                      @click="viewClient(data.id)"
-                      icon="pi pi-eye"
-                      class="p-button-text p-button-rounded"
-                      v-tooltip.top="'View Details'"
-                  />
-                  <Button
-                      @click="editClient(data.id)"
-                      icon="pi pi-pencil"
-                      class="p-button-text p-button-rounded"
-                      v-tooltip.top="'Edit Client'"
-                  />
-                  <Button
-                      @click="createActivation(data.id)"
-                      icon="pi pi-plus"
-                      class="p-button-text p-button-rounded"
-                      v-tooltip.top="'Create Activation'"
-                  />
-                  <Button
-                      @click="deleteClient(data)"
-                      icon="pi pi-trash"
-                      class="p-button-text p-button-rounded p-button-danger"
-                      v-tooltip.top="'Delete Client'"
-                  />
-                </div>
+                <EntityActionButtons
+                  :entity="data"
+                  :actions="tableActions"
+                  :permissions="userPermissions"
+                  variant="table"
+                  @action="handleTableAction"
+                />
               </template>
             </Column>
 
             <template #empty>
-              <div class="empty-state">
-                <div v-if="hasError" class="error-state">
-                  <i class="pi pi-exclamation-triangle error-icon"></i>
-                  <h3>Unable to Load Clients</h3>
-                  <p>There was an error loading your client data. Please try refreshing the page.</p>
-                  <div class="error-actions">
-                    <Button
-                        @click="loadClients()"
-                        label="Retry"
-                        icon="pi pi-refresh"
-                        class="p-button-outlined"
-                    />
-                    <Button
-                        @click="$router.push('/dashboard')"
-                        label="Go to Dashboard"
-                        icon="pi pi-home"
-                        class="p-button-text"
-                    />
-                  </div>
-                </div>
-                <div v-else-if="searchQuery || selectedStatus || selectedIndustry" class="no-results-state">
-                  <i class="pi pi-search no-results-icon"></i>
-                  <h3>No Matching Clients</h3>
-                  <p>No clients found matching your current filters. Try adjusting your search criteria.</p>
-                  <Button
-                      @click="resetFilters"
-                      label="Clear Filters"
-                      icon="pi pi-filter-slash"
-                      class="p-button-outlined"
-                  />
-                </div>
-                <div v-else class="empty-clients-state">
-                  <i class="pi pi-building empty-icon"></i>
-                  <h3>No Clients Yet</h3>
-                  <p>Start by adding your first client to begin managing activations and tracking performance.</p>
-                  <Button
-                      @click="$router.push('/clients/create')"
-                      label="Add Your First Client"
-                      icon="pi pi-plus"
-                      class="p-button-success"
-                  />
-                </div>
-              </div>
+              <EmptyState
+                :type="emptyStateConfig.type"
+                :title="emptyStateConfig.title"
+                :message="emptyStateConfig.message"
+                :actions="emptyStateConfig.actions"
+              />
             </template>
           </DataTable>
         </template>
@@ -467,6 +295,11 @@ import { useToast } from 'primevue/usetoast'
 import { useClientsStore } from '@/stores/client'
 import { useLoading } from '@/composables/useLoading'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatsGrid from '@/components/ui/StatsGrid.vue'
+import FilterBar from '@/components/ui/FilterBar.vue'
+import EntityActionButtons from '@/components/ui/EntityActionButtons.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 
 const router = useRouter()
 const toast = useToast()
@@ -571,6 +404,169 @@ const exportOptions = [
     command: () => exportSelectedClients()
   }
 ]
+
+// Header actions configuration
+const headerActions = computed(() => [
+  {
+    key: 'refresh',
+    icon: 'pi pi-refresh',
+    class: 'p-button-outlined',
+    loading: refreshing.value,
+    tooltip: 'Refresh client list',
+    handler: refreshClients
+  },
+  {
+    key: 'create',
+    icon: 'pi pi-plus',
+    label: 'Add Client',
+    class: 'p-button-success',
+    handler: () => router.push('/clients/create')
+  }
+])
+
+// Stats data configuration
+const statsData = computed(() => [
+  {
+    key: 'total',
+    title: 'Total Clients',
+    value: clientStats.value.total,
+    icon: 'pi pi-building',
+    type: 'total'
+  },
+  {
+    key: 'active',
+    title: 'Active Clients',
+    value: clientStats.value.active,
+    icon: 'pi pi-check-circle',
+    type: 'active'
+  },
+  {
+    key: 'activeActivations',
+    title: 'Active Activations',
+    value: clientStats.value.activeActivations,
+    icon: 'pi pi-calendar',
+    type: 'activations'
+  },
+  {
+    key: 'totalRevenue',
+    title: 'Total Revenue',
+    value: clientStats.value.totalRevenue,
+    format: 'currency',
+    icon: 'pi pi-dollar',
+    type: 'revenue'
+  }
+])
+
+// Filter configuration
+const filterValues = ref({
+  status: selectedStatus.value,
+  industry: selectedIndustry.value
+})
+
+const filterConfig = [
+  {
+    key: 'status',
+    type: 'dropdown',
+    placeholder: 'All Status',
+    options: statusOptions
+  },
+  {
+    key: 'industry',
+    type: 'dropdown', 
+    placeholder: 'All Industries',
+    options: industryOptions
+  }
+]
+
+// Table actions configuration
+const tableActions = [
+  {
+    key: 'view',
+    icon: 'pi pi-eye',
+    tooltip: 'View Details',
+    handler: (entity) => viewClient(entity.id)
+  },
+  {
+    key: 'edit',
+    icon: 'pi pi-pencil',
+    tooltip: 'Edit Client',
+    handler: (entity) => editClient(entity.id)
+  },
+  {
+    key: 'createActivation',
+    icon: 'pi pi-plus',
+    tooltip: 'Create Activation',
+    handler: (entity) => createActivation(entity.id)
+  },
+  {
+    key: 'delete',
+    icon: 'pi pi-trash',
+    tooltip: 'Delete Client',
+    severity: 'danger',
+    handler: (entity) => deleteClient(entity)
+  }
+]
+
+// User permissions for action visibility
+const userPermissions = computed(() => ({
+  canView: true,
+  canEdit: true,
+  canCreate: true,
+  canDelete: true
+}))
+
+// Empty state configurations
+const emptyStateConfig = computed(() => {
+  if (hasError.value) {
+    return {
+      type: 'error',
+      title: 'Unable to Load Clients',
+      message: 'There was an error loading your client data. Please try refreshing the page.',
+      actions: [
+        {
+          label: 'Retry',
+          icon: 'pi pi-refresh',
+          class: 'p-button-outlined',
+          handler: () => loadClients()
+        },
+        {
+          label: 'Go to Dashboard',
+          icon: 'pi pi-home',
+          class: 'p-button-text',
+          handler: () => router.push('/dashboard')
+        }
+      ]
+    }
+  } else if (searchQuery.value || selectedStatus.value || selectedIndustry.value) {
+    return {
+      type: 'no-results',
+      title: 'No Matching Clients',
+      message: 'No clients found matching your current filters. Try adjusting your search criteria.',
+      actions: [
+        {
+          label: 'Clear Filters',
+          icon: 'pi pi-filter-slash',
+          class: 'p-button-outlined',
+          handler: resetFilters
+        }
+      ]
+    }
+  } else {
+    return {
+      type: 'empty',
+      title: 'No Clients Yet',
+      message: 'Start by adding your first client to begin managing activations and tracking performance.',
+      actions: [
+        {
+          label: 'Add Your First Client',
+          icon: 'pi pi-plus',
+          class: 'p-button-success',
+          handler: () => router.push('/clients/create')
+        }
+      ]
+    }
+  }
+})
 
 // Computed
 const loading = computed(() => isLoading('fetch-clients') || clientsStore.isLoading)
@@ -863,6 +859,14 @@ const createActivation = (clientId) => {
 const deleteClient = (client) => {
   clientToDelete.value = client
   deleteDialogVisible.value = true
+}
+
+// Handle table action events from EntityActionButtons
+const handleTableAction = ({ action, entity }) => {
+  const handler = action.handler
+  if (handler && typeof handler === 'function') {
+    handler(entity)
+  }
 }
 
 const confirmDelete = async () => {

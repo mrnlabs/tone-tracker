@@ -3,18 +3,27 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { inventoryService } from '@/services/api'
+import { inventoryService, warehouseService } from '@/services/api'
 import { STOCK_STATUS } from '@/utils/constants'
 
 export const useWarehouseStore = defineStore('warehouse', () => {
     // === STATE ===
+    // Warehouse management
+    const warehouses = ref([])
+    const currentWarehouse = ref(null)
+    const warehouseStats = ref({})
+    
+    // Inventory management
     const inventory = ref([])
     const currentItem = ref(null)
     const stockMovements = ref([])
     const lowStockAlerts = ref([])
+    
+    // Loading states
     const isLoading = ref(false)
     const isCreating = ref(false)
     const isUpdating = ref(false)
+    const isDeleting = ref(false)
     const error = ref(null)
     const pagination = ref({
         total: 0,
@@ -161,43 +170,263 @@ export const useWarehouseStore = defineStore('warehouse', () => {
 
     // === ACTIONS ===
 
+    // === WAREHOUSE MANAGEMENT ===
+    
     /**
-     * Fetch inventory with pagination and filters
+     * Fetch warehouses with pagination and filters
      */
-    const fetchInventory = async (params = {}) => {
+    const fetchWarehouses = async (params = {}) => {
         try {
             isLoading.value = true
             error.value = null
 
-            const queryParams = {
-                page: pagination.value.page,
-                limit: pagination.value.limit,
-                sort: sortBy.value,
-                order: sortOrder.value,
-                ...filters.value,
-                ...params
-            }
-
-            // Remove empty filters
-            Object.keys(queryParams).forEach(key => {
-                if (queryParams[key] === null || queryParams[key] === '' || queryParams[key] === undefined) {
-                    delete queryParams[key]
+            // Try to fetch from API first
+            try {
+                // Convert our pagination to Spring Boot format
+                const springBootParams = {
+                    ...params,
+                    page: Math.max(0, (pagination.value.page || 1) - 1), // Convert 1-based to 0-based
+                    size: pagination.value.limit || 10,
+                    sort: params.sort || 'name,asc'
                 }
-            })
+                
+                const response = await warehouseService.getWarehouses(springBootParams)
+                warehouses.value = response.data
+                
+                // Convert Spring Boot response back to our format
+                pagination.value = {
+                    total: response.meta.total,
+                    page: (response.meta.page || 0) + 1, // Convert 0-based back to 1-based
+                    limit: response.meta.size || response.meta.limit || 10,
+                    totalPages: Math.ceil(response.meta.total / (response.meta.size || response.meta.limit || 10))
+                }
 
-            const response = await inventoryService.getInventory(queryParams)
+                return response
+            } catch (apiError) {
+                console.error('Failed to fetch warehouses from API:', apiError)
+                throw apiError
+            }
+        } catch (err) {
+            error.value = err.message || 'Failed to fetch warehouses'
+            throw err
+        } finally {
+            isLoading.value = false
+        }
+    }
 
-            inventory.value = response.data
-            pagination.value = {
-                total: response.meta.total,
-                page: response.meta.page,
-                limit: response.meta.limit,
-                totalPages: Math.ceil(response.meta.total / response.meta.limit)
+    /**
+     * Get warehouse by ID
+     */
+    const getWarehouse = async (id) => {
+        try {
+            isLoading.value = true
+            error.value = null
+
+            try {
+                const warehouse = await warehouseService.getWarehouse(id)
+                currentWarehouse.value = warehouse
+                return warehouse
+            } catch (apiError) {
+                console.error('Failed to fetch warehouse from API:', apiError)
+                throw apiError
+            }
+        } catch (err) {
+            error.value = err.message || 'Failed to fetch warehouse'
+            throw err
+        } finally {
+            isLoading.value = false
+        }
+    }
+
+    /**
+     * Create new warehouse
+     */
+    const createWarehouse = async (warehouseData) => {
+        try {
+            isCreating.value = true
+            error.value = null
+
+            try {
+                const newWarehouse = await warehouseService.createWarehouse(warehouseData)
+
+                // Add to the beginning of the list
+                warehouses.value.unshift(newWarehouse)
+
+                // Update pagination total
+                pagination.value.total += 1
+
+                return newWarehouse
+            } catch (apiError) {
+                console.error('Failed to create warehouse:', apiError)
+                throw apiError
+            }
+        } catch (err) {
+            error.value = err.message || 'Failed to create warehouse'
+            throw err
+        } finally {
+            isCreating.value = false
+        }
+    }
+
+    /**
+     * Update warehouse
+     */
+    const updateWarehouse = async (id, warehouseData) => {
+        try {
+            isUpdating.value = true
+            error.value = null
+
+            // Update warehouse - backend returns just the ID
+            await warehouseService.updateWarehouse(id, warehouseData)
+
+            // Fetch the updated warehouse to get the complete data
+            const updatedWarehouse = await warehouseService.getWarehouse(id)
+
+            // Update in the list
+            const index = warehouses.value.findIndex(warehouse => warehouse.id === id)
+            if (index !== -1) {
+                warehouses.value[index] = updatedWarehouse
             }
 
-            return response
+            // Update current warehouse if it's the same
+            if (currentWarehouse.value?.id === id) {
+                currentWarehouse.value = updatedWarehouse
+            }
+
+            return updatedWarehouse
         } catch (err) {
-            error.value = err.message || 'Failed to fetch inventory'
+            error.value = err.message || 'Failed to update warehouse'
+            throw err
+        } finally {
+            isUpdating.value = false
+        }
+    }
+
+    /**
+     * Delete warehouse
+     */
+    const deleteWarehouse = async (id) => {
+        try {
+            isDeleting.value = true
+            error.value = null
+
+            await warehouseService.deleteWarehouse(id)
+
+            // Remove from list
+            const index = warehouses.value.findIndex(warehouse => warehouse.id === id)
+            if (index !== -1) {
+                warehouses.value.splice(index, 1)
+            }
+
+            // Clear current warehouse if it's the same
+            if (currentWarehouse.value?.id === id) {
+                currentWarehouse.value = null
+            }
+
+            // Update pagination total
+            pagination.value.total = Math.max(0, pagination.value.total - 1)
+
+            return true
+        } catch (err) {
+            error.value = err.message || 'Failed to delete warehouse'
+            throw err
+        } finally {
+            isDeleting.value = false
+        }
+    }
+
+    /**
+     * Get warehouse statistics
+     */
+    const getWarehouseStats = async (warehouseId) => {
+        try {
+            error.value = null
+
+            const stats = await warehouseService.getWarehouseStats(warehouseId)
+            warehouseStats.value = stats
+
+            return stats
+        } catch (err) {
+            error.value = err.message || 'Failed to fetch warehouse statistics'
+            throw err
+        }
+    }
+
+    /**
+     * Get warehouse inventory with fallback
+     */
+    const getWarehouseInventory = async (warehouseId, params = {}) => {
+        try {
+            error.value = null
+
+            try {
+                return await warehouseService.getWarehouseInventory(warehouseId, params)
+            } catch (apiError) {
+                if (apiError.response?.status === 404 || apiError.response?.status === 403) {
+                    console.warn('Warehouse inventory API not available, returning empty inventory')
+                    return {
+                        data: [],
+                        meta: { total: 0, page: 1, limit: 10, totalPages: 0 }
+                    }
+                } else {
+                    throw apiError
+                }
+            }
+        } catch (err) {
+            error.value = err.message || 'Failed to fetch warehouse inventory'
+            throw err
+        }
+    }
+
+    /**
+     * Get warehouse stocks
+     */
+    const getWarehouseStocks = async (warehouseId) => {
+        try {
+            error.value = null
+            return await warehouseService.getWarehouseStocks(warehouseId)
+        } catch (err) {
+            error.value = err.message || 'Failed to fetch warehouse stocks'
+            throw err
+        }
+    }
+
+    // === INVENTORY MANAGEMENT ===
+
+    /**
+     * Fetch all stocks from all warehouses
+     */
+    const fetchAllStocks = async () => {
+        try {
+            isLoading.value = true
+            error.value = null
+
+            // Get all warehouses with their stocks
+            const warehousesWithStocks = await warehouseService.getWarehousesWithStocks()
+            
+            // Flatten all stocks from all warehouses into inventory array
+            inventory.value = warehousesWithStocks.reduce((allStocks, warehouse) => {
+                if (warehouse.stocks && warehouse.stocks.length > 0) {
+                    const warehouseStocks = warehouse.stocks.map(stock => ({
+                        ...stock,
+                        warehouseName: warehouse.name,
+                        warehouseId: warehouse.id
+                    }))
+                    return [...allStocks, ...warehouseStocks]
+                }
+                return allStocks
+            }, [])
+
+            pagination.value = {
+                total: inventory.value.length,
+                page: 1,
+                limit: inventory.value.length,
+                totalPages: 1
+            }
+
+            return { data: inventory.value, meta: pagination.value }
+        } catch (err) {
+            error.value = err.message || 'Failed to fetch stocks'
             throw err
         } finally {
             isLoading.value = false
@@ -491,7 +720,7 @@ export const useWarehouseStore = defineStore('warehouse', () => {
      * Refresh inventory
      */
     const refreshInventory = async () => {
-        await fetchInventory()
+        await fetchAllStocks()
     }
 
     /**
@@ -513,7 +742,7 @@ export const useWarehouseStore = defineStore('warehouse', () => {
      */
     const searchInventory = async (searchTerm) => {
         setFilters({ search: searchTerm })
-        await fetchInventory()
+        await fetchAllStocks()
     }
 
     /**
@@ -653,16 +882,24 @@ export const useWarehouseStore = defineStore('warehouse', () => {
 
     // Return store interface
     return {
-        // State
+        // Warehouse State
+        warehouses,
+        currentWarehouse,
+        warehouseStats,
+        
+        // Inventory State
         inventory,
         currentItem,
         stockMovements,
         lowStockAlerts,
         allocations,
         pendingAllocations,
+        
+        // Loading States
         isLoading,
         isCreating,
         isUpdating,
+        isDeleting,
         error,
         pagination,
         filters,
@@ -681,8 +918,18 @@ export const useWarehouseStore = defineStore('warehouse', () => {
         inventoryOptions,
         recentMovements,
 
-        // Actions
-        fetchInventory,
+        // Warehouse Actions
+        fetchWarehouses,
+        getWarehouse,
+        createWarehouse,
+        updateWarehouse,
+        deleteWarehouse,
+        getWarehouseStats,
+        getWarehouseStocks,
+        createWarehouseStock,
+        
+        // Inventory Actions
+        fetchAllStocks,
         getInventoryItem,
         createInventoryItem,
         updateInventoryItem,

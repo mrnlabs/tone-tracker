@@ -2,25 +2,26 @@
   <DashboardLayout>
     <div class="warehouses-page">
       <!-- Page Header -->
-      <div class="page-header">
-        <div class="header-content">
-          <div class="header-info">
-            <h1 class="page-title">Warehouse Management</h1>
-            <p class="page-description">
-              Manage warehouses, inventory, and stock distribution across locations
-            </p>
-          </div>
-          <div class="header-actions">
-            <Button
-                v-if="canManageWarehouses"
-                @click="$router.push('/warehouses/create')"
-                icon="pi pi-plus"
-                label="Add Warehouse"
-                class="p-button-success"
-            />
-          </div>
-        </div>
-      </div>
+      <PageHeader 
+        title="Warehouse Management"
+        description="Manage warehouses, inventory, and stock distribution across locations"
+        :actions="headerActions"
+        :loading="loading"
+      />
+
+      <!-- Stats Grid -->
+      <StatsGrid :stats="statsData" :loading="loading" />
+
+      <!-- Filters and Search -->
+      <FilterBar
+        v-model:search="searchQuery"
+        v-model:filter-values="filterValues"
+        search-placeholder="Search warehouses..."
+        :filters="filterConfig"
+        @search="handleSearch"
+        @filter="handleFilter"
+        @reset="resetFilters"
+      />
 
       <!-- Quick Navigation Cards -->
       <div class="nav-cards">
@@ -76,156 +77,117 @@
         </Card>
       </div>
 
-      <!-- Quick Stats -->
-      <div class="stats-grid">
-        <Card class="stat-card">
-          <template #content>
-            <div class="stat-content">
-              <div class="stat-icon total">
-                <i class="pi pi-building"></i>
-              </div>
-              <div class="stat-info">
-                <h3>Total Warehouses</h3>
-                <p class="stat-number">{{ warehouseStats.total }}</p>
-              </div>
-            </div>
-          </template>
-        </Card>
 
-        <Card class="stat-card">
-          <template #content>
-            <div class="stat-content">
-              <div class="stat-icon skus">
-                <i class="pi pi-box"></i>
-              </div>
-              <div class="stat-info">
-                <h3>Total SKUs</h3>
-                <p class="stat-number">{{ warehouseStats.totalSKUs }}</p>
-              </div>
-            </div>
-          </template>
-        </Card>
-
-        <Card class="stat-card">
-          <template #content>
-            <div class="stat-content">
-              <div class="stat-icon value">
-                <i class="pi pi-dollar"></i>
-              </div>
-              <div class="stat-info">
-                <h3>Inventory Value</h3>
-                <p class="stat-number">${{ warehouseStats.totalValue.toLocaleString() }}</p>
-              </div>
-            </div>
-          </template>
-        </Card>
-
-        <Card class="stat-card">
-          <template #content>
-            <div class="stat-content">
-              <div class="stat-icon alerts">
-                <i class="pi pi-exclamation-triangle"></i>
-              </div>
-              <div class="stat-info">
-                <h3>Low Stock Alerts</h3>
-                <p class="stat-number">{{ warehouseStats.lowStockAlerts }}</p>
-              </div>
-            </div>
-          </template>
-        </Card>
-      </div>
-
-      <!-- Warehouses List -->
-      <Card class="warehouses-list-card">
-        <template #header>
-          <div class="list-header">
-            <h3>Your Warehouses</h3>
-            <Button
-                v-if="canManageWarehouses"
-                @click="$router.push('/warehouses/create')"
-                icon="pi pi-plus"
-                label="Add Warehouse"
-                class="p-button-outlined"
-            />
-          </div>
-        </template>
+      <!-- Warehouses Table -->
+      <Card class="warehouses-table-card">
         <template #content>
-          <div class="warehouses-grid">
-            <div
-                v-for="warehouse in warehouses"
-                :key="warehouse.id"
-                class="warehouse-card"
-                @click="viewWarehouse(warehouse.id)"
-            >
-              <div class="warehouse-header">
-                <div class="warehouse-info">
-                  <h4>{{ warehouse.name }}</h4>
-                  <span class="warehouse-code">{{ warehouse.code }}</span>
+          <DataTable
+              :value="warehouses"
+              dataKey="id"
+              :paginator="true"
+              :rows="pagination.limit"
+              :totalRecords="pagination.total"
+              :first="(pagination.page - 1) * pagination.limit"
+              :lazy="true"
+              responsiveLayout="scroll"
+              :loading="loading"
+              v-model:selection="selectedWarehouses"
+              :selectAll="selectAll"
+              @select-all-change="onSelectAllChange"
+              @row-select="onRowSelect"
+              @row-unselect="onRowUnselect"
+              @page="onPageChange"
+              @sort="onSort"
+          >
+            <template #header>
+              <div class="table-header">
+                <h3>Warehouses Directory</h3>
+                <div class="table-actions">
+                  <Button
+                      v-if="selectedWarehouses.length > 0"
+                      @click="bulkAction"
+                      icon="pi pi-cog"
+                      :label="`Actions (${selectedWarehouses.length})`"
+                      class="p-button-outlined"
+                      :disabled="loading"
+                      v-tooltip.top="`Bulk actions for ${selectedWarehouses.length} selected warehouses`"
+                  />
+                  <Button
+                      @click="exportData"
+                      icon="pi pi-download"
+                      label="Export"
+                      class="p-button-outlined"
+                      :disabled="loading || !warehouses?.length"
+                      v-tooltip.top="warehouses?.length ? `Export ${warehouses.length} warehouses` : 'No warehouses to export'"
+                  />
                 </div>
-                <Tag
-                    :value="warehouse.status"
-                    :severity="getStatusSeverity(warehouse.status)"
-                />
               </div>
+            </template>
 
-              <div class="warehouse-details">
-                <div class="detail-row">
-                  <i class="pi pi-map-marker"></i>
-                  <span>{{ warehouse.location }}</span>
-                </div>
-                <div class="detail-row">
-                  <i class="pi pi-user"></i>
-                  <span>{{ warehouse.manager }}</span>
-                </div>
-                <div class="detail-row">
-                  <i class="pi pi-box"></i>
-                  <span>{{ warehouse.skuCount }} SKUs</span>
-                </div>
-              </div>
-
-              <div class="warehouse-metrics">
-                <div class="metric">
-                  <span class="metric-label">Utilization</span>
-                  <div class="metric-value">
-                    <ProgressBar :value="warehouse.utilization" class="utilization-bar" />
-                    <span class="percentage">{{ warehouse.utilization }}%</span>
+            <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
+            <Column field="id" header="ID" sortable></Column>
+            
+            <Column field="name" header="Warehouse" sortable>
+              <template #body="{ data }">
+                <div class="warehouse-cell">
+                  <div class="warehouse-icon">
+                    <i class="pi pi-building"></i>
+                  </div>
+                  <div class="warehouse-info">
+                    <span class="warehouse-name">{{ data.name }}</span>
                   </div>
                 </div>
-                <div class="metric">
-                  <span class="metric-label">Inventory Value</span>
-                  <span class="metric-amount">${{ warehouse.inventoryValue.toLocaleString() }}</span>
-                </div>
-              </div>
+              </template>
+            </Column>
 
-              <div class="warehouse-actions">
-                <Button
-                    @click.stop="viewInventory(warehouse.id)"
-                    icon="pi pi-list"
-                    label="Inventory"
-                    class="p-button-outlined p-button-sm"
-                />
-                <Button
-                    @click.stop="viewDetails(warehouse.id)"
-                    icon="pi pi-eye"
-                    label="Details"
-                    class="p-button-outlined p-button-sm"
-                />
-              </div>
-            </div>
-          </div>
+            <Column field="streetAddress" header="Street Address" sortable>
+              <template #body="{ data }">
+                <span class="address">{{ data.streetAddress }}</span>
+              </template>
+            </Column>
 
-          <div v-if="warehouses.length === 0" class="empty-state">
-            <i class="pi pi-building empty-icon"></i>
-            <h3>No warehouses found</h3>
-            <p>Start by adding your first warehouse to manage inventory.</p>
-            <Button
-                v-if="canManageWarehouses"
-                @click="$router.push('/warehouses/create')"
-                label="Add Your First Warehouse"
-                icon="pi pi-plus"
-                class="p-button-outlined"
-            />
-          </div>
+            <Column field="city" header="City" sortable>
+              <template #body="{ data }">
+                <span class="city">{{ data.city || 'N/A' }}</span>
+              </template>
+            </Column>
+
+            <Column field="warehouseManager" header="Manager" sortable>
+              <template #body="{ data }">
+                <span class="manager">
+                  {{ data.warehouseManager ? `${data.warehouseManager.firstName} ${data.warehouseManager.lastName}` : 'Not assigned' }}
+                </span>
+              </template>
+            </Column>
+
+            <Column field="dateCreated" header="Created" sortable>
+              <template #body="{ data }">
+                <span class="date-created">{{ formatDate(data.dateCreated) }}</span>
+              </template>
+            </Column>
+
+            <Column header="Actions" :exportable="false">
+              <template #body="{ data }">
+                <EntityActionButtons
+                  :entity="data"
+                  :actions="tableActions"
+                  :permissions="warehousePermissions"
+                  variant="table"
+                  @action="handleTableAction"
+                />
+              </template>
+            </Column>
+
+            <template #empty>
+              <EmptyState
+                :type="emptyStateConfig.type"
+                :title="emptyStateConfig.title"
+                :message="emptyStateConfig.message"
+                :actions="emptyStateConfig.actions"
+                @action="handleEmptyStateAction"
+              />
+            </template>
+          </DataTable>
         </template>
       </Card>
 
@@ -262,23 +224,43 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
+import { useWarehouseStore } from '@/stores/warehouse'
+import { useLoading } from '@/composables/useLoading'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatsGrid from '@/components/ui/StatsGrid.vue'
+import FilterBar from '@/components/ui/FilterBar.vue'
+import EntityActionButtons from '@/components/ui/EntityActionButtons.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 
 const router = useRouter()
+const toast = useToast()
 const authStore = useAuthStore()
+const warehouseStore = useWarehouseStore()
+const { withLoading } = useLoading()
 
 // State
-const warehouses = ref([])
+const refreshing = ref(false)
+const searchQuery = ref('')
+const selectedWarehouses = ref([])
+const selectAll = ref(false)
+const filterValues = ref({})
+const recentActivity = ref([])
+
+// Use warehouse store data
+const warehouses = computed(() => warehouseStore.warehouses || [])
+const pagination = computed(() => warehouseStore.pagination)
+const loading = computed(() => warehouseStore.isLoading)
 const warehouseStats = ref({
   total: 0,
   totalSKUs: 0,
   totalValue: 0,
   lowStockAlerts: 0
 })
-const recentActivity = ref([])
 
 // Computed
 const userRole = computed(() => authStore.user?.role)
@@ -287,88 +269,320 @@ const canManageWarehouses = computed(() => {
   return ['ADMIN', 'WAREHOUSE_MANAGER'].includes(userRole.value)
 })
 
+const warehousePermissions = computed(() => ({
+  view: true,
+  edit: canManageWarehouses.value,
+  delete: ['ADMIN'].includes(userRole.value),
+  manage: canManageWarehouses.value
+}))
+
+// Page Header Actions
+const headerActions = computed(() => {
+  const actions = [
+    {
+      label: 'Refresh',
+      icon: 'pi pi-refresh',
+      handler: handleRefresh,
+      loading: refreshing.value,
+      variant: 'outlined'
+    }
+  ]
+  
+  if (canManageWarehouses.value) {
+    actions.unshift({
+      label: 'New Warehouse',
+      icon: 'pi pi-plus',
+      handler: () => router.push('/warehouses/create'),
+      variant: 'primary'
+    })
+  }
+  
+  return actions
+})
+
+// Stats Configuration
+const statsData = computed(() => [
+  {
+    title: 'Total Warehouses',
+    value: warehouseStats.value.total,
+    icon: 'pi pi-building',
+    color: 'blue',
+    trend: null
+  },
+  {
+    title: 'Total SKUs',
+    value: warehouseStats.value.totalSKUs,
+    icon: 'pi pi-box',
+    color: 'purple',
+    trend: null
+  },
+  {
+    title: 'Inventory Value',
+    value: warehouseStats.value.totalValue,
+    icon: 'pi pi-dollar',
+    color: 'green',
+    format: 'currency',
+    trend: null
+  },
+  {
+    title: 'Low Stock Alerts',
+    value: warehouseStats.value.lowStockAlerts,
+    icon: 'pi pi-exclamation-triangle',
+    color: 'red',
+    trend: null
+  }
+])
+
+// Filter Configuration
+const filterConfig = computed(() => [
+  {
+    type: 'dropdown',
+    key: 'city',
+    label: 'City',
+    placeholder: 'All Cities',
+    options: [
+      // These options would be populated from actual warehouse data
+      { label: 'New York', value: 'New York' },
+      { label: 'Los Angeles', value: 'Los Angeles' },
+      { label: 'Chicago', value: 'Chicago' }
+    ]
+  }
+])
+
+// Table Actions
+const tableActions = computed(() => [
+  {
+    label: 'View Details',
+    icon: 'pi pi-eye',
+    action: 'view',
+    variant: 'text',
+    permission: 'view'
+  },
+  {
+    label: 'Edit',
+    icon: 'pi pi-pencil',
+    action: 'edit',
+    variant: 'text',
+    permission: 'edit'
+  },
+  {
+    label: 'Delete',
+    icon: 'pi pi-trash',
+    action: 'delete',
+    variant: 'text',
+    severity: 'danger',
+    permission: 'delete'
+  }
+])
+
+// Empty State Configuration
+const emptyStateConfig = computed(() => {
+  const hasSearch = searchQuery.value && searchQuery.value.length > 0
+  const hasFilters = filterValues.value && Object.keys(filterValues.value).length > 0
+  const hasSearchOrFilters = hasSearch || hasFilters
+  
+  return {
+    type: hasSearchOrFilters ? 'no-results' : 'empty',
+    title: hasSearchOrFilters ? 'No warehouses found' : 'No warehouses yet',
+    message: hasSearchOrFilters 
+      ? 'Try adjusting your search criteria or filters.' 
+      : 'Get started by creating your first warehouse.',
+    actions: hasSearchOrFilters 
+      ? [{ label: 'Clear Filters', action: 'clear-filters', icon: 'pi pi-filter-slash' }]
+      : canManageWarehouses.value 
+        ? [{ label: 'Create Warehouse', action: 'create', icon: 'pi pi-plus' }]
+        : []
+  }
+})
+
 // Methods
 const loadWarehouseData = async () => {
   try {
-    // Mock data - replace with actual API calls
-    warehouses.value = [
-      {
-        id: 1,
-        name: 'Main Distribution Center',
-        code: 'MDC-001',
-        location: 'New York, NY',
-        manager: 'John Smith',
-        status: 'Active',
-        skuCount: 245,
-        utilization: 78,
-        inventoryValue: 485000
-      },
-      {
-        id: 2,
-        name: 'West Coast Depot',
-        code: 'WCD-002',
-        location: 'Los Angeles, CA',
-        manager: 'Sarah Johnson',
-        status: 'Active',
-        skuCount: 180,
-        utilization: 65,
-        inventoryValue: 320000
-      },
-      {
-        id: 3,
-        name: 'Central Hub',
-        code: 'CH-003',
-        location: 'Chicago, IL',
-        manager: 'Mike Chen',
-        status: 'Maintenance',
-        skuCount: 210,
-        utilization: 85,
-        inventoryValue: 395000
-      }
-    ]
-
+    // Load warehouses from API
+    await warehouseStore.fetchWarehouses()
+    
+    // Calculate warehouse stats from warehouse data
     warehouseStats.value = {
       total: warehouses.value.length,
-      totalSKUs: warehouses.value.reduce((sum, w) => sum + w.skuCount, 0),
-      totalValue: warehouses.value.reduce((sum, w) => sum + w.inventoryValue, 0),
-      lowStockAlerts: 8
+      totalSKUs: warehouses.value.reduce((sum, w) => sum + (w.stocks?.length || 0), 0),
+      totalValue: 0, // This would need to be calculated from stock values when available
+      lowStockAlerts: 0 // This would need to be calculated from low stock alerts when available
     }
 
-    recentActivity.value = [
-      {
-        id: 1,
-        type: 'stock-in',
-        icon: 'pi pi-arrow-down',
-        text: 'Stock received at Main Distribution Center - 500 units',
-        timestamp: new Date(Date.now() - 1000 * 60 * 30)
-      },
-      {
-        id: 2,
-        type: 'transfer',
-        icon: 'pi pi-arrow-right-arrow-left',
-        text: 'Stock transfer from Central Hub to West Coast Depot - 200 units',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2)
-      },
-      {
-        id: 3,
-        type: 'alert',
-        icon: 'pi pi-exclamation-triangle',
-        text: 'Low stock alert: Product SKU-123 below minimum threshold',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4)
-      }
-    ]
+    // Load recent activity from API (this would be another API call)
+    // For now, this can remain empty until we have the API endpoint
+    recentActivity.value = []
   } catch (error) {
     console.error('Failed to load warehouse data:', error)
+    
+    let errorMessage = 'Failed to load warehouse data'
+    
+    // Provide more specific error messages
+    if (error.response?.status === 403) {
+      errorMessage = 'Access denied. Please check your permissions.'
+    } else if (error.response?.status === 401) {
+      errorMessage = 'Authentication required. Please log in again.'
+    } else if (error.response?.status === 404) {
+      errorMessage = 'Warehouse API endpoint not found.'
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: errorMessage,
+      life: 5000
+    })
   }
 }
 
-const getStatusSeverity = (status) => {
-  const severityMap = {
-    'Active': 'success',
-    'Inactive': 'secondary',
-    'Maintenance': 'warning'
+const handleRefresh = async () => {
+  refreshing.value = true
+  try {
+    await loadWarehouseData()
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Warehouse data refreshed',
+      life: 3000
+    })
+  } catch (error) {
+    console.error('Refresh failed:', error)
+  } finally {
+    refreshing.value = false
   }
-  return severityMap[status] || 'info'
+}
+
+const handleSearch = (searchTerm) => {
+  searchQuery.value = searchTerm
+  // Implement search logic
+}
+
+const handleFilter = (filters) => {
+  filterValues.value = filters
+  // Implement filter logic
+}
+
+const resetFilters = () => {
+  filterValues.value = {}
+  searchQuery.value = ''
+}
+
+const handleTableAction = async (event) => {
+  // Handle the event object from EntityActionButtons
+  const actionType = event.actionConfig?.action || event.action
+  const warehouse = event.entity
+  
+  console.log('Table action triggered:', { actionType, warehouse })
+  
+  switch (actionType) {
+    case 'view':
+      viewWarehouse(warehouse.id)
+      break
+    case 'edit':
+      editWarehouse(warehouse.id)
+      break
+    case 'delete':
+      await deleteWarehouse(warehouse.id)
+      break
+    default:
+      console.warn('Unknown action:', actionType)
+  }
+}
+
+const editWarehouse = (warehouseId) => {
+  router.push(`/warehouses/${warehouseId}/edit`)
+}
+
+const deleteWarehouse = async (warehouseId) => {
+  const warehouse = warehouses.value.find(w => w.id === warehouseId)
+  const warehouseName = warehouse?.name || `Warehouse ${warehouseId}`
+  
+  if (!confirm(`Are you sure you want to delete "${warehouseName}"? This action cannot be undone.`)) {
+    return
+  }
+  
+  try {
+    await warehouseStore.deleteWarehouse(warehouseId)
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Warehouse deleted successfully',
+      life: 3000
+    })
+    
+    // Refresh warehouse data
+    await loadWarehouseData()
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: error.message || 'Failed to delete warehouse',
+      life: 3000
+    })
+  }
+}
+
+const bulkAction = () => {
+  console.log('Bulk action for:', selectedWarehouses.value)
+}
+
+const exportData = () => {
+  console.log('Export warehouse data')
+}
+
+const onSelectAllChange = (event) => {
+  selectAll.value = event.checked
+  if (event.checked) {
+    selectedWarehouses.value = [...warehouses.value]
+  } else {
+    selectedWarehouses.value = []
+  }
+}
+
+const onRowSelect = (event) => {
+  selectedWarehouses.value.push(event.data)
+}
+
+const onRowUnselect = (event) => {
+  const index = selectedWarehouses.value.findIndex(w => w.id === event.data.id)
+  if (index > -1) {
+    selectedWarehouses.value.splice(index, 1)
+  }
+}
+
+const onPageChange = (event) => {
+  warehouseStore.setPagination({ 
+    page: Math.floor(event.first / event.rows) + 1,
+    limit: event.rows
+  })
+  loadWarehouseData()
+}
+
+const onSort = (event) => {
+  warehouseStore.setSorting(event.sortField, event.sortOrder === 1 ? 'asc' : 'desc')
+  loadWarehouseData()
+}
+
+const handleEmptyStateAction = (action) => {
+  switch (action) {
+    case 'create':
+      router.push('/warehouses/create')
+      break
+    case 'clear-filters':
+      resetFilters()
+      break
+  }
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A'
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  })
 }
 
 const formatTime = (timestamp) => {

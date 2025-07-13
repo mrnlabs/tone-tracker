@@ -19,9 +19,24 @@ export function useValidation() {
       return VALIDATION_RULES.EMAIL.test(value) || message
     },
 
-    phone: (value, message = ERROR_MESSAGES.INVALID_PHONE) => {
+    phone: (value, message = 'Please enter a valid phone number (e.g., +263 772 999 9999, +263 650 987 726, or 072 999 9999)') => {
       if (!value) return true
-      return VALIDATION_RULES.PHONE.test(value) || message
+      
+      // Remove all spaces and dashes, keep + for international prefix
+      const cleanPhone = value.replace(/[\s-]/g, '')
+      
+      // Zimbabwean phone number patterns
+      const phonePatterns = [
+        /^\+263\s?[67][0-9]{2}\s?[0-9]{3}\s?[0-9]{4}$/,  // International: +263 772 999 9999 or +263 650 987 726
+        /^\+263[67][0-9]{8}$/,                            // International without spaces: +263772999999 or +263650987726
+        /^0[67][0-9]\s?[0-9]{3}\s?[0-9]{4}$/,            // Local: 072 999 9999 or 065 098 7726
+        /^0[67][0-9][0-9]{7}$/                            // Local without spaces: 0729999999 or 0650987726
+      ]
+      
+      const isValid = phonePatterns.some(pattern => pattern.test(value)) || 
+                     phonePatterns.some(pattern => pattern.test(cleanPhone))
+      
+      return isValid || message
     },
 
     minLength: (min, message) => (value) => {

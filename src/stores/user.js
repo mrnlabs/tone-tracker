@@ -29,7 +29,7 @@ export const useUsersStore = defineStore('users', () => {
         search: '',
         active: null
     })
-    const sortBy = ref('lastName')
+    const sortBy = ref('firstName')
     const sortOrder = ref('asc')
 
     // Team assignments and performance tracking
@@ -59,17 +59,18 @@ export const useUsersStore = defineStore('users', () => {
         }
 
         if (filters.value.active !== null) {
-            result = result.filter(user => user.active === filters.value.active)
+            result = result.filter(user => user.isActive === filters.value.active)
         }
 
         if (filters.value.search) {
             const searchTerm = filters.value.search.toLowerCase()
             result = result.filter(user =>
-                user.firstName.toLowerCase().includes(searchTerm) ||
-                user.lastName.toLowerCase().includes(searchTerm) ||
-                user.email.toLowerCase().includes(searchTerm) ||
-                user.username?.toLowerCase().includes(searchTerm) ||
-                user.phone?.includes(searchTerm)
+                user.firstName?.toLowerCase().includes(searchTerm) ||
+                user.lastName?.toLowerCase().includes(searchTerm) ||
+                user.email?.toLowerCase().includes(searchTerm) ||
+                user.phone?.includes(searchTerm) ||
+                user.jobTitle?.toLowerCase().includes(searchTerm) ||
+                user.department?.toLowerCase().includes(searchTerm)
             )
         }
 
@@ -84,15 +85,15 @@ export const useUsersStore = defineStore('users', () => {
     })
 
     const activeUsers = computed(() =>
-        users.value.filter(user => user.active && user.status !== USER_STATUS.OFFLINE)
+        users.value.filter(user => user.isActive)
     )
 
     const onlineUsers = computed(() =>
-        users.value.filter(user => user.status === USER_STATUS.ONLINE)
+        users.value.filter(user => user.lastLogin && new Date(user.lastLogin) > new Date(Date.now() - 24 * 60 * 60 * 1000)) // Active in last 24 hours
     )
 
     const checkedInUsers = computed(() =>
-        users.value.filter(user => user.status === USER_STATUS.CHECKED_IN)
+        users.value.filter(user => user.isActive && user.lastLogin && new Date(user.lastLogin) > new Date(Date.now() - 8 * 60 * 60 * 1000)) // Active in last 8 hours
     )
 
     const promoters = computed(() =>
@@ -172,10 +173,9 @@ export const useUsersStore = defineStore('users', () => {
             error.value = null
 
             const queryParams = {
-                page: pagination.value.page,
-                limit: pagination.value.limit,
-                sort: sortBy.value,
-                order: sortOrder.value,
+                page: (pagination.value.page - 1), // Convert to 0-based for API
+                size: pagination.value.limit,
+                sort: [`${sortBy.value},${sortOrder.value}`],
                 ...filters.value,
                 ...params
             }
@@ -187,15 +187,24 @@ export const useUsersStore = defineStore('users', () => {
                 }
             })
 
+            console.log('Fetching users with params:', queryParams)
             const response = await userService.getUsers(queryParams)
+            console.log('User API response:', response)
 
-            users.value = response.data
+            // The getPaginated method transforms the response to {data, meta} format
+            users.value = response.data || []
+            console.log('Users set to:', users.value)
+            
+            // Handle pagination info from the transformed response
+            const meta = response.meta || {}
+            console.log('Meta info:', meta)
             pagination.value = {
-                total: response.meta.total,
-                page: response.meta.page,
-                limit: response.meta.limit,
-                totalPages: Math.ceil(response.meta.total / response.meta.limit)
+                total: meta.total || 0,
+                page: meta.page !== undefined ? meta.page + 1 : 1, // Convert 0-based to 1-based for UI
+                limit: meta.size || 10,
+                totalPages: meta.totalPages || Math.ceil((meta.total || 0) / (meta.size || 10))
             }
+            console.log('Pagination set to:', pagination.value)
 
             return response
         } catch (err) {
@@ -245,6 +254,31 @@ export const useUsersStore = defineStore('users', () => {
             return newUser
         } catch (err) {
             error.value = err.message || 'Failed to create user'
+            throw err
+        } finally {
+            isCreating.value = false
+        }
+    }
+
+    /**
+     * Create new staff user (Admin, Activation Manager, Warehouse Manager)
+     */
+    const createStaffUser = async (userData) => {
+        try {
+            isCreating.value = true
+            error.value = null
+
+            const newUser = await userService.createStaffUser(userData)
+
+            // Add to the beginning of the list
+            users.value.unshift(newUser)
+
+            // Update pagination total
+            pagination.value.total += 1
+
+            return newUser
+        } catch (err) {
+            error.value = err.message || 'Failed to create staff user'
             throw err
         } finally {
             isCreating.value = false
@@ -353,11 +387,11 @@ export const useUsersStore = defineStore('users', () => {
             // Update in the list
             const index = users.value.findIndex(user => user.id === id)
             if (index !== -1) {
-                users.value[index] = { ...users.value[index], active: true }
+                users.value[index] = { ...users.value[index], isActive: true }
             }
 
             if (currentUser.value?.id === id) {
-                currentUser.value = { ...currentUser.value, active: true }
+                currentUser.value = { ...currentUser.value, isActive: true }
             }
 
             return updatedUser
@@ -379,11 +413,11 @@ export const useUsersStore = defineStore('users', () => {
             // Update in the list
             const index = users.value.findIndex(user => user.id === id)
             if (index !== -1) {
-                users.value[index] = { ...users.value[index], active: false }
+                users.value[index] = { ...users.value[index], isActive: false }
             }
 
             if (currentUser.value?.id === id) {
-                currentUser.value = { ...currentUser.value, active: false }
+                currentUser.value = { ...currentUser.value, isActive: false }
             }
 
             return updatedUser
@@ -599,6 +633,7 @@ export const useUsersStore = defineStore('users', () => {
         fetchUsers,
         getUser,
         createUser,
+        createStaffUser,
         updateUser,
         deleteUser,
         assignRole,

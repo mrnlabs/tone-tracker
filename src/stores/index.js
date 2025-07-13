@@ -71,7 +71,7 @@ export const initializeStores = async () => {
             }
 
             if (authStore.canManageWarehouse) {
-                initPromises.push(warehouseStore.fetchInventory({ limit: 20 }))
+                initPromises.push(warehouseStore.fetchAllStocks())
                 initPromises.push(warehouseStore.fetchLowStockAlerts())
             }
 

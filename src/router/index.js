@@ -9,6 +9,9 @@ import Dashboard from '@/views/dashboard/Dashboard.vue'
 
 // All other views will be lazy-loaded
 
+// Import warehouse routes
+import { warehouseRoutes } from './warehouses'
+
 const routes = [
     // Auth Routes
     {
@@ -125,8 +128,18 @@ const routes = [
             roles: ['ADMIN', 'ACTIVATION_MANAGER']
         }
     },
+    {
+        path: '/activations/:id/team',
+        name: 'activation-team',
+        component: () => import('@/views/activations/ActivationTeam.vue'),
+        meta: {
+            requiresAuth: true,
+            title: 'Manage Team - Activation Tracker',
+            roles: ['ADMIN', 'ACTIVATION_MANAGER']
+        }
+    },
 
-    // Other sections (using lazy loading)
+    // Promoter Management Routes
     {
         path: '/promoters',
         name: 'promoters',
@@ -138,15 +151,39 @@ const routes = [
         }
     },
     {
-        path: '/warehouses',
-        name: 'warehouses',
-        component: () => import('@/views/warehouses/Warehouses.vue'),
+        path: '/promoters/create',
+        name: 'create-promoter',
+        component: () => import('@/views/promoters/CreatePromoter.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Warehouses - Activation Tracker',
-            roles: ['ADMIN', 'WAREHOUSE_MANAGER']
+            title: 'Add New Promoter - Activation Tracker',
+            roles: ['ADMIN', 'ACTIVATION_MANAGER']
         }
     },
+    {
+        path: '/promoters/:id',
+        name: 'promoter-details',
+        component: () => import('@/views/promoters/PromoterDetails.vue'),
+        meta: {
+            requiresAuth: true,
+            title: 'Promoter Details - Activation Tracker',
+            roles: ['ADMIN', 'ACTIVATION_MANAGER', 'PROMOTER']
+        }
+    },
+    {
+        path: '/promoters/:id/edit',
+        name: 'edit-promoter',
+        component: () => import('@/views/promoters/EditPromoter.vue'),
+        meta: {
+            requiresAuth: true,
+            title: 'Edit Promoter - Activation Tracker',
+            roles: ['ADMIN', 'ACTIVATION_MANAGER']
+        }
+    },
+
+    // Warehouse routes (imported from separate file)
+    ...warehouseRoutes,
+
     {
         path: '/reports',
         name: 'reports',
@@ -157,6 +194,7 @@ const routes = [
             roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT']
         }
     },
+    // User Management Routes
     {
         path: '/users',
         name: 'users',
@@ -164,6 +202,36 @@ const routes = [
         meta: {
             requiresAuth: true,
             title: 'User Management - Activation Tracker',
+            roles: ['ADMIN']
+        }
+    },
+    {
+        path: '/users/create',
+        name: 'create-user',
+        component: () => import('@/views/users/CreateUser.vue'),
+        meta: {
+            requiresAuth: true,
+            title: 'Add New User - Activation Tracker',
+            roles: ['ADMIN']
+        }
+    },
+    {
+        path: '/users/:id',
+        name: 'user-details',
+        component: () => import('@/views/users/UserDetails.vue'),
+        meta: {
+            requiresAuth: true,
+            title: 'User Details - Activation Tracker',
+            roles: ['ADMIN']
+        }
+    },
+    {
+        path: '/users/:id/edit',
+        name: 'edit-user',
+        component: () => import('@/views/users/EditUser.vue'),
+        meta: {
+            requiresAuth: true,
+            title: 'Edit User - Activation Tracker',
             roles: ['ADMIN']
         }
     },

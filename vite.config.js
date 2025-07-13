@@ -11,6 +11,13 @@ export default defineConfig({
       'vue': 'vue/dist/vue.esm-bundler.js'
     }
   },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        api: 'modern-compiler' // Use modern Sass API
+      }
+    }
+  },
   define: {
     // Enable Vue template compilation
     __VUE_OPTIONS_API__: true,

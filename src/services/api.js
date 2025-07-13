@@ -341,10 +341,10 @@ class ApiService {
                 // Spring Boot pagination response
                 data = response.data.content
                 meta = {
-                    total: response.data.totalElements,
-                    page: response.data.number,
-                    size: response.data.size,
-                    totalPages: response.data.totalPages
+                    total: response.data.page.totalElements,
+                    page: response.data.page.number,
+                    size: response.data.page.size,
+                    totalPages: response.data.page.totalPages
                 }
             } else if (response.data.data) {
                 // Custom pagination response
@@ -465,6 +465,58 @@ const apiService = new ApiService()
 }
 
 /**
+ * Promoter Management Service
+ */
+ const promoterService = {
+    async getPromoters(params = {}) {
+        return await apiService.getPaginated('/promoters', params)
+    },
+
+    async getPromoter(id) {
+        return await apiService.get(`/promoters/${id}`)
+    },
+
+    async createPromoter(promoterData) {
+        return await apiService.post('/promoters/with-user', promoterData)
+    },
+
+    async updatePromoter(id, promoterData) {
+        return await apiService.put(`/promoters/${id}`, promoterData)
+    },
+
+    async deletePromoter(id) {
+        return await apiService.delete(`/promoters/${id}`)
+    },
+
+    async activatePromoter(id) {
+        return await apiService.patch(`/promoters/${id}/activate`)
+    },
+
+    async deactivatePromoter(id) {
+        return await apiService.patch(`/promoters/${id}/deactivate`)
+    },
+
+    async getPromoterAssignments(promoterId, params = {}) {
+        return await apiService.getPaginated(`/promoters/${promoterId}/assignments`, params)
+    },
+
+    async assignToActivation(promoterId, activationId, assignmentData) {
+        return await apiService.post(`/promoters/${promoterId}/assignments`, {
+            activationId,
+            ...assignmentData
+        })
+    },
+
+    async getPromoterPerformance(promoterId, params = {}) {
+        return await apiService.get(`/promoters/${promoterId}/performance`, { params })
+    },
+
+    async updatePromoterLocation(promoterId, locationData) {
+        return await apiService.patch(`/promoters/${promoterId}/location`, locationData)
+    }
+}
+
+/**
  * User Management Service
  */
  const userService = {
@@ -478,6 +530,10 @@ const apiService = new ApiService()
 
     async createUser(userData) {
         return await apiService.post(API_ENDPOINTS.USERS, userData)
+    },
+
+    async createStaffUser(userData) {
+        return await apiService.post('/staff/with-user', userData)
     },
 
     async updateUser(id, userData) {
@@ -515,6 +571,10 @@ const apiService = new ApiService()
 
     async createClient(clientData) {
         return await apiService.post(API_ENDPOINTS.CLIENTS, clientData)
+    },
+
+    async createClientWithAccountOwner(clientData) {
+        return await apiService.post('/clients/with-account-owner', clientData)
     },
 
     async updateClient(id, clientData) {
@@ -652,6 +712,67 @@ const apiService = new ApiService()
 }
 
 /**
+ * Warehouse Service
+ */
+const warehouseService = {
+    async getWarehouses(params = {}) {
+        return await apiService.getPaginated(API_ENDPOINTS.WAREHOUSES, params)
+    },
+
+    async getWarehouse(id) {
+        return await apiService.get(`${API_ENDPOINTS.WAREHOUSES}/${id}`)
+    },
+
+    async createWarehouse(warehouseData) {
+        return await apiService.post(API_ENDPOINTS.WAREHOUSES, warehouseData)
+    },
+
+    async updateWarehouse(id, warehouseData) {
+        return await apiService.put(`${API_ENDPOINTS.WAREHOUSES}/${id}`, warehouseData)
+    },
+
+    async deleteWarehouse(id) {
+        return await apiService.delete(`${API_ENDPOINTS.WAREHOUSES}/${id}`)
+    },
+
+    async getWarehouseInventory(warehouseId, params = {}) {
+        return await apiService.getPaginated(`${API_ENDPOINTS.WAREHOUSES}/${warehouseId}/inventory`, params)
+    },
+
+    async getWarehouseStats(warehouseId) {
+        return await apiService.get(`${API_ENDPOINTS.WAREHOUSES}/${warehouseId}/stats`)
+    },
+
+    async getWarehouseReports(warehouseId, params = {}) {
+        return await apiService.getPaginated(`${API_ENDPOINTS.WAREHOUSES}/${warehouseId}/reports`, params)
+    },
+
+    async transferStock(transferData) {
+        return await apiService.post(`${API_ENDPOINTS.WAREHOUSES}/transfers`, transferData)
+    },
+
+    async getStockTransfers(params = {}) {
+        return await apiService.getPaginated(`${API_ENDPOINTS.WAREHOUSES}/transfers`, params)
+    },
+
+    async updateWarehouseCapacity(warehouseId, capacityData) {
+        return await apiService.put(`${API_ENDPOINTS.WAREHOUSES}/${warehouseId}/capacity`, capacityData)
+    },
+
+    async getWarehouseManagers() {
+        return await apiService.get('/users', { params: { role: 'WAREHOUSE_MANAGER' } })
+    },
+
+    async getWarehouseStocks(warehouseId) {
+        return await apiService.get(`/stocks/warehouse/${warehouseId}`)
+    },
+
+    async createWarehouseStock(warehouseId, stockData) {
+        return await apiService.post('/stocks', stockData)
+    }
+}
+
+/**
  * Reports Service
  */
  const reportService = {
@@ -751,10 +872,12 @@ export default apiService
 export {
     apiService,
     authService,
+    promoterService,
     userService,
     clientService,
     activationService,
     inventoryService,
+    warehouseService,
     reportService,
     fileService,
     notificationService,

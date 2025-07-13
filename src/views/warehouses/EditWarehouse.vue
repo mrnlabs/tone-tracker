@@ -2,22 +2,12 @@
   <DashboardLayout>
     <div class="edit-warehouse-page">
       <!-- Page Header -->
-      <div class="page-header">
-        <div class="header-nav">
-          <Button
-              @click="goBack"
-              icon="pi pi-arrow-left"
-              class="p-button-text"
-              label="Back to Warehouse"
-          />
-        </div>
-        <div class="header-info">
-          <h1 class="page-title">Edit Warehouse</h1>
-          <p class="page-description">
-            Update warehouse information and settings
-          </p>
-        </div>
-      </div>
+      <PageHeader 
+        :title="warehouse ? `Edit ${warehouse.name}` : 'Edit Warehouse'"
+        description="Update warehouse information and settings"
+        :actions="headerActions"
+        :loading="saving"
+      />
 
       <!-- Loading State -->
       <div v-if="loading" class="loading-container">
@@ -25,19 +15,26 @@
         <p>Loading warehouse data...</p>
       </div>
 
+      <!-- Error State -->
+      <div v-else-if="error" class="error-container">
+        <EmptyState
+          type="error"
+          title="Error Loading Warehouse"
+          :message="error"
+          :actions="[{ label: 'Back to Warehouses', action: 'back', icon: 'pi pi-arrow-left' }]"
+          @action="handleEmptyStateAction"
+        />
+      </div>
+
       <!-- Not Found State -->
       <div v-else-if="!warehouse" class="not-found-container">
-        <div class="not-found-content">
-          <i class="pi pi-exclamation-triangle not-found-icon"></i>
-          <h2>Warehouse Not Found</h2>
-          <p>The warehouse you're trying to edit could not be found.</p>
-          <Button
-              @click="$router.push('/warehouses')"
-              label="Back to Warehouses"
-              icon="pi pi-arrow-left"
-              class="p-button-outlined"
-          />
-        </div>
+        <EmptyState
+          type="error"
+          title="Warehouse Not Found"
+          message="The warehouse you're trying to edit could not be found."
+          :actions="[{ label: 'Back to Warehouses', action: 'back', icon: 'pi pi-arrow-left' }]"
+          @action="handleEmptyStateAction"
+        />
       </div>
 
       <!-- Edit Form -->
@@ -45,9 +42,9 @@
         <Card class="form-card">
           <template #content>
             <form @submit.prevent="submitForm" class="warehouse-form">
-              <!-- Basic Information Section -->
+              <!-- Warehouse Information Section -->
               <div class="form-section">
-                <h3 class="section-title">Basic Information</h3>
+                <h3 class="section-title">Warehouse Information</h3>
                 <div class="form-grid">
                   <div class="form-group">
                     <label for="name" class="form-label">Warehouse Name *</label>
@@ -61,220 +58,40 @@
                     <small v-if="errors.name" class="p-error">{{ errors.name }}</small>
                   </div>
 
-                  <div class="form-group">
-                    <label for="code" class="form-label">Warehouse Code *</label>
-                    <InputText
-                        id="code"
-                        v-model="form.code"
-                        :class="{ 'p-invalid': errors.code }"
-                        placeholder="e.g., WH-001"
-                        class="form-input"
-                        disabled
-                    />
-                    <small class="p-help">Warehouse code cannot be changed</small>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="type" class="form-label">Warehouse Type *</label>
-                    <Dropdown
-                        id="type"
-                        v-model="form.type"
-                        :options="warehouseTypes"
-                        option-label="label"
-                        option-value="value"
-                        :class="{ 'p-invalid': errors.type }"
-                        placeholder="Select warehouse type"
-                        class="form-input"
-                    />
-                    <small v-if="errors.type" class="p-error">{{ errors.type }}</small>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="status" class="form-label">Status *</label>
-                    <Dropdown
-                        id="status"
-                        v-model="form.status"
-                        :options="statusOptions"
-                        option-label="label"
-                        option-value="value"
-                        :class="{ 'p-invalid': errors.status }"
-                        placeholder="Select status"
-                        class="form-input"
-                    />
-                    <small v-if="errors.status" class="p-error">{{ errors.status }}</small>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Location Information Section -->
-              <div class="form-section">
-                <h3 class="section-title">Location Information</h3>
-                <div class="form-grid">
                   <div class="form-group full-width">
-                    <label for="address" class="form-label">Address *</label>
+                    <label for="streetAddress" class="form-label">Street Address *</label>
                     <Textarea
-                        id="address"
-                        v-model="form.address"
-                        :class="{ 'p-invalid': errors.address }"
-                        placeholder="Enter complete address"
+                        id="streetAddress"
+                        v-model="form.streetAddress"
+                        :class="{ 'p-invalid': errors.streetAddress }"
+                        placeholder="Enter complete street address"
                         rows="3"
                         class="form-input"
                     />
-                    <small v-if="errors.address" class="p-error">{{ errors.address }}</small>
+                    <small v-if="errors.streetAddress" class="p-error">{{ errors.streetAddress }}</small>
                   </div>
 
                   <div class="form-group">
-                    <label for="city" class="form-label">City *</label>
+                    <label for="city" class="form-label">City</label>
                     <InputText
                         id="city"
                         v-model="form.city"
-                        :class="{ 'p-invalid': errors.city }"
                         placeholder="Enter city"
                         class="form-input"
                     />
-                    <small v-if="errors.city" class="p-error">{{ errors.city }}</small>
                   </div>
 
                   <div class="form-group">
-                    <label for="country" class="form-label">Country *</label>
-                    <Dropdown
-                        id="country"
-                        v-model="form.country"
-                        :options="countryOptions"
-                        option-label="label"
-                        option-value="value"
-                        :class="{ 'p-invalid': errors.country }"
-                        placeholder="Select country"
-                        class="form-input"
-                    />
-                    <small v-if="errors.country" class="p-error">{{ errors.country }}</small>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="postalCode" class="form-label">Postal Code</label>
-                    <InputText
-                        id="postalCode"
-                        v-model="form.postalCode"
-                        placeholder="Enter postal code"
-                        class="form-input"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <!-- Capacity Information Section -->
-              <div class="form-section">
-                <h3 class="section-title">Capacity Information</h3>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="totalCapacity" class="form-label">Total Capacity (units) *</label>
-                    <InputNumber
-                        id="totalCapacity"
-                        v-model="form.totalCapacity"
-                        :class="{ 'p-invalid': errors.totalCapacity }"
-                        placeholder="Enter total capacity"
-                        :min="1"
-                        class="form-input"
-                    />
-                    <small v-if="errors.totalCapacity" class="p-error">{{ errors.totalCapacity }}</small>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="availableCapacity" class="form-label">Available Capacity (units) *</label>
-                    <InputNumber
-                        id="availableCapacity"
-                        v-model="form.availableCapacity"
-                        :class="{ 'p-invalid': errors.availableCapacity }"
-                        placeholder="Enter available capacity"
-                        :min="0"
-                        :max="form.totalCapacity"
-                        class="form-input"
-                    />
-                    <small v-if="errors.availableCapacity" class="p-error">{{ errors.availableCapacity }}</small>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="unit" class="form-label">Capacity Unit *</label>
-                    <Dropdown
-                        id="unit"
-                        v-model="form.unit"
-                        :options="unitOptions"
-                        option-label="label"
-                        option-value="value"
-                        :class="{ 'p-invalid': errors.unit }"
-                        placeholder="Select unit"
-                        class="form-input"
-                    />
-                    <small v-if="errors.unit" class="p-error">{{ errors.unit }}</small>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Manager Information Section -->
-              <div class="form-section">
-                <h3 class="section-title">Manager Information</h3>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="managerId" class="form-label">Warehouse Manager *</label>
-                    <Dropdown
-                        id="managerId"
-                        v-model="form.managerId"
+                    <label for="warehouseManagerId" class="form-label">Warehouse Manager</label>
+                    <Select
+                        id="warehouseManagerId"
+                        v-model="form.warehouseManagerId"
                         :options="managerOptions"
                         option-label="name"
                         option-value="id"
-                        :class="{ 'p-invalid': errors.managerId }"
                         placeholder="Select warehouse manager"
                         class="form-input"
-                    />
-                    <small v-if="errors.managerId" class="p-error">{{ errors.managerId }}</small>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="contactPhone" class="form-label">Contact Phone</label>
-                    <InputText
-                        id="contactPhone"
-                        v-model="form.contactPhone"
-                        placeholder="Enter contact phone"
-                        class="form-input"
-                    />
-                  </div>
-
-                  <div class="form-group">
-                    <label for="contactEmail" class="form-label">Contact Email</label>
-                    <InputText
-                        id="contactEmail"
-                        v-model="form.contactEmail"
-                        type="email"
-                        placeholder="Enter contact email"
-                        class="form-input"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <!-- Additional Information Section -->
-              <div class="form-section">
-                <h3 class="section-title">Additional Information</h3>
-                <div class="form-grid">
-                  <div class="form-group full-width">
-                    <label for="description" class="form-label">Description</label>
-                    <Textarea
-                        id="description"
-                        v-model="form.description"
-                        placeholder="Enter warehouse description"
-                        rows="3"
-                        class="form-input"
-                    />
-                  </div>
-
-                  <div class="form-group full-width">
-                    <label for="notes" class="form-label">Notes</label>
-                    <Textarea
-                        id="notes"
-                        v-model="form.notes"
-                        placeholder="Enter any additional notes"
-                        rows="3"
-                        class="form-input"
+                        :loading="loadingManagers"
                     />
                   </div>
                 </div>
@@ -294,8 +111,8 @@
                     label="Update Warehouse"
                     icon="pi pi-check"
                     class="p-button-success"
-                    :loading="submitting"
-                    :disabled="!isFormValid"
+                    :loading="saving"
+                    :disabled="!isFormValid || saving"
                 />
               </div>
             </form>
@@ -308,133 +125,92 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
+import { useWarehouseStore } from '@/stores/warehouse'
+import { useUsersStore } from '@/stores/user'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 
 // Composables
-const router = useRouter()
 const route = useRoute()
+const router = useRouter()
 const toast = useToast()
 const authStore = useAuthStore()
+const warehouseStore = useWarehouseStore()
+const userStore = useUsersStore()
 
 // State
 const loading = ref(true)
-const submitting = ref(false)
+const saving = ref(false)
+const loadingManagers = ref(false)
+const error = ref(null)
 const warehouse = ref(null)
 const form = ref({
   name: '',
-  code: '',
-  type: '',
-  status: '',
-  address: '',
+  streetAddress: '',
   city: '',
-  country: '',
-  postalCode: '',
-  totalCapacity: null,
-  availableCapacity: null,
-  unit: '',
-  managerId: '',
-  contactPhone: '',
-  contactEmail: '',
-  description: '',
-  notes: ''
+  warehouseManagerId: ''
 })
-
 const errors = ref({})
 const managerOptions = ref([])
 
-// Options
-const warehouseTypes = [
-  { label: 'Distribution Center', value: 'DISTRIBUTION' },
-  { label: 'Storage Facility', value: 'STORAGE' },
-  { label: 'Transit Hub', value: 'TRANSIT' },
-  { label: 'Cold Storage', value: 'COLD_STORAGE' }
-]
-
-const statusOptions = [
-  { label: 'Active', value: 'ACTIVE' },
-  { label: 'Inactive', value: 'INACTIVE' },
-  { label: 'Under Construction', value: 'UNDER_CONSTRUCTION' },
-  { label: 'Maintenance', value: 'MAINTENANCE' }
-]
-
-const countryOptions = [
-  { label: 'South Africa', value: 'ZA' },
-  { label: 'Zimbabwe', value: 'ZW' },
-  { label: 'Botswana', value: 'BW' },
-  { label: 'Namibia', value: 'NA' }
-]
-
-const unitOptions = [
-  { label: 'Units', value: 'units' },
-  { label: 'Pallets', value: 'pallets' },
-  { label: 'Cubic Meters', value: 'cubic_meters' },
-  { label: 'Square Meters', value: 'square_meters' }
-]
-
 // Computed
 const isFormValid = computed(() => {
-  return form.value.name &&
-      form.value.code &&
-      form.value.type &&
-      form.value.status &&
-      form.value.address &&
-      form.value.city &&
-      form.value.country &&
-      form.value.totalCapacity &&
-      form.value.availableCapacity !== null &&
-      form.value.unit &&
-      form.value.managerId
+  return form.value.name && form.value.streetAddress
 })
 
+const headerActions = computed(() => [
+  {
+    label: 'Cancel',
+    icon: 'pi pi-times',
+    handler: cancelForm,
+    variant: 'outlined'
+  },
+  {
+    label: 'Save Changes',
+    icon: 'pi pi-check',
+    handler: submitForm,
+    variant: 'primary',
+    loading: saving.value,
+    disabled: !isFormValid.value || saving.value
+  }
+])
+
 // Methods
-const loadWarehouse = async () => {
-  loading.value = true
+const loadWarehouseData = async () => {
   try {
-    const response = await fetch(`/api/warehouses/${route.params.id}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+    loading.value = true
+    error.value = null
+    const warehouseId = route.params.id
+
+    console.log('EditWarehouse: Loading warehouse with ID:', warehouseId)
+
+    // Load warehouse from API
+    warehouse.value = await warehouseStore.getWarehouse(warehouseId)
+
+    console.log('EditWarehouse: Warehouse loaded:', warehouse.value)
+
+    if (warehouse.value) {
+      // Populate form with warehouse data
+      form.value = {
+        name: warehouse.value.name || '',
+        streetAddress: warehouse.value.streetAddress || '',
+        city: warehouse.value.city || '',
+        warehouseManagerId: warehouse.value.warehouseManager?.id || ''
       }
-    })
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        warehouse.value = null
-        return
-      }
-      throw new Error('Failed to load warehouse')
+      console.log('EditWarehouse: Form populated:', form.value)
     }
-
-    warehouse.value = await response.json()
-
-    // Populate form with warehouse data
-    form.value = {
-      name: warehouse.value.name || '',
-      code: warehouse.value.code || '',
-      type: warehouse.value.type || '',
-      status: warehouse.value.status || '',
-      address: warehouse.value.address || '',
-      city: warehouse.value.city || '',
-      country: warehouse.value.country || '',
-      postalCode: warehouse.value.postalCode || '',
-      totalCapacity: warehouse.value.totalCapacity || null,
-      availableCapacity: warehouse.value.availableCapacity || null,
-      unit: warehouse.value.unit || '',
-      managerId: warehouse.value.managerId || '',
-      contactPhone: warehouse.value.contactPhone || '',
-      contactEmail: warehouse.value.contactEmail || '',
-      description: warehouse.value.description || '',
-      notes: warehouse.value.notes || ''
-    }
-
-  } catch (error) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: error.message || 'Failed to load warehouse',
-      life: 3000
+    
+  } catch (err) {
+    error.value = err.message || 'Failed to load warehouse data'
+    console.error('EditWarehouse: Error loading warehouse:', err)
+    console.error('EditWarehouse: Error details:', {
+      message: err.message,
+      status: err.status,
+      response: err.response
     })
   } finally {
     loading.value = false
@@ -443,21 +219,22 @@ const loadWarehouse = async () => {
 
 const loadManagers = async () => {
   try {
-    const response = await fetch('/api/users?role=WAREHOUSE_MANAGER', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-      }
-    })
-
-    if (!response.ok) throw new Error('Failed to load managers')
-
-    const managers = await response.json()
-    managerOptions.value = managers.map(manager => ({
-      id: manager.id,
-      name: `${manager.firstName} ${manager.lastName}`
-    }))
+    loadingManagers.value = true
+    // Load staff members who can be warehouse managers
+    await userStore.getPaginated({ role: 'WAREHOUSE_MANAGER' })
+    
+    managerOptions.value = userStore.users
+      .filter(user => user.role === 'WAREHOUSE_MANAGER')
+      .map(manager => ({
+        id: manager.id,
+        name: `${manager.firstName} ${manager.lastName}`,
+        email: manager.email
+      }))
   } catch (error) {
     console.error('Failed to load managers:', error)
+    managerOptions.value = []
+  } finally {
+    loadingManagers.value = false
   }
 }
 
@@ -465,20 +242,7 @@ const validateForm = () => {
   errors.value = {}
 
   if (!form.value.name) errors.value.name = 'Warehouse name is required'
-  if (!form.value.code) errors.value.code = 'Warehouse code is required'
-  if (!form.value.type) errors.value.type = 'Warehouse type is required'
-  if (!form.value.status) errors.value.status = 'Status is required'
-  if (!form.value.address) errors.value.address = 'Address is required'
-  if (!form.value.city) errors.value.city = 'City is required'
-  if (!form.value.country) errors.value.country = 'Country is required'
-  if (!form.value.totalCapacity) errors.value.totalCapacity = 'Total capacity is required'
-  if (form.value.availableCapacity === null) errors.value.availableCapacity = 'Available capacity is required'
-  if (!form.value.unit) errors.value.unit = 'Capacity unit is required'
-  if (!form.value.managerId) errors.value.managerId = 'Warehouse manager is required'
-
-  if (form.value.availableCapacity > form.value.totalCapacity) {
-    errors.value.availableCapacity = 'Available capacity cannot exceed total capacity'
-  }
+  if (!form.value.streetAddress) errors.value.streetAddress = 'Street address is required'
 
   return Object.keys(errors.value).length === 0
 }
@@ -486,20 +250,19 @@ const validateForm = () => {
 const submitForm = async () => {
   if (!validateForm()) return
 
-  submitting.value = true
   try {
-    const response = await fetch(`/api/warehouses/${route.params.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-      },
-      body: JSON.stringify(form.value)
-    })
+    saving.value = true
 
-    if (!response.ok) throw new Error('Failed to update warehouse')
+    // Create warehouse data object matching backend entity
+    const warehouseData = {
+      name: form.value.name,
+      streetAddress: form.value.streetAddress,
+      city: form.value.city || null,
+      warehouseManager: form.value.warehouseManagerId ? { id: form.value.warehouseManagerId } : null
+    }
 
-    const updatedWarehouse = await response.json()
+    // Use warehouse store to update warehouse
+    await warehouseStore.updateWarehouse(warehouse.value.id, warehouseData)
 
     toast.add({
       severity: 'success',
@@ -508,9 +271,8 @@ const submitForm = async () => {
       life: 3000
     })
 
-    // Navigate to warehouse details
-    router.push(`/warehouses/${updatedWarehouse.id}`)
-
+    // Navigate back to warehouse details
+    router.push(`/warehouses/${warehouse.value.id}`)
   } catch (error) {
     toast.add({
       severity: 'error',
@@ -519,21 +281,27 @@ const submitForm = async () => {
       life: 3000
     })
   } finally {
-    submitting.value = false
+    saving.value = false
   }
 }
 
 const cancelForm = () => {
-  router.push(`/warehouses/${route.params.id}`)
+  if (warehouse.value) {
+    router.push(`/warehouses/${warehouse.value.id}`)
+  } else {
+    router.push('/warehouses')
+  }
 }
 
-const goBack = () => {
-  router.push(`/warehouses/${route.params.id}`)
+const handleEmptyStateAction = (action) => {
+  if (action === 'back') {
+    router.push('/warehouses')
+  }
 }
 
 onMounted(async () => {
   await Promise.all([
-    loadWarehouse(),
+    loadWarehouseData(),
     loadManagers()
   ])
 })
@@ -544,27 +312,8 @@ onMounted(async () => {
   padding: 1.5rem;
 }
 
-.page-header {
-  margin-bottom: 2rem;
-}
-
-.header-nav {
-  margin-bottom: 1rem;
-}
-
-.page-title {
-  font-size: 1.875rem;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 0.5rem 0;
-}
-
-.page-description {
-  color: #6b7280;
-  margin: 0;
-}
-
 .loading-container,
+.error-container,
 .not-found-container {
   display: flex;
   flex-direction: column;
@@ -572,16 +321,6 @@ onMounted(async () => {
   justify-content: center;
   min-height: 50vh;
   text-align: center;
-}
-
-.not-found-content {
-  max-width: 400px;
-}
-
-.not-found-icon {
-  font-size: 4rem;
-  color: #f59e0b;
-  margin-bottom: 1rem;
 }
 
 .form-container {
@@ -599,10 +338,6 @@ onMounted(async () => {
 
 .form-section {
   margin-bottom: 2rem;
-}
-
-.form-section:last-child {
-  margin-bottom: 0;
 }
 
 .section-title {

@@ -1,31 +1,22 @@
 <template>
   <DashboardLayout>
     <div class="create-warehouse-page">
-      <!-- Breadcrumb Navigation -->
-      <div class="breadcrumb-section">
-        <Breadcrumb :model="breadcrumbItems" />
-      </div>
-
       <!-- Page Header -->
-      <div class="page-header">
-        <div class="header-content">
-          <div class="header-info">
-            <h1 class="page-title">Create New Warehouse</h1>
-            <p class="page-description">
-              Add a new warehouse location to your inventory management system
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader 
+        title="Create New Warehouse"
+        description="Add a new warehouse location to your inventory management system"
+        :actions="headerActions"
+        :loading="loading"
+      />
 
       <!-- Form Container -->
       <div class="form-container">
         <Card class="form-card">
           <template #content>
             <form @submit.prevent="submitForm" class="warehouse-form">
-              <!-- Basic Information Section -->
+              <!-- Warehouse Information Section -->
               <div class="form-section">
-                <h3 class="section-title">Basic Information</h3>
+                <h3 class="section-title">Warehouse Information</h3>
                 <div class="form-grid">
                   <div class="form-group">
                     <label for="name" class="form-label">Warehouse Name *</label>
@@ -39,218 +30,38 @@
                     <small v-if="errors.name" class="p-error">{{ errors.name }}</small>
                   </div>
 
-                  <div class="form-group">
-                    <label for="code" class="form-label">Warehouse Code *</label>
-                    <InputText
-                        id="code"
-                        v-model="form.code"
-                        :class="{ 'p-invalid': errors.code }"
-                        placeholder="e.g., WH-001"
-                        class="form-input"
-                    />
-                    <small v-if="errors.code" class="p-error">{{ errors.code }}</small>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="type" class="form-label">Warehouse Type *</label>
-                    <Dropdown
-                        id="type"
-                        v-model="form.type"
-                        :options="warehouseTypes"
-                        option-label="label"
-                        option-value="value"
-                        :class="{ 'p-invalid': errors.type }"
-                        placeholder="Select warehouse type"
-                        class="form-input"
-                    />
-                    <small v-if="errors.type" class="p-error">{{ errors.type }}</small>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="status" class="form-label">Status *</label>
-                    <Dropdown
-                        id="status"
-                        v-model="form.status"
-                        :options="statusOptions"
-                        option-label="label"
-                        option-value="value"
-                        :class="{ 'p-invalid': errors.status }"
-                        placeholder="Select status"
-                        class="form-input"
-                    />
-                    <small v-if="errors.status" class="p-error">{{ errors.status }}</small>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Location Information Section -->
-              <div class="form-section">
-                <h3 class="section-title">Location Information</h3>
-                <div class="form-grid">
                   <div class="form-group full-width">
-                    <label for="address" class="form-label">Address *</label>
+                    <label for="streetAddress" class="form-label">Street Address *</label>
                     <Textarea
-                        id="address"
-                        v-model="form.address"
-                        :class="{ 'p-invalid': errors.address }"
-                        placeholder="Enter complete address"
+                        id="streetAddress"
+                        v-model="form.streetAddress"
+                        :class="{ 'p-invalid': errors.streetAddress }"
+                        placeholder="Enter complete street address"
                         rows="3"
                         class="form-input"
                     />
-                    <small v-if="errors.address" class="p-error">{{ errors.address }}</small>
+                    <small v-if="errors.streetAddress" class="p-error">{{ errors.streetAddress }}</small>
                   </div>
 
                   <div class="form-group">
-                    <label for="city" class="form-label">City *</label>
+                    <label for="city" class="form-label">City</label>
                     <InputText
                         id="city"
                         v-model="form.city"
-                        :class="{ 'p-invalid': errors.city }"
                         placeholder="Enter city"
                         class="form-input"
                     />
-                    <small v-if="errors.city" class="p-error">{{ errors.city }}</small>
                   </div>
 
                   <div class="form-group">
-                    <label for="country" class="form-label">Country *</label>
-                    <Dropdown
-                        id="country"
-                        v-model="form.country"
-                        :options="countryOptions"
-                        option-label="label"
-                        option-value="value"
-                        :class="{ 'p-invalid': errors.country }"
-                        placeholder="Select country"
-                        class="form-input"
-                    />
-                    <small v-if="errors.country" class="p-error">{{ errors.country }}</small>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="postalCode" class="form-label">Postal Code</label>
-                    <InputText
-                        id="postalCode"
-                        v-model="form.postalCode"
-                        placeholder="Enter postal code"
-                        class="form-input"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <!-- Capacity Information Section -->
-              <div class="form-section">
-                <h3 class="section-title">Capacity Information</h3>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="totalCapacity" class="form-label">Total Capacity (units) *</label>
-                    <InputNumber
-                        id="totalCapacity"
-                        v-model="form.totalCapacity"
-                        :class="{ 'p-invalid': errors.totalCapacity }"
-                        placeholder="Enter total capacity"
-                        :min="1"
-                        class="form-input"
-                    />
-                    <small v-if="errors.totalCapacity" class="p-error">{{ errors.totalCapacity }}</small>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="availableCapacity" class="form-label">Available Capacity (units) *</label>
-                    <InputNumber
-                        id="availableCapacity"
-                        v-model="form.availableCapacity"
-                        :class="{ 'p-invalid': errors.availableCapacity }"
-                        placeholder="Enter available capacity"
-                        :min="0"
-                        :max="form.totalCapacity"
-                        class="form-input"
-                    />
-                    <small v-if="errors.availableCapacity" class="p-error">{{ errors.availableCapacity }}</small>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="unit" class="form-label">Capacity Unit *</label>
-                    <Dropdown
-                        id="unit"
-                        v-model="form.unit"
-                        :options="unitOptions"
-                        option-label="label"
-                        option-value="value"
-                        :class="{ 'p-invalid': errors.unit }"
-                        placeholder="Select unit"
-                        class="form-input"
-                    />
-                    <small v-if="errors.unit" class="p-error">{{ errors.unit }}</small>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Manager Information Section -->
-              <div class="form-section">
-                <h3 class="section-title">Manager Information</h3>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="managerId" class="form-label">Warehouse Manager *</label>
-                    <Dropdown
-                        id="managerId"
-                        v-model="form.managerId"
+                    <label for="warehouseManagerId" class="form-label">Warehouse Manager</label>
+                    <Select
+                        id="warehouseManagerId"
+                        v-model="form.warehouseManagerId"
                         :options="managerOptions"
                         option-label="name"
                         option-value="id"
-                        :class="{ 'p-invalid': errors.managerId }"
                         placeholder="Select warehouse manager"
-                        class="form-input"
-                    />
-                    <small v-if="errors.managerId" class="p-error">{{ errors.managerId }}</small>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="contactPhone" class="form-label">Contact Phone</label>
-                    <InputText
-                        id="contactPhone"
-                        v-model="form.contactPhone"
-                        placeholder="Enter contact phone"
-                        class="form-input"
-                    />
-                  </div>
-
-                  <div class="form-group">
-                    <label for="contactEmail" class="form-label">Contact Email</label>
-                    <InputText
-                        id="contactEmail"
-                        v-model="form.contactEmail"
-                        type="email"
-                        placeholder="Enter contact email"
-                        class="form-input"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <!-- Additional Information Section -->
-              <div class="form-section">
-                <h3 class="section-title">Additional Information</h3>
-                <div class="form-grid">
-                  <div class="form-group full-width">
-                    <label for="description" class="form-label">Description</label>
-                    <Textarea
-                        id="description"
-                        v-model="form.description"
-                        placeholder="Enter warehouse description"
-                        rows="3"
-                        class="form-input"
-                    />
-                  </div>
-
-                  <div class="form-group full-width">
-                    <label for="notes" class="form-label">Notes</label>
-                    <Textarea
-                        id="notes"
-                        v-model="form.notes"
-                        placeholder="Enter any additional notes"
-                        rows="3"
                         class="form-input"
                     />
                   </div>
@@ -287,88 +98,58 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
-import { useWarehouseNavigation } from '@/utils/warehouseNavigation'
 import { useAuthStore } from '@/stores/auth'
-import DashboardLayout from '@/layouts/DashboardLayout.vue'
+import { useWarehouseStore } from '@/stores/warehouse'
+import { useUsersStore } from '@/stores/user'
+import { useValidation } from '@/composables/useValidation'
+import { useLoading } from '@/composables/useLoading'
+import DashboardLayout from '@/components/general/DashboardLayout.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
 
 // Composables
 const router = useRouter()
 const toast = useToast()
-const { navigateToWarehouses } = useWarehouseNavigation()
 const authStore = useAuthStore()
+const warehouseStore = useWarehouseStore()
+const userStore = useUsersStore()
+const { validators } = useValidation()
+const { withLoading, isLoading } = useLoading()
 
 // State
-const loading = ref(false)
+const loading = computed(() => warehouseStore.isCreating)
 const form = ref({
   name: '',
-  code: '',
-  type: '',
-  status: 'ACTIVE',
-  address: '',
+  streetAddress: '',
   city: '',
-  country: '',
-  postalCode: '',
-  totalCapacity: null,
-  availableCapacity: null,
-  unit: 'units',
-  managerId: '',
-  contactPhone: '',
-  contactEmail: '',
-  description: '',
-  notes: ''
+  warehouseManagerId: ''
 })
 
 const errors = ref({})
 const managerOptions = ref([])
 
-// Options
-const warehouseTypes = [
-  { label: 'Distribution Center', value: 'DISTRIBUTION' },
-  { label: 'Storage Facility', value: 'STORAGE' },
-  { label: 'Transit Hub', value: 'TRANSIT' },
-  { label: 'Cold Storage', value: 'COLD_STORAGE' }
-]
-
-const statusOptions = [
-  { label: 'Active', value: 'ACTIVE' },
-  { label: 'Inactive', value: 'INACTIVE' },
-  { label: 'Under Construction', value: 'UNDER_CONSTRUCTION' },
-  { label: 'Maintenance', value: 'MAINTENANCE' }
-]
-
-const countryOptions = [
-  { label: 'South Africa', value: 'ZA' },
-  { label: 'Zimbabwe', value: 'ZW' },
-  { label: 'Botswana', value: 'BW' },
-  { label: 'Namibia', value: 'NA' }
-]
-
-const unitOptions = [
-  { label: 'Units', value: 'units' },
-  { label: 'Pallets', value: 'pallets' },
-  { label: 'Cubic Meters', value: 'cubic_meters' },
-  { label: 'Square Meters', value: 'square_meters' }
-]
+// No additional options needed for simplified form
 
 // Computed
-const breadcrumbItems = computed(() => [
-  { label: 'Dashboard', command: () => router.push('/dashboard') },
-  { label: 'Warehouses', command: () => navigateToWarehouses() },
-  { label: 'Create Warehouse' }
+const headerActions = computed(() => [
+  {
+    label: 'Cancel',
+    icon: 'pi pi-times',
+    handler: cancelForm,
+    variant: 'outlined'
+  },
+  {
+    label: 'Save Warehouse',
+    icon: 'pi pi-check',
+    handler: submitForm,
+    variant: 'primary',
+    loading: loading.value,
+    disabled: !isFormValid.value
+  }
 ])
 
 const isFormValid = computed(() => {
   return form.value.name &&
-      form.value.code &&
-      form.value.type &&
-      form.value.status &&
-      form.value.address &&
-      form.value.city &&
-      form.value.country &&
-      form.value.totalCapacity &&
-      form.value.availableCapacity !== null &&
-      form.value.unit &&
-      form.value.managerId
+      form.value.streetAddress
 })
 
 // Methods
@@ -376,20 +157,7 @@ const validateForm = () => {
   errors.value = {}
 
   if (!form.value.name) errors.value.name = 'Warehouse name is required'
-  if (!form.value.code) errors.value.code = 'Warehouse code is required'
-  if (!form.value.type) errors.value.type = 'Warehouse type is required'
-  if (!form.value.status) errors.value.status = 'Status is required'
-  if (!form.value.address) errors.value.address = 'Address is required'
-  if (!form.value.city) errors.value.city = 'City is required'
-  if (!form.value.country) errors.value.country = 'Country is required'
-  if (!form.value.totalCapacity) errors.value.totalCapacity = 'Total capacity is required'
-  if (form.value.availableCapacity === null) errors.value.availableCapacity = 'Available capacity is required'
-  if (!form.value.unit) errors.value.unit = 'Capacity unit is required'
-  if (!form.value.managerId) errors.value.managerId = 'Warehouse manager is required'
-
-  if (form.value.availableCapacity > form.value.totalCapacity) {
-    errors.value.availableCapacity = 'Available capacity cannot exceed total capacity'
-  }
+  if (!form.value.streetAddress) errors.value.streetAddress = 'Street address is required'
 
   return Object.keys(errors.value).length === 0
 }
@@ -397,21 +165,17 @@ const validateForm = () => {
 const submitForm = async () => {
   if (!validateForm()) return
 
-  loading.value = true
   try {
-    // API call to create warehouse
-    const response = await fetch('/api/warehouses', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-      },
-      body: JSON.stringify(form.value)
-    })
+    // Create warehouse data object matching backend entity
+    const warehouseData = {
+      name: form.value.name,
+      streetAddress: form.value.streetAddress,
+      city: form.value.city || null,
+      warehouseManager: form.value.warehouseManagerId ? { id: form.value.warehouseManagerId } : null
+    }
 
-    if (!response.ok) throw new Error('Failed to create warehouse')
-
-    const warehouse = await response.json()
+    // Use warehouse store to create warehouse
+    const warehouse = await warehouseStore.createWarehouse(warehouseData)
 
     toast.add({
       severity: 'success',
@@ -420,9 +184,8 @@ const submitForm = async () => {
       life: 3000
     })
 
-    // Navigate to warehouse details
-    router.push(`/warehouses/${warehouse.id}`)
-
+    // Navigate to warehouse list
+    router.push('/warehouses')
   } catch (error) {
     toast.add({
       severity: 'error',
@@ -430,32 +193,28 @@ const submitForm = async () => {
       detail: error.message || 'Failed to create warehouse',
       life: 3000
     })
-  } finally {
-    loading.value = false
   }
 }
 
 const cancelForm = () => {
-  navigateToWarehouses()
+  router.push('/warehouses')
 }
 
 const loadManagers = async () => {
   try {
-    const response = await fetch('/api/users?role=WAREHOUSE_MANAGER', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-      }
-    })
-
-    if (!response.ok) throw new Error('Failed to load managers')
-
-    const managers = await response.json()
-    managerOptions.value = managers.map(manager => ({
-      id: manager.id,
-      name: `${manager.firstName} ${manager.lastName}`
-    }))
+    // Load staff members who can be warehouse managers
+    await userStore.getPaginated({ role: 'WAREHOUSE_MANAGER' })
+    
+    managerOptions.value = userStore.users
+      .filter(user => user.role === 'WAREHOUSE_MANAGER')
+      .map(manager => ({
+        id: manager.id,
+        name: `${manager.firstName} ${manager.lastName}`,
+        email: manager.email
+      }))
   } catch (error) {
     console.error('Failed to load managers:', error)
+    managerOptions.value = []
   }
 }
 
