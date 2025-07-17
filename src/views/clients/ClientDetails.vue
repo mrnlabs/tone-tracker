@@ -118,7 +118,7 @@
                   <div class="stat-info">
                     <h3>Avg. Engagement</h3>
                     <p class="stat-number">{{ client.avgEngagement }}</p>
-                    <span class="stat-change positive">{{ client.totalCustomersReached.toLocaleString() }} customers reached</span>
+                    <span class="stat-change positive">{{ (client.totalCustomersReached || 0).toLocaleString() }} customers reached</span>
                   </div>
                 </div>
               </template>
@@ -328,7 +328,7 @@
 
                   <Column field="budget" header="Budget" sortable>
                     <template #body="{ data }">
-                      <span class="budget-amount">${{ data.budget.toLocaleString() }}</span>
+                      <span class="budget-amount">${{ (data.budget || 0).toLocaleString() }}</span>
                     </template>
                   </Column>
 
@@ -466,6 +466,11 @@
               </div>
             </TabPanel>
 
+            <!-- Contacts Tab -->
+            <TabPanel header="Contacts">
+              <ClientContact :client-id="route.params.id" />
+            </TabPanel>
+
             <!-- Activity Log Tab -->
             <TabPanel header="Activity Log">
               <div class="activity-content">
@@ -534,6 +539,7 @@ import { useToast } from 'primevue/usetoast'
 import { useClientsStore } from '@/stores/client'
 import { useLoading } from '@/composables/useLoading'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
+import ClientContact from './ClientContact.vue'
 
 const route = useRoute()
 const router = useRouter()

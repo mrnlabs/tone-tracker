@@ -1,5 +1,6 @@
 // src/services/api.js
 // Centralized API service for the Activation Tracking System
+// Updated: Contact endpoints now use hardcoded URLs
 
 import axios from 'axios'
 import { API_ENDPOINTS, STORAGE_KEYS, ERROR_MESSAGES } from '@/utils/constants'
@@ -461,6 +462,20 @@ const apiService = new ApiService()
 
     async updateProfile(userData) {
         return await apiService.put(API_ENDPOINTS.UPDATE_PROFILE, userData)
+    },
+
+    async uploadProfilePicture(userId, formData) {
+        const userIdPath = userId === 'current' ? 'current' : userId
+        return await apiService.post(`/users/${userIdPath}/profile-picture`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        })
+    },
+
+    async deleteProfilePicture(userId) {
+        const userIdPath = userId === 'current' ? 'current' : userId
+        return await apiService.delete(`/users/${userIdPath}/profile-picture`)
     }
 }
 
@@ -554,6 +569,19 @@ const apiService = new ApiService()
 
     async activateUser(id) {
         return await apiService.patch(`${API_ENDPOINTS.USERS}/${id}/activate`)
+    },
+
+    async resetPassword(userId) {
+        return await apiService.post(`${API_ENDPOINTS.USERS}/${userId}/reset-password`)
+    },
+
+    async updatePassword(userId, passwordData) {
+        return await apiService.patch(`${API_ENDPOINTS.USERS}/${userId}/password`, passwordData)
+    },
+
+    async getUsersByRole(role, params = {}) {
+        const queryParams = { role, ...params }
+        return await apiService.get('/users/by-role', { params: queryParams })
     }
 }
 
@@ -592,6 +620,53 @@ const apiService = new ApiService()
 
     async getClientReports(clientId, params = {}) {
         return await apiService.getPaginated(`${API_ENDPOINTS.CLIENTS}/${clientId}/reports`, params)
+    },
+
+    // Contact management
+    async getClientContacts(clientId, params = {}) {
+        // Direct hardcoded endpoint to bypass any import issues
+        const url = `/contacts/by-client/${clientId}`
+        console.log('getClientContacts using hardcoded url:', url)
+        return await apiService.getPaginated(url, params)
+    },
+
+    async createClientContact(clientId, contactData) {
+        // Add clientId to the contact data for the backend
+        const dataWithClientId = { ...contactData, clientId }
+        const url = '/contacts'
+        console.log('createClientContact using hardcoded url:', url)
+        return await apiService.post(url, dataWithClientId)
+    },
+
+    async updateClientContact(clientId, contactId, contactData) {
+        const dataWithClientId = { ...contactData, clientId }
+        const url = `/contacts/${contactId}`
+        console.log('updateClientContact using hardcoded url:', url)
+        return await apiService.put(url, dataWithClientId)
+    },
+
+    async deleteClientContact(clientId, contactId) {
+        const url = `/contacts/${contactId}`
+        console.log('deleteClientContact using hardcoded url:', url)
+        return await apiService.delete(url)
+    },
+
+    async setPrimaryContact(clientId, contactId) {
+        const url = `/contacts/${contactId}/set-primary`
+        console.log('setPrimaryContact using hardcoded url:', url)
+        return await apiService.post(url, {})
+    },
+
+    async getPrimaryContact(clientId) {
+        const url = `/contacts/primary/${clientId}`
+        console.log('getPrimaryContact using hardcoded url:', url)
+        return await apiService.get(url)
+    },
+
+    async searchClientContacts(clientId, searchTerm, params = {}) {
+        const url = `/contacts/search/${clientId}`
+        console.log('searchClientContacts using hardcoded url:', url)
+        return await apiService.getPaginated(url, { ...params, search: searchTerm })
     }
 }
 
@@ -610,6 +685,24 @@ const apiService = new ApiService()
 
     async createActivation(activationData) {
         return await apiService.post(API_ENDPOINTS.ACTIVATIONS, activationData)
+    },
+
+    async createActivationWithDocument(activationData, briefDocument = null) {
+        const formData = new FormData()
+        
+        // Add activation data as JSON string
+        formData.append('activation', JSON.stringify(activationData))
+        
+        // Add brief document if provided
+        if (briefDocument) {
+            formData.append('briefDocument', briefDocument)
+        }
+        
+        return await apiService.post('/activations/with-document', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        })
     },
 
     async updateActivation(id, activationData) {
@@ -819,8 +912,102 @@ const warehouseService = {
         return await apiService.delete(url)
     },
 
-    async getFileUrl(id) {
-        return await apiService.get(`/files/${id}/url`)
+    async getFileUrl(filePath) {
+        // Handle both file IDs and file paths
+        let endpoint = '';
+        
+        if (filePath.startsWith('/') || filePath.includes('/')) {
+            // File path format (e.g., '/briefs/document.pdf')
+            endpoint = `/files/url?path=${encodeURIComponent(filePath)}`;
+        } else {
+            // File ID format 
+            endpoint = `/files/${filePath}/url`;
+        }
+        
+        const response = await apiService.get(endpoint);
+        
+        // Handle different response formats
+        if (response.data && response.data.url) {
+            return response.data;
+        } else if (response.url) {
+            return response;
+        } else if (typeof response === 'string') {
+            // Direct S3 URL response
+            return { url: response };
+        }
+        
+        throw new Error('Invalid file URL response format');
+    },
+
+    async getS3FileUrl(filePath) {
+        // Direct S3 URL construction using environment variable
+        try {
+            const s3BucketUrl = import.meta.env.VITE_AWS_S3_BUCKET;
+            
+            if (!s3BucketUrl) {
+                throw new Error('S3 bucket URL not configured. Please set VITE_AWS_S3_BUCKET environment variable.');
+            }
+            
+            // Clean the file path (remove leading slash if present)
+            let cleanPath = filePath;
+            if (cleanPath.startsWith('/')) {
+                cleanPath = cleanPath.substring(1);
+            }
+            
+            // Construct direct S3 URL
+            const s3Url = s3BucketUrl.endsWith('/') 
+                ? `${s3BucketUrl}${cleanPath}`
+                : `${s3BucketUrl}/${cleanPath}`;
+            
+            console.log('Constructed S3 URL:', s3Url);
+            return s3Url;
+            
+        } catch (error) {
+            console.error('Failed to construct S3 URL:', error);
+            
+            // Fallback to API endpoint if direct S3 construction fails
+            try {
+                console.log('Falling back to API endpoint for S3 URL...');
+                const response = await apiService.get(`/files/s3-url?path=${encodeURIComponent(filePath)}`);
+                
+                // Return S3 signed URL from API
+                if (response.data && response.data.signedUrl) {
+                    return response.data.signedUrl;
+                } else if (response.signedUrl) {
+                    return response.signedUrl;
+                } else if (typeof response === 'string' && response.includes('amazonaws.com')) {
+                    return response;
+                }
+                
+                throw new Error('No valid S3 URL returned from API');
+            } catch (apiError) {
+                console.error('API fallback also failed:', apiError);
+                throw new Error('Failed to access file from S3 bucket');
+            }
+        }
+    },
+
+    getDirectS3Url(filePath) {
+        // Synchronous direct S3 URL construction for immediate use
+        const s3BucketUrl = import.meta.env.VITE_AWS_S3_BUCKET;
+        
+        if (!s3BucketUrl) {
+            console.warn('S3 bucket URL not configured');
+            return null;
+        }
+        
+        // Clean the file path
+        let cleanPath = filePath;
+        if (cleanPath.startsWith('/')) {
+            cleanPath = cleanPath.substring(1);
+        }
+        
+        // Construct and return direct S3 URL
+        const s3Url = s3BucketUrl.endsWith('/') 
+            ? `${s3BucketUrl}${cleanPath}`
+            : `${s3BucketUrl}/${cleanPath}`;
+            
+        return s3Url;
     }
 }
 

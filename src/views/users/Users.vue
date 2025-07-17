@@ -76,6 +76,14 @@
               <template #body="{ data }">
                 <div class="user-cell">
                   <Avatar
+                      v-if="data.profilePictureUrl"
+                      :image="data.profilePictureUrl"
+                      size="normal"
+                      shape="circle"
+                      @error="handleAvatarError"
+                  />
+                  <Avatar
+                      v-else
                       :label="(data.firstName || data.name || '?').charAt(0)"
                       size="normal"
                       shape="circle"
@@ -186,6 +194,7 @@ import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useUsersStore } from '@/stores/user'
 import { useLoading } from '@/composables/useLoading'
+import { userService } from '@/services/api'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import StatsGrid from '@/components/ui/StatsGrid.vue'
@@ -430,6 +439,11 @@ const getUserColor = (userId) => {
   return colors[userId % colors.length]
 }
 
+const handleAvatarError = (event) => {
+  // Hide broken image and let the fallback avatar show
+  event.target.style.display = 'none'
+}
+
 const getRoleSeverity = (role) => {
   const severityMap = {
     'ADMIN': 'danger',
@@ -548,9 +562,8 @@ const editUser = (userId) => {
 
 const resetPassword = async (userId) => {
   try {
-    // TODO: Implement password reset API call when available
-    // await userService.resetPassword(userId)
-    await new Promise(resolve => setTimeout(resolve, 500))
+    loading.value = true
+    await userService.resetPassword(userId)
     toast.add({
       severity: 'success',
       summary: 'Password Reset',
@@ -558,13 +571,14 @@ const resetPassword = async (userId) => {
       life: 4000
     })
   } catch (error) {
-    console.error('Failed to reset password:', error)
     toast.add({
       severity: 'error',
       summary: 'Reset Failed',
       detail: 'Failed to reset user password',
       life: 5000
     })
+  } finally {
+    loading.value = false
   }
 }
 

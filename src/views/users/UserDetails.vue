@@ -15,6 +15,14 @@
           <template #content>
             <div class="profile-header">
               <Avatar
+                v-if="user.profilePictureUrl"
+                :image="user.profilePictureUrl"
+                size="xlarge"
+                shape="circle"
+                @error="handleAvatarError"
+              />
+              <Avatar
+                v-else
                 :label="(user.firstName || '?').charAt(0)"
                 size="xlarge"
                 shape="circle"
@@ -263,6 +271,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useUsersStore } from '@/stores/user'
+import { useAuthStore } from '@/stores/auth'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
@@ -271,6 +280,7 @@ const router = useRouter()
 const route = useRoute()
 const toast = useToast()
 const usersStore = useUsersStore()
+const authStore = useAuthStore()
 
 // State
 const loading = ref(false)
@@ -330,28 +340,52 @@ const statusDialogTitle = computed(() => {
   return user.value.isActive ? 'Deactivate User' : 'Activate User'
 })
 
+const isOwnProfile = computed(() => {
+  return authStore.userId && userId.value && authStore.userId.toString() === userId.value.toString()
+})
+
 // Header actions
-const headerActions = computed(() => [
-  {
-    key: 'back',
-    label: 'Back to Users',
-    icon: 'pi pi-arrow-left',
-    class: 'p-button-outlined',
-    handler: () => router.push('/users')
-  },
-  {
-    key: 'edit',
-    label: 'Edit User',
-    icon: 'pi pi-pencil',
-    class: 'p-button-primary',
-    handler: editUser
+const headerActions = computed(() => {
+  const actions = [
+    {
+      key: 'back',
+      label: 'Back to Users',
+      icon: 'pi pi-arrow-left',
+      class: 'p-button-outlined',
+      handler: () => router.push('/users')
+    }
+  ]
+
+  if (isOwnProfile.value) {
+    actions.push({
+      key: 'edit-profile',
+      label: 'Edit My Profile',
+      icon: 'pi pi-pencil',
+      class: 'p-button-success',
+      handler: editUser
+    })
+  } else {
+    actions.push({
+      key: 'edit',
+      label: 'Edit User',
+      icon: 'pi pi-pencil',
+      class: 'p-button-primary',
+      handler: editUser
+    })
   }
-])
+
+  return actions
+})
 
 // Utility functions
 const getUserColor = (userId) => {
   const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#84cc16']
   return colors[userId % colors.length]
+}
+
+const handleAvatarError = (event) => {
+  // Hide broken image and let the fallback avatar show
+  event.target.style.display = 'none'
 }
 
 const getRoleSeverity = (role) => {

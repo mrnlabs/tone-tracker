@@ -40,13 +40,8 @@
               <span class="step-label">Team & Resources</span>
             </div>
             <div class="step-divider"></div>
-            <div :class="['step', { active: currentStep >= 4, completed: currentStep > 4 }]">
+            <div :class="['step', { active: currentStep >= 4 }]">
               <div class="step-number">4</div>
-              <span class="step-label">Budget & Goals</span>
-            </div>
-            <div class="step-divider"></div>
-            <div :class="['step', { active: currentStep >= 5 }]">
-              <div class="step-number">5</div>
               <span class="step-label">Review</span>
             </div>
           </div>
@@ -68,20 +63,10 @@
                     id="activationName"
                     v-model="formData.name"
                     :class="{ 'p-invalid': errors.name }"
-                    placeholder="Enter activation name"
+                    placeholder="Enter activation name (max 200 characters)"
+                    maxlength="200"
                 />
                 <small v-if="errors.name" class="p-error">{{ errors.name }}</small>
-              </div>
-
-              <div class="form-group">
-                <label for="activationCode">Activation Code</label>
-                <InputText
-                    id="activationCode"
-                    v-model="formData.code"
-                    placeholder="Auto-generated if empty"
-                    :disabled="true"
-                />
-                <small class="p-help">Code will be auto-generated based on the activation name</small>
               </div>
 
               <div class="form-group">
@@ -100,62 +85,40 @@
               </div>
 
               <div class="form-group">
-                <label for="activationType">Activation Type *</label>
+                <label for="status">Status *</label>
                 <Dropdown
-                    id="activationType"
-                    v-model="formData.type"
-                    :options="activationTypeOptions"
+                    id="status"
+                    v-model="formData.status"
+                    :options="statusOptions"
                     optionLabel="label"
                     optionValue="value"
-                    placeholder="Select activation type"
-                    :class="{ 'p-invalid': errors.type }"
+                    placeholder="Select status"
+                    :class="{ 'p-invalid': errors.status }"
                 />
-                <small v-if="errors.type" class="p-error">{{ errors.type }}</small>
+                <small v-if="errors.status" class="p-error">{{ errors.status }}</small>
               </div>
 
-              <div class="form-group">
-                <label for="category">Category</label>
-                <Dropdown
-                    id="category"
-                    v-model="formData.category"
-                    :options="categoryOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select category"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="priority">Priority Level</label>
-                <Dropdown
-                    id="priority"
-                    v-model="formData.priority"
-                    :options="priorityOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select priority"
+              <div class="form-group full-width">
+                <RichTextEditor
+                    v-model="formData.briefDescription"
+                    label="Brief Description"
+                    placeholder="Provide a detailed brief description of the activation, including objectives, target audience, key messaging, and execution strategy..."
+                    :max-length="2000"
+                    :error="errors.briefDescription"
+                    :show-word-count="true"
                 />
               </div>
 
               <div class="form-group full-width">
-                <label for="description">Description *</label>
-                <Textarea
-                    id="description"
-                    v-model="formData.description"
-                    :rows="4"
-                    placeholder="Describe the activation goals, target audience, and key activities"
-                    :class="{ 'p-invalid': errors.description }"
-                />
-                <small v-if="errors.description" class="p-error">{{ errors.description }}</small>
-              </div>
-
-              <div class="form-group full-width">
-                <label for="objectives">Key Objectives</label>
-                <Textarea
-                    id="objectives"
-                    v-model="formData.objectives"
-                    :rows="3"
-                    placeholder="List the main objectives and success criteria for this activation"
+                <FileUpload
+                    v-model="briefDocument"
+                    label="Brief Document (PDF)"
+                    accept=".pdf"
+                    :max-size="10 * 1024 * 1024"
+                    :error="errors.briefDocument"
+                    :store-only="true"
+                    @upload-success="handleBriefUploadSuccess"
+                    @file-removed="handleBriefRemoved"
                 />
               </div>
             </div>
@@ -197,116 +160,57 @@
               </div>
 
               <div class="form-group">
-                <label for="startTime">Start Time</label>
+                <label for="startTime">Start Time *</label>
                 <Calendar
                     id="startTime"
                     v-model="formData.startTime"
                     :timeOnly="true"
                     :showIcon="true"
                     placeholder="Select start time"
+                    :class="{ 'p-invalid': errors.startTime }"
+                    hourFormat="24"
                 />
+                <small v-if="errors.startTime" class="p-error">{{ errors.startTime }}</small>
               </div>
 
               <div class="form-group">
-                <label for="endTime">End Time</label>
+                <label for="endTime">End Time *</label>
                 <Calendar
                     id="endTime"
                     v-model="formData.endTime"
                     :timeOnly="true"
                     :showIcon="true"
                     placeholder="Select end time"
+                    :class="{ 'p-invalid': errors.endTime }"
+                    hourFormat="24"
                 />
+                <small v-if="errors.endTime" class="p-error">{{ errors.endTime }}</small>
               </div>
 
-              <div class="form-group">
-                <label for="timezone">Timezone</label>
-                <Dropdown
-                    id="timezone"
-                    v-model="formData.timezone"
-                    :options="timezoneOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select timezone"
-                    filter
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="setupTime">Setup Duration (hours)</label>
-                <InputNumber
-                    id="setupTime"
-                    v-model="formData.setupDuration"
-                    :step="0.5"
-                    :min="0"
-                    placeholder="Setup time needed"
-                />
-              </div>
-
+              <!-- Enhanced Location Picker with Google Places Autocomplete -->
               <div class="form-group full-width">
-                <label for="venue">Venue/Location *</label>
-                <InputText
-                    id="venue"
-                    v-model="formData.venue"
-                    :class="{ 'p-invalid': errors.venue }"
-                    placeholder="Enter venue name and address"
+                <LocationPicker
+                    v-model="selectedLocation"
+                    label="Location *"
+                    placeholder="Search for a location or venue..."
+                    :required="true"
+                    :error="errors.location"
+                    :show-map="true"
+                    @location-selected="handleLocationSelected"
                 />
-                <small v-if="errors.venue" class="p-error">{{ errors.venue }}</small>
               </div>
 
+              <!-- Manual Location Override (optional) -->
               <div class="form-group">
-                <label for="city">City *</label>
+                <label for="locationName">Location/Venue Name</label>
                 <InputText
-                    id="city"
-                    v-model="formData.city"
-                    :class="{ 'p-invalid': errors.city }"
-                    placeholder="Enter city"
+                    id="locationName"
+                    v-model="formData.locationName"
+                    :class="{ 'p-invalid': errors.locationName }"
+                    placeholder="Override or specify venue name"
+                    maxlength="200"
                 />
-                <small v-if="errors.city" class="p-error">{{ errors.city }}</small>
-              </div>
-
-              <div class="form-group">
-                <label for="state">State/Province *</label>
-                <InputText
-                    id="state"
-                    v-model="formData.state"
-                    :class="{ 'p-invalid': errors.state }"
-                    placeholder="Enter state"
-                />
-                <small v-if="errors.state" class="p-error">{{ errors.state }}</small>
-              </div>
-
-              <div class="form-group">
-                <label for="country">Country</label>
-                <Dropdown
-                    id="country"
-                    v-model="formData.country"
-                    :options="countryOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select country"
-                    filter
-                />
-              </div>
-
-              <div class="form-group full-width">
-                <label for="venueDetails">Venue Details</label>
-                <Textarea
-                    id="venueDetails"
-                    v-model="formData.venueDetails"
-                    :rows="3"
-                    placeholder="Additional venue information, directions, contact details"
-                />
-              </div>
-
-              <div class="form-group full-width">
-                <div class="checkbox-group">
-                  <Checkbox
-                      id="weatherDependent"
-                      v-model="formData.weatherDependent"
-                      :binary="true"
-                  />
-                  <label for="weatherDependent">Weather Dependent Activation</label>
-                </div>
+                <small v-if="errors.locationName" class="p-error">{{ errors.locationName }}</small>
               </div>
             </div>
           </template>
@@ -320,36 +224,25 @@
           <template #content>
             <div class="form-grid">
               <div class="form-group">
-                <label for="activationManager">Activation Manager *</label>
+                <label for="activationManager">Activation Manager</label>
                 <Dropdown
                     id="activationManager"
-                    v-model="formData.managerId"
+                    v-model="formData.activationManagerId"
                     :options="managerOptions"
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Select activation manager"
-                    :class="{ 'p-invalid': errors.managerId }"
+                    :class="{ 'p-invalid': errors.activationManagerId }"
                     filter
                 />
-                <small v-if="errors.managerId" class="p-error">{{ errors.managerId }}</small>
-              </div>
-
-              <div class="form-group">
-                <label for="teamSize">Required Team Size</label>
-                <InputNumber
-                    id="teamSize"
-                    v-model="formData.requiredTeamSize"
-                    :min="1"
-                    :max="20"
-                    placeholder="Number of promoters needed"
-                />
+                <small v-if="errors.activationManagerId" class="p-error">{{ errors.activationManagerId }}</small>
               </div>
 
               <div class="form-group full-width">
                 <label for="promoters">Assign Promoters</label>
                 <MultiSelect
                     id="promoters"
-                    v-model="formData.promoterIds"
+                    v-model="formData.assignedPromoterIds"
                     :options="promoterOptions"
                     optionLabel="label"
                     optionValue="value"
@@ -360,253 +253,12 @@
                 <small class="p-help">You can assign promoters now or later</small>
               </div>
 
-              <div class="form-group">
-                <label for="warehouse">Primary Warehouse</label>
-                <Dropdown
-                    id="warehouse"
-                    v-model="formData.warehouseId"
-                    :options="warehouseOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select warehouse"
-                    filter
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="transportRequired">Transport Required</label>
-                <Dropdown
-                    id="transportRequired"
-                    v-model="formData.transportRequired"
-                    :options="[
-                      { label: 'Yes - Company Vehicle', value: 'company' },
-                      { label: 'Yes - Rental Required', value: 'rental' },
-                      { label: 'No - Team Arranges Own', value: 'none' }
-                    ]"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select transport option"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="equipmentNeeded">Equipment Needed</label>
-                <MultiSelect
-                    id="equipmentNeeded"
-                    v-model="formData.equipmentNeeded"
-                    :options="equipmentOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select required equipment"
-                    filter
-                />
-              </div>
-
-              <div class="form-group full-width">
-                <label for="specialRequirements">Special Requirements</label>
-                <Textarea
-                    id="specialRequirements"
-                    v-model="formData.specialRequirements"
-                    :rows="3"
-                    placeholder="Any special requirements, certifications, or qualifications needed"
-                />
-              </div>
-
-              <div class="form-group full-width">
-                <label for="safetyRequirements">Safety & Compliance</label>
-                <div class="checkbox-list">
-                  <div class="checkbox-group">
-                    <Checkbox
-                        id="safetyBriefing"
-                        v-model="formData.safetyBriefingRequired"
-                        :binary="true"
-                    />
-                    <label for="safetyBriefing">Safety Briefing Required</label>
-                  </div>
-                  <div class="checkbox-group">
-                    <Checkbox
-                        id="permits"
-                        v-model="formData.permitsRequired"
-                        :binary="true"
-                    />
-                    <label for="permits">Permits/Licenses Required</label>
-                  </div>
-                  <div class="checkbox-group">
-                    <Checkbox
-                        id="insurance"
-                        v-model="formData.insuranceRequired"
-                        :binary="true"
-                    />
-                    <label for="insurance">Additional Insurance Required</label>
-                  </div>
-                </div>
-              </div>
             </div>
           </template>
         </Card>
 
-        <!-- Step 4: Budget & Goals -->
+        <!-- Step 4: Review -->
         <Card v-if="currentStep === 4" class="form-card">
-          <template #header>
-            <h2>Budget & Performance Goals</h2>
-          </template>
-          <template #content>
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="totalBudget">Total Budget *</label>
-                <InputNumber
-                    id="totalBudget"
-                    v-model="formData.totalBudget"
-                    mode="currency"
-                    currency="USD"
-                    locale="en-US"
-                    :class="{ 'p-invalid': errors.totalBudget }"
-                    placeholder="Enter total budget"
-                />
-                <small v-if="errors.totalBudget" class="p-error">{{ errors.totalBudget }}</small>
-              </div>
-
-              <div class="form-group">
-                <label for="staffCosts">Staff Costs</label>
-                <InputNumber
-                    id="staffCosts"
-                    v-model="formData.staffCosts"
-                    mode="currency"
-                    currency="USD"
-                    locale="en-US"
-                    placeholder="Estimated staff costs"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="materialCosts">Material Costs</label>
-                <InputNumber
-                    id="materialCosts"
-                    v-model="formData.materialCosts"
-                    mode="currency"
-                    currency="USD"
-                    locale="en-US"
-                    placeholder="Materials and supplies"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="venueCosts">Venue/Location Costs</label>
-                <InputNumber
-                    id="venueCosts"
-                    v-model="formData.venueCosts"
-                    mode="currency"
-                    currency="USD"
-                    locale="en-US"
-                    placeholder="Venue rental and fees"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="transportCosts">Transport Costs</label>
-                <InputNumber
-                    id="transportCosts"
-                    v-model="formData.transportCosts"
-                    mode="currency"
-                    currency="USD"
-                    locale="en-US"
-                    placeholder="Transportation expenses"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="otherCosts">Other Costs</label>
-                <InputNumber
-                    id="otherCosts"
-                    v-model="formData.otherCosts"
-                    mode="currency"
-                    currency="USD"
-                    locale="en-US"
-                    placeholder="Miscellaneous expenses"
-                />
-              </div>
-
-              <!-- Performance Goals -->
-              <div class="form-group full-width">
-                <h3 class="section-title">Performance Goals</h3>
-              </div>
-
-              <div class="form-group">
-                <label for="targetCustomers">Target Customer Interactions</label>
-                <InputNumber
-                    id="targetCustomers"
-                    v-model="formData.targetCustomerInteractions"
-                    placeholder="Expected customer interactions"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="targetSales">Target Sales Units</label>
-                <InputNumber
-                    id="targetSales"
-                    v-model="formData.targetSalesUnits"
-                    placeholder="Expected sales volume"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="targetRevenue">Target Revenue</label>
-                <InputNumber
-                    id="targetRevenue"
-                    v-model="formData.targetRevenue"
-                    mode="currency"
-                    currency="USD"
-                    locale="en-US"
-                    placeholder="Expected revenue"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="targetLeads">Target Lead Generation</label>
-                <InputNumber
-                    id="targetLeads"
-                    v-model="formData.targetLeads"
-                    placeholder="Expected leads collected"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="targetSamples">Samples to Distribute</label>
-                <InputNumber
-                    id="targetSamples"
-                    v-model="formData.targetSamples"
-                    placeholder="Number of samples to give"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="kpiMetrics">Key Performance Indicators</label>
-                <MultiSelect
-                    id="kpiMetrics"
-                    v-model="formData.kpiMetrics"
-                    :options="kpiOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select KPIs to track"
-                    filter
-                />
-              </div>
-
-              <div class="form-group full-width">
-                <label for="successCriteria">Success Criteria</label>
-                <Textarea
-                    id="successCriteria"
-                    v-model="formData.successCriteria"
-                    :rows="3"
-                    placeholder="Define what constitutes success for this activation"
-                />
-              </div>
-            </div>
-          </template>
-        </Card>
-
-        <!-- Step 5: Review -->
-        <Card v-if="currentStep === 5" class="form-card">
           <template #header>
             <h2>Review Activation Details</h2>
           </template>
@@ -621,28 +273,26 @@
                     <span>{{ formData.name }}</span>
                   </div>
                   <div class="review-item">
-                    <label>Code:</label>
-                    <span>{{ generateActivationCode() }}</span>
-                  </div>
-                  <div class="review-item">
                     <label>Client:</label>
                     <span>{{ getClientName(formData.clientId) }}</span>
                   </div>
                   <div class="review-item">
-                    <label>Type:</label>
-                    <span>{{ formData.type }}</span>
-                  </div>
-                  <div class="review-item">
-                    <label>Category:</label>
-                    <span>{{ formData.category || 'Not specified' }}</span>
-                  </div>
-                  <div class="review-item">
-                    <label>Priority:</label>
-                    <span>{{ formData.priority || 'Not specified' }}</span>
+                    <label>Status:</label>
+                    <span>{{ formData.status }}</span>
                   </div>
                   <div class="review-item full-width">
-                    <label>Description:</label>
-                    <span>{{ formData.description }}</span>
+                    <label>Brief Description:</label>
+                    <div class="brief-preview">
+                      <div v-if="formData.briefDescription" v-html="formData.briefDescription" class="brief-content"></div>
+                      <span v-else class="no-content">Not provided</span>
+                    </div>
+                  </div>
+                  <div class="review-item full-width" v-if="briefDocument">
+                    <label>Brief Document:</label>
+                    <div class="document-preview">
+                      <i class="pi pi-file-pdf"></i>
+                      <span>{{ briefDocument.name }} ({{ formatFileSize(briefDocument.size) }})</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -659,17 +309,17 @@
                     <label>Time:</label>
                     <span>{{ formatTime(formData.startTime) }} - {{ formatTime(formData.endTime) }}</span>
                   </div>
-                  <div class="review-item">
-                    <label>Timezone:</label>
-                    <span>{{ formData.timezone || 'Not specified' }}</span>
-                  </div>
-                  <div class="review-item">
-                    <label>Setup Duration:</label>
-                    <span>{{ formData.setupDuration || 0 }} hours</span>
+                  <div class="review-item full-width">
+                    <label>Location:</label>
+                    <span>{{ formData.locationName }}</span>
                   </div>
                   <div class="review-item full-width">
-                    <label>Venue:</label>
-                    <span>{{ formData.venue }}, {{ formData.city }}, {{ formData.state }}</span>
+                    <label>Address:</label>
+                    <span>{{ formData.streetAddress }}, {{ formData.city }} {{ formData.zipCode }}</span>
+                  </div>
+                  <div class="review-item">
+                    <label>Coordinates:</label>
+                    <span>{{ formData.latitude }}, {{ formData.longitude }}</span>
                   </div>
                 </div>
               </div>
@@ -680,96 +330,15 @@
                 <div class="review-grid">
                   <div class="review-item">
                     <label>Activation Manager:</label>
-                    <span>{{ getManagerName(formData.managerId) }}</span>
-                  </div>
-                  <div class="review-item">
-                    <label>Team Size:</label>
-                    <span>{{ formData.requiredTeamSize || 'Not specified' }} members</span>
+                    <span>{{ getManagerName(formData.activationManagerId) || 'Not assigned' }}</span>
                   </div>
                   <div class="review-item">
                     <label>Assigned Promoters:</label>
-                    <span>{{ formData.promoterIds?.length || 0 }} assigned</span>
-                  </div>
-                  <div class="review-item">
-                    <label>Warehouse:</label>
-                    <span>{{ getWarehouseName(formData.warehouseId) || 'Not specified' }}</span>
-                  </div>
-                  <div class="review-item">
-                    <label>Transport:</label>
-                    <span>{{ formatTransportOption(formData.transportRequired) }}</span>
-                  </div>
-                  <div class="review-item">
-                    <label>Equipment:</label>
-                    <span>{{ formData.equipmentNeeded?.length || 0 }} items</span>
+                    <span>{{ formData.assignedPromoterIds?.length || 0 }} promoters assigned</span>
                   </div>
                 </div>
               </div>
 
-              <!-- Budget & Goals -->
-              <div class="review-section">
-                <h3>Budget & Goals</h3>
-                <div class="review-grid">
-                  <div class="review-item">
-                    <label>Total Budget:</label>
-                    <span>${{ formData.totalBudget?.toLocaleString() || '0' }}</span>
-                  </div>
-                  <div class="review-item">
-                    <label>Staff Costs:</label>
-                    <span>${{ formData.staffCosts?.toLocaleString() || '0' }}</span>
-                  </div>
-                  <div class="review-item">
-                    <label>Target Customer Interactions:</label>
-                    <span>{{ formData.targetCustomerInteractions?.toLocaleString() || 'Not set' }}</span>
-                  </div>
-                  <div class="review-item">
-                    <label>Target Sales Units:</label>
-                    <span>{{ formData.targetSalesUnits?.toLocaleString() || 'Not set' }}</span>
-                  </div>
-                  <div class="review-item">
-                    <label>Target Revenue:</label>
-                    <span>${{ formData.targetRevenue?.toLocaleString() || '0' }}</span>
-                  </div>
-                  <div class="review-item">
-                    <label>KPI Metrics:</label>
-                    <span>{{ formData.kpiMetrics?.length || 0 }} selected</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Budget Breakdown -->
-              <div class="review-section" v-if="hasDetailedBudget">
-                <h3>Budget Breakdown</h3>
-                <div class="budget-breakdown">
-                  <div class="budget-item" v-if="formData.staffCosts">
-                    <span>Staff Costs</span>
-                    <span>${{ formData.staffCosts.toLocaleString() }}</span>
-                  </div>
-                  <div class="budget-item" v-if="formData.materialCosts">
-                    <span>Material Costs</span>
-                    <span>${{ formData.materialCosts.toLocaleString() }}</span>
-                  </div>
-                  <div class="budget-item" v-if="formData.venueCosts">
-                    <span>Venue Costs</span>
-                    <span>${{ formData.venueCosts.toLocaleString() }}</span>
-                  </div>
-                  <div class="budget-item" v-if="formData.transportCosts">
-                    <span>Transport Costs</span>
-                    <span>${{ formData.transportCosts.toLocaleString() }}</span>
-                  </div>
-                  <div class="budget-item" v-if="formData.otherCosts">
-                    <span>Other Costs</span>
-                    <span>${{ formData.otherCosts.toLocaleString() }}</span>
-                  </div>
-                  <div class="budget-total">
-                    <span>Total Allocated</span>
-                    <span>${{ calculateTotalAllocated().toLocaleString() }}</span>
-                  </div>
-                  <div class="budget-remaining" :class="{ 'over-budget': getBudgetRemaining() < 0 }">
-                    <span>{{ getBudgetRemaining() >= 0 ? 'Remaining' : 'Over Budget' }}</span>
-                    <span>${{ Math.abs(getBudgetRemaining()).toLocaleString() }}</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </template>
         </Card>
@@ -804,7 +373,7 @@
                     :disabled="loading"
                 />
                 <Button
-                    v-if="currentStep < 5"
+                    v-if="currentStep < 4"
                     @click="nextStep"
                     label="Next"
                     icon="pi pi-arrow-right"
@@ -812,7 +381,7 @@
                     :disabled="!isCurrentStepValid"
                 />
                 <Button
-                    v-if="currentStep === 5"
+                    v-if="currentStep === 4"
                     type="submit"
                     label="Create Activation"
                     icon="pi pi-check"
@@ -829,10 +398,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
+import { clientService, userService, promoterService, activationService } from '@/services/api'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
+import LocationPicker from '@/components/form-components/LocationPicker.vue'
+import RichTextEditor from '@/components/form-components/RichTextEditor.vue'
+import FileUpload from '@/components/form-components/FileUpload.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -842,95 +415,62 @@ const toast = useToast()
 const currentStep = ref(1)
 const loading = ref(false)
 const errors = ref({})
+const selectedLocation = ref(null)
+const briefDocument = ref(null)
 
-// Form data
+// Form data (matching backend DTO structure)
 const formData = ref({
-  // Basic Info
+  // Basic Info (from ActivationDTO)
   name: '',
-  code: '',
-  clientId: '',
-  type: '',
-  category: '',
-  priority: '',
-  description: '',
-  objectives: '',
+  clientId: null,
+  status: 'PLANNED', // Default status
+  briefDescription: '',
+  briefDocumentPath: '',
 
-  // Schedule & Location
+  // Schedule
   startDate: null,
   endDate: null,
   startTime: null,
   endTime: null,
-  timezone: '',
-  setupDuration: 1,
-  venue: '',
+
+  // Location Details
+  locationName: '',
+  streetAddress: '',
   city: '',
-  state: '',
-  country: 'United States',
-  venueDetails: '',
-  weatherDependent: false,
+  zipCode: '',
+  latitude: null,
+  longitude: null,
 
-  // Team & Resources
-  managerId: '',
-  requiredTeamSize: 3,
-  promoterIds: [],
-  warehouseId: '',
-  transportRequired: '',
-  equipmentNeeded: [],
-  specialRequirements: '',
-  safetyBriefingRequired: false,
-  permitsRequired: false,
-  insuranceRequired: false,
+  // Staff Assignment
+  activationManagerId: null,
+  assignedPromoterIds: [],
 
-  // Budget & Goals
+  // Legacy fields (removed from current step but kept for potential future use)
+  type: '',
+  category: '',
+  priority: '',
+  objectives: '',
   totalBudget: null,
-  staffCosts: null,
-  materialCosts: null,
-  venueCosts: null,
-  transportCosts: null,
-  otherCosts: null,
   targetCustomerInteractions: null,
   targetSalesUnits: null,
-  targetRevenue: null,
-  targetLeads: null,
-  targetSamples: null,
-  kpiMetrics: [],
-  successCriteria: ''
+  targetRevenue: null
 })
 
 // Options
 const clientOptions = ref([])
 const managerOptions = ref([])
 const promoterOptions = ref([])
-const warehouseOptions = ref([])
 
-const activationTypeOptions = [
-  { label: 'Product Launch', value: 'Product Launch' },
-  { label: 'Brand Awareness', value: 'Brand Awareness' },
-  { label: 'Sampling Campaign', value: 'Sampling Campaign' },
-  { label: 'Trade Show', value: 'Trade Show' },
-  { label: 'Pop-up Store', value: 'Pop-up Store' },
-  { label: 'Experiential Marketing', value: 'Experiential Marketing' },
-  { label: 'Digital Campaign', value: 'Digital Campaign' },
-  { label: 'Promotional Event', value: 'Promotional Event' }
+// Status options matching backend ActivationStatus enum
+const statusOptions = [
+  { label: 'Planned', value: 'PLANNED' },
+  { label: 'Active', value: 'ACTIVE' },
+  { label: 'Completed', value: 'COMPLETED' },
+  { label: 'Cancelled', value: 'CANCELLED' }
 ]
 
-const categoryOptions = [
-  { label: 'Technology', value: 'Technology' },
-  { label: 'Fashion & Beauty', value: 'Fashion & Beauty' },
-  { label: 'Food & Beverage', value: 'Food & Beverage' },
-  { label: 'Automotive', value: 'Automotive' },
-  { label: 'Healthcare', value: 'Healthcare' },
-  { label: 'Finance', value: 'Finance' },
-  { label: 'Retail', value: 'Retail' },
-  { label: 'Entertainment', value: 'Entertainment' }
-]
 
-const priorityOptions = [
-  { label: 'Low', value: 'Low' },
-  { label: 'Medium', value: 'Medium' },
-  { label: 'High', value: 'High' },
-  { label: 'Critical', value: 'Critical' }
-]
+
 
 const timezoneOptions = [
   { label: 'Eastern Time (ET)', value: 'America/New_York' },
@@ -975,63 +515,48 @@ const kpiOptions = [
 const isCurrentStepValid = computed(() => {
   switch (currentStep.value) {
     case 1:
-      return formData.value.name && formData.value.clientId && formData.value.type && formData.value.description
+      return formData.value.name && formData.value.clientId && formData.value.status
     case 2:
-      return formData.value.startDate && formData.value.endDate && formData.value.venue && formData.value.city && formData.value.state
+      return formData.value.startDate && formData.value.endDate && formData.value.startTime && 
+             formData.value.endTime && formData.value.latitude && formData.value.longitude &&
+             (selectedLocation.value || formData.value.locationName?.trim())
     case 3:
-      return formData.value.managerId
-    case 4:
-      return formData.value.totalBudget && formData.value.totalBudget > 0
+      return true // Team assignment is optional
     default:
       return true
   }
 })
 
-const hasDetailedBudget = computed(() => {
-  return formData.value.staffCosts || formData.value.materialCosts ||
-      formData.value.venueCosts || formData.value.transportCosts ||
-      formData.value.otherCosts
-})
 
-// Watch for form changes to generate code
-watch(() => formData.value.name, (newName) => {
-  if (newName) {
-    formData.value.code = generateActivationCode()
-  }
-})
 
 // Methods
 const loadFormOptions = async () => {
+  loading.value = true
   try {
-    // Mock API calls - replace with actual API
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // Load form options from API in parallel
+    const [clientsResponse, managersResponse, promotersResponse] = await Promise.all([
+      clientService.getClients({ size: 100 }), // Get all clients
+      userService.getUsersByRole('ACTIVATION_MANAGER', { size: 100 }), // Get activation managers
+      promoterService.getPromoters({ size: 100 }) // Get all promoters
+    ])
 
-    clientOptions.value = [
-      { label: 'TechCorp Solutions', value: 1 },
-      { label: 'Fashion Forward Inc', value: 2 },
-      { label: 'Global Foods Ltd', value: 3 }
-    ]
+    // Transform clients data
+    clientOptions.value = (clientsResponse.data || []).map(client => ({
+      label: client.companyName || client.name,
+      value: client.id
+    }))
 
-    managerOptions.value = [
-      { label: 'Sarah Johnson', value: 1 },
-      { label: 'Mike Chen', value: 2 },
-      { label: 'Lisa Anderson', value: 3 }
-    ]
+    // Transform managers data (from users with ACTIVATION_MANAGER role)
+    managerOptions.value = (managersResponse.data || []).map(manager => ({
+      label: `${manager.firstName} ${manager.lastName}`,
+      value: manager.id
+    }))
 
-    promoterOptions.value = [
-      { label: 'John Doe', value: 1 },
-      { label: 'Jane Smith', value: 2 },
-      { label: 'Mike Johnson', value: 3 },
-      { label: 'Lisa Brown', value: 4 },
-      { label: 'Emma Wilson', value: 5 },
-      { label: 'David Lee', value: 6 }
-    ]
-
-    warehouseOptions.value = [
-      { label: 'Main Warehouse - New York', value: 1 },
-      { label: 'West Coast Depot - LA', value: 2 },
-      { label: 'Central Hub - Chicago', value: 3 }
-    ]
+    // Transform promoters data
+    promoterOptions.value = (promotersResponse.data || []).map(promoter => ({
+      label: `${promoter.firstName} ${promoter.lastName}`,
+      value: promoter.id
+    }))
 
     // Pre-select client if coming from query param
     if (route.query.client) {
@@ -1039,24 +564,47 @@ const loadFormOptions = async () => {
     }
 
   } catch (error) {
+    console.error('Failed to load form options:', error)
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to load form options',
-      life: 3000
+      summary: 'Loading Error',
+      detail: error.message || 'Failed to load form options. Please refresh the page.',
+      life: 5000
     })
+  } finally {
+    loading.value = false
   }
 }
 
-const generateActivationCode = () => {
-  if (!formData.value.name) return ''
+// Handle location selection from Google Places
+const handleLocationSelected = (location) => {
+  if (location) {
+    // Auto-populate form fields from the selected location
+    formData.value.locationName = location.name || location.address
+    formData.value.streetAddress = location.streetAddress || location.address
+    formData.value.city = location.city || ''
+    formData.value.zipCode = location.zipCode || ''
+    formData.value.latitude = location.lat
+    formData.value.longitude = location.lng
+    
+    // Clear any location-related errors
+    delete errors.value.location
+    delete errors.value.locationName
+    delete errors.value.streetAddress
+    delete errors.value.latitude
+    delete errors.value.longitude
+  }
+}
 
-  const words = formData.value.name.split(' ')
-  const initials = words.map(word => word.charAt(0).toUpperCase()).join('')
-  const year = new Date().getFullYear()
-  const sequence = Math.floor(Math.random() * 999) + 1
+// Handle brief document upload
+const handleBriefUploadSuccess = (result) => {
+  // File is stored locally in briefDocument.value, no immediate upload
+  console.log('Brief document selected:', result.file?.name)
+}
 
-  return `${initials}-${year}-${sequence.toString().padStart(3, '0')}`
+const handleBriefRemoved = () => {
+  formData.value.briefDocumentPath = ''
+  briefDocument.value = null
 }
 
 const validateStep = (step) => {
@@ -1064,25 +612,33 @@ const validateStep = (step) => {
   let isValid = true
 
   if (step === 1) {
-    if (!formData.value.name) {
+    // Required fields from backend DTO
+    if (!formData.value.name?.trim()) {
       errors.value.name = 'Activation name is required'
       isValid = false
+    } else if (formData.value.name.length > 200) {
+      errors.value.name = 'Activation name must not exceed 200 characters'
+      isValid = false
     }
+    
     if (!formData.value.clientId) {
-      errors.value.clientId = 'Client selection is required'
+      errors.value.clientId = 'Client ID is required'
       isValid = false
     }
-    if (!formData.value.type) {
-      errors.value.type = 'Activation type is required'
+    
+    if (!formData.value.status) {
+      errors.value.status = 'Status is required'
       isValid = false
     }
-    if (!formData.value.description) {
-      errors.value.description = 'Description is required'
+    
+    if (formData.value.briefDescription && formData.value.briefDescription.length > 2000) {
+      errors.value.briefDescription = 'Brief description must not exceed 2000 characters'
       isValid = false
     }
   }
 
   if (step === 2) {
+    // Required schedule fields
     if (!formData.value.startDate) {
       errors.value.startDate = 'Start date is required'
       isValid = false
@@ -1091,36 +647,70 @@ const validateStep = (step) => {
       errors.value.endDate = 'End date is required'
       isValid = false
     }
-    if (formData.value.startDate && formData.value.endDate && formData.value.startDate > formData.value.endDate) {
-      errors.value.endDate = 'End date must be after start date'
+    if (!formData.value.startTime) {
+      errors.value.startTime = 'Start time is required'
       isValid = false
     }
-    if (!formData.value.venue) {
-      errors.value.venue = 'Venue is required'
+    if (!formData.value.endTime) {
+      errors.value.endTime = 'End time is required'
       isValid = false
     }
-    if (!formData.value.city) {
-      errors.value.city = 'City is required'
+    
+    // Location validation - either from Places picker or manual entry
+    if (!selectedLocation.value && !formData.value.locationName?.trim()) {
+      errors.value.location = 'Please select a location using the search or enter a location name'
       isValid = false
     }
-    if (!formData.value.state) {
-      errors.value.state = 'State is required'
+    
+    if (!formData.value.latitude) {
+      errors.value.latitude = 'Latitude is required (select a location from search)'
       isValid = false
+    }
+    
+    if (!formData.value.longitude) {
+      errors.value.longitude = 'Longitude is required (select a location from search)'
+      isValid = false
+    }
+    
+    // Manual overrides validation
+    if (formData.value.locationName && formData.value.locationName.length > 200) {
+      errors.value.locationName = 'Location name must not exceed 200 characters'
+      isValid = false
+    }
+    
+    // Coordinate range validation (if coordinates exist)
+    if (formData.value.latitude && (formData.value.latitude < -90 || formData.value.latitude > 90)) {
+      errors.value.latitude = 'Latitude must be between -90 and 90'
+      isValid = false
+    }
+    
+    if (formData.value.longitude && (formData.value.longitude < -180 || formData.value.longitude > 180)) {
+      errors.value.longitude = 'Longitude must be between -180 and 180'
+      isValid = false
+    }
+    
+    // Optional field length validations
+    if (formData.value.city && formData.value.city.length > 50) {
+      errors.value.city = 'City must not exceed 50 characters'
+      isValid = false
+    }
+    
+    if (formData.value.zipCode && formData.value.zipCode.length > 10) {
+      errors.value.zipCode = 'Zip code must not exceed 10 characters'
+      isValid = false
+    }
+    
+    // Date logic validation
+    if (formData.value.startDate && formData.value.endDate) {
+      if (formData.value.endDate < formData.value.startDate) {
+        errors.value.endDate = 'End date must be after or equal to start date'
+        isValid = false
+      }
     }
   }
 
   if (step === 3) {
-    if (!formData.value.managerId) {
-      errors.value.managerId = 'Activation manager is required'
-      isValid = false
-    }
-  }
-
-  if (step === 4) {
-    if (!formData.value.totalBudget || formData.value.totalBudget <= 0) {
-      errors.value.totalBudget = 'Total budget is required and must be greater than 0'
-      isValid = false
-    }
+    // Team assignment validation (optional in backend)
   }
 
   return isValid
@@ -1148,10 +738,16 @@ const formatDate = (date) => {
 
 const formatTime = (time) => {
   if (!time) return 'Not set'
-  return new Date(time).toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+  // If time is already a Date object from Calendar component
+  if (time instanceof Date) {
+    return time.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    })
+  }
+  // If time is a string (HH:mm format)
+  return time
 }
 
 const getClientName = (clientId) => {
@@ -1160,35 +756,11 @@ const getClientName = (clientId) => {
 }
 
 const getManagerName = (managerId) => {
+  if (!managerId) return 'Not assigned'
   const manager = managerOptions.value.find(m => m.value === managerId)
-  return manager ? manager.label : 'Not selected'
+  return manager ? manager.label : 'Unknown Manager'
 }
 
-const getWarehouseName = (warehouseId) => {
-  const warehouse = warehouseOptions.value.find(w => w.value === warehouseId)
-  return warehouse ? warehouse.label : null
-}
-
-const formatTransportOption = (option) => {
-  const options = {
-    'company': 'Company Vehicle',
-    'rental': 'Rental Required',
-    'none': 'Team Arranges Own'
-  }
-  return options[option] || 'Not specified'
-}
-
-const calculateTotalAllocated = () => {
-  return (formData.value.staffCosts || 0) +
-      (formData.value.materialCosts || 0) +
-      (formData.value.venueCosts || 0) +
-      (formData.value.transportCosts || 0) +
-      (formData.value.otherCosts || 0)
-}
-
-const getBudgetRemaining = () => {
-  return (formData.value.totalBudget || 0) - calculateTotalAllocated()
-}
 
 const saveDraft = async () => {
   try {
@@ -1212,15 +784,61 @@ const saveDraft = async () => {
 }
 
 const handleSubmit = async () => {
-  if (!validateStep(currentStep.value)) {
+  // Validate all steps
+  let isValid = true
+  for (let step = 1; step <= 3; step++) {
+    if (!validateStep(step)) {
+      isValid = false
+      currentStep.value = step
+      break
+    }
+  }
+
+  if (!isValid) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Validation Error',
+      detail: 'Please fix the errors before submitting',
+      life: 5000
+    })
     return
   }
 
   loading.value = true
 
   try {
-    // Mock API call - replace with actual API
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    // Prepare data to match backend DTO
+    const activationData = {
+      name: formData.value.name,
+      clientId: formData.value.clientId,
+      startDate: formatDateForAPI(formData.value.startDate),
+      endDate: formatDateForAPI(formData.value.endDate),
+      startTime: formatTimeForAPI(formData.value.startTime),
+      endTime: formatTimeForAPI(formData.value.endTime),
+      locationName: formData.value.locationName,
+      streetAddress: formData.value.streetAddress,
+      city: formData.value.city || null,
+      zipCode: formData.value.zipCode || null,
+      latitude: formData.value.latitude,
+      longitude: formData.value.longitude,
+      activationManagerId: formData.value.activationManagerId || null,
+      assignedPromoterIds: formData.value.assignedPromoterIds || [],
+      briefDescription: formData.value.briefDescription || null,
+      status: formData.value.status
+    }
+
+    // Get the selected brief document file if any
+    const briefDocumentFile = briefDocument.value?.file || null
+
+    // Make API call to create activation with document
+    let response
+    if (briefDocumentFile) {
+      // Use the multipart endpoint if we have a document
+      response = await activationService.createActivationWithDocument(activationData, briefDocumentFile)
+    } else {
+      // Use the regular endpoint if no document
+      response = await activationService.createActivation(activationData)
+    }
 
     toast.add({
       severity: 'success',
@@ -1229,17 +847,44 @@ const handleSubmit = async () => {
       life: 3000
     })
 
-    router.push('/activations')
+    // Navigate to the created activation details page if we have an ID
+    if (response && response.id) {
+      router.push(`/activations/${response.id}`)
+    } else {
+      router.push('/activations')
+    }
   } catch (error) {
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: 'Failed to create activation',
-      life: 3000
+      detail: error.message || 'Failed to create activation',
+      life: 5000
     })
   } finally {
     loading.value = false
   }
+}
+
+// Helper functions for API formatting
+const formatDateForAPI = (date) => {
+  if (!date) return null
+  return date.toISOString().split('T')[0] // Returns YYYY-MM-DD format
+}
+
+const formatTimeForAPI = (time) => {
+  if (!time) return null
+  if (time instanceof Date) {
+    return time.toTimeString().slice(0, 5) // Returns HH:mm format
+  }
+  return time // Assume it's already in HH:mm format
+}
+
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
 onMounted(() => {
@@ -1477,6 +1122,57 @@ onMounted(() => {
 
 .budget-remaining.over-budget {
   color: #ef4444;
+}
+
+.brief-preview {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 1rem;
+  background: #f9fafb;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.brief-content {
+  line-height: 1.6;
+}
+
+.brief-content :deep(h1),
+.brief-content :deep(h2),
+.brief-content :deep(h3) {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.brief-content :deep(p) {
+  margin-bottom: 0.75rem;
+}
+
+.brief-content :deep(ul),
+.brief-content :deep(ol) {
+  margin-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.no-content {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.document-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  color: #991b1b;
+}
+
+.document-preview i {
+  font-size: 1.25rem;
 }
 
 .actions-card {

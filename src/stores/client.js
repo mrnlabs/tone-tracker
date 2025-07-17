@@ -546,6 +546,84 @@ export const useClientsStore = defineStore('clients', () => {
         }
     }
 
+    // === CONTACT MANAGEMENT ===
+    
+    /**
+     * Get client contacts
+     */
+    const getClientContacts = async (clientId, params = {}) => {
+        try {
+            error.value = null
+            const response = await clientService.getClientContacts(clientId, params)
+            return response
+        } catch (err) {
+            error.value = err.message || 'Failed to fetch client contacts'
+            throw err
+        }
+    }
+
+    /**
+     * Create client contact
+     */
+    const createClientContact = async (clientId, contactData) => {
+        try {
+            error.value = null
+            const newContact = await clientService.createClientContact(clientId, contactData)
+            return newContact
+        } catch (err) {
+            error.value = err.message || 'Failed to create client contact'
+            throw err
+        }
+    }
+
+    /**
+     * Update client contact
+     */
+    const updateClientContact = async (clientId, contactId, contactData) => {
+        try {
+            error.value = null
+            const updatedContact = await clientService.updateClientContact(clientId, contactId, contactData)
+            return updatedContact
+        } catch (err) {
+            error.value = err.message || 'Failed to update client contact'
+            throw err
+        }
+    }
+
+    /**
+     * Delete client contact
+     */
+    const deleteClientContact = async (clientId, contactId) => {
+        try {
+            error.value = null
+            await clientService.deleteClientContact(clientId, contactId)
+            return true
+        } catch (err) {
+            error.value = err.message || 'Failed to delete client contact'
+            throw err
+        }
+    }
+
+    /**
+     * Set primary contact
+     */
+    const setPrimaryContact = async (clientId, contactId) => {
+        try {
+            error.value = null
+            const result = await clientService.setPrimaryContact(clientId, contactId)
+            
+            // Update current client if it matches
+            if (currentClient.value?.id === parseInt(clientId)) {
+                await getClient(clientId) // Refresh client data to get updated primary contact
+            }
+            
+            return result
+        } catch (err) {
+            error.value = err.message || 'Failed to set primary contact'
+            throw err
+        }
+    }
+
     // Return store interface
     return {
         // State
@@ -591,7 +669,14 @@ export const useClientsStore = defineStore('clients', () => {
         searchClients,
         getCachedClientActivations,
         getCachedClientReports,
-        clearClientCache
+        clearClientCache,
+        
+        // Contact management
+        getClientContacts,
+        createClientContact,
+        updateClientContact,
+        deleteClientContact,
+        setPrimaryContact
     }
 })
 

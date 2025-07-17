@@ -102,8 +102,18 @@
               @click="toggleUserMenu"
               class="flex items-center space-x-3 focus:outline-none"
           >
-            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-              <i class="pi pi-user text-blue-600 text-sm"></i>
+            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden">
+              <img
+                v-if="currentUser.profilePictureUrl"
+                :src="currentUser.profilePictureUrl"
+                :alt="currentUser.name"
+                class="w-full h-full object-cover"
+                @error="handleImageError"
+              />
+              <i
+                v-else
+                class="pi pi-user text-blue-600 text-sm"
+              ></i>
             </div>
             <div class="hidden sm:block text-left">
               <p class="text-sm font-medium text-gray-900">{{ currentUser.name }}</p>
@@ -122,12 +132,12 @@
           >
             <div class="py-1">
               <router-link
-                  to="/profile"
+                  :to="profileRoute"
                   class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                   @click="closeDropdowns"
               >
                 <i class="pi pi-user mr-3 text-gray-400"></i>
-                Your Profile
+                My Profile
               </router-link>
               <router-link
                   to="/settings"
@@ -197,17 +207,29 @@ const notifications = ref([
 const currentUser = computed(() => {
   if (authStore.user) {
     return {
-      name: authStore.userDisplayName || 'Unknown User',
+      id: authStore.userId,
+      name: authStore.userFullName || 'Unknown User',
       role: authStore.userRole || 'USER',
-      avatar: authStore.userAvatar
+      avatar: authStore.userAvatar,
+      profilePictureUrl: authStore.profilePictureUrl
     }
   }
 
   return {
+    id: null,
     name: 'Unknown User',
     role: 'USER',
-    avatar: null
+    avatar: null,
+    profilePictureUrl: null
   }
+})
+
+const profileRoute = computed(() => {
+  return '/profile'
+})
+
+const viewProfileRoute = computed(() => {
+  return '/profile'
 })
 
 const unreadCount = computed(() =>
@@ -276,6 +298,11 @@ const logout = async () => {
   closeDropdowns()
   await authStore.logout()
   router.push('/')
+}
+
+const handleImageError = (event) => {
+  // Hide the image and show the default user icon
+  event.target.style.display = 'none'
 }
 
 // Close dropdowns when clicking outside

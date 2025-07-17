@@ -7,6 +7,38 @@
         <p>Loading activation details...</p>
       </div>
 
+      <!-- Error State -->
+      <div v-else-if="error && !activation" class="error-container">
+        <Card class="error-card">
+          <template #content>
+            <div class="error-content">
+              <i class="pi pi-exclamation-triangle error-icon"></i>
+              <h3>Failed to Load Activation</h3>
+              <p class="error-message">{{ error }}</p>
+              <div class="error-actions">
+                <Button
+                    @click="retryLoad"
+                    label="Retry"
+                    icon="pi pi-refresh"
+                    class="p-button-outlined"
+                    :disabled="retryCount >= maxRetries"
+                />
+                <Button
+                    v-if="retryCount >= maxRetries"
+                    @click="$router.push('/activations')"
+                    label="Back to Activations"
+                    icon="pi pi-arrow-left"
+                    class="p-button-text"
+                />
+                <small v-if="retryCount > 0" class="retry-info">
+                  Retry attempt {{ retryCount }} of {{ maxRetries }}
+                </small>
+              </div>
+            </div>
+          </template>
+        </Card>
+      </div>
+
       <!-- Activation Details Content -->
       <div v-else-if="activation" class="activation-content">
         <!-- Page Header -->
@@ -25,7 +57,10 @@
               <div class="activation-header">
                 <div class="activation-title">
                   <h1 class="activation-name">{{ activation.name }}</h1>
-                  <span class="activation-code">{{ activation.code }}</span>
+                  <div class="title-meta">
+                    <span class="activation-id">ID: {{ activation.id }}</span>
+                    <span class="created-date">Created: {{ formatDate(activation.dateCreated) }}</span>
+                  </div>
                 </div>
                 <Tag
                     :value="activation.status"
@@ -37,11 +72,11 @@
               <div class="activation-meta">
                 <div class="meta-item">
                   <i class="pi pi-building"></i>
-                  <span>{{ activation.client }}</span>
+                  <span>{{ activation.clientCompanyName || activation.client }}</span>
                 </div>
                 <div class="meta-item">
                   <i class="pi pi-map-marker"></i>
-                  <span>{{ activation.location }}</span>
+                  <span>{{ activation.locationName }}</span>
                 </div>
                 <div class="meta-item">
                   <i class="pi pi-calendar"></i>
@@ -49,12 +84,20 @@
                 </div>
                 <div class="meta-item">
                   <i class="pi pi-dollar"></i>
-                  <span>${{ activation.budget.toLocaleString() }}</span>
+                  <span>${{ (activation?.totalRevenueUSD || 0).toLocaleString() }}</span>
                 </div>
               </div>
             </div>
 
             <div class="header-actions">
+              <Button
+                  @click="refreshData"
+                  icon="pi pi-refresh"
+                  label="Refresh"
+                  class="p-button-outlined"
+                  :loading="refreshing"
+                  v-tooltip.bottom="'Refresh activation data'"
+              />
               <Button
                   v-if="canEditActivation"
                   @click="editActivation"
@@ -68,6 +111,13 @@
                   icon="pi pi-users"
                   label="Manage Team"
                   class="p-button-outlined"
+              />
+              <Button
+                  v-if="canManageTeam"
+                  @click="openAddPromoterDialog"
+                  icon="pi pi-user-plus"
+                  label="Add Promoter"
+                  class="p-button-success p-button-outlined"
               />
               <Button
                   @click="showActionsMenu = !showActionsMenu"
@@ -104,8 +154,8 @@
                   </div>
                   <div class="stat-info">
                     <h3>Team Size</h3>
-                    <p class="stat-number">{{ activation.teamMembers.length }}</p>
-                    <span class="stat-detail">{{ activation.teamMembers.filter(m => m.status === 'active').length }} active</span>
+                    <p class="stat-number">{{ allTeamMembers.length }}</p>
+                    <span class="stat-detail">{{ allTeamMembers.filter(m => (m.status || 'active') === 'active').length }} active</span>
                   </div>
                 </div>
               </template>
@@ -119,7 +169,7 @@
                   </div>
                   <div class="stat-info">
                     <h3>Customer Interactions</h3>
-                    <p class="stat-number">{{ activation.customerInteractions.toLocaleString() }}</p>
+                    <p class="stat-number">{{ (activation?.customerInteractions || 0).toLocaleString() }}</p>
                     <span class="stat-detail">{{ calculateDailyAverage() }} per day</span>
                   </div>
                 </div>
@@ -134,8 +184,8 @@
                   </div>
                   <div class="stat-info">
                     <h3>Sales Generated</h3>
-                    <p class="stat-number">${{ activation.salesGenerated.toLocaleString() }}</p>
-                    <span class="stat-detail">{{ activation.unitsOld }} units sold</span>
+                    <p class="stat-number">${{ (activation?.salesGenerated || 0).toLocaleString() }}</p>
+                    <span class="stat-detail">{{ activation?.unitsOld || 0 }} units sold</span>
                   </div>
                 </div>
               </template>
@@ -158,28 +208,24 @@
                     <template #content>
                       <div class="info-grid">
                         <div class="info-item">
-                          <label>Type</label>
-                          <span>{{ activation.type }}</span>
+                          <label>Client Company</label>
+                          <span>{{ activation.clientCompanyName || 'Not specified' }}</span>
                         </div>
                         <div class="info-item">
-                          <label>Category</label>
-                          <span>{{ activation.category }}</span>
+                          <label>Client Brand</label>
+                          <span>{{ activation.clientBrandName || 'Not specified' }}</span>
                         </div>
                         <div class="info-item">
-                          <label>Priority</label>
-                          <Tag :value="activation.priority" :severity="getPrioritySeverity(activation.priority)" />
+                          <label>Status</label>
+                          <Tag :value="activation.status" :severity="getStatusSeverity(activation.status)" />
                         </div>
                         <div class="info-item">
                           <label>Duration</label>
                           <span>{{ calculateDuration() }} days</span>
                         </div>
-                        <div class="info-item full-width">
-                          <label>Description</label>
-                          <span>{{ activation.description }}</span>
-                        </div>
-                        <div class="info-item full-width" v-if="activation.objectives">
-                          <label>Key Objectives</label>
-                          <span>{{ activation.objectives }}</span>
+                        <div class="info-item full-width" v-if="activation.briefDescription">
+                          <label>Brief Description</label>
+                          <div class="brief-description-content" v-html="formatBriefDescription(activation.briefDescription)"></div>
                         </div>
                       </div>
                     </template>
@@ -218,8 +264,35 @@
                             <i class="pi pi-map-marker"></i>
                             <h4>Venue</h4>
                           </div>
-                          <p class="venue-name">{{ activation.venue }}</p>
-                          <p class="venue-address">{{ activation.address }}</p>
+                          <div class="location-details-grid">
+                            <div class="location-item">
+                              <label>Location Name</label>
+                              <span>{{ activation.locationName }}</span>
+                            </div>
+                            <div class="location-item">
+                              <label>Street Address</label>
+                              <span>{{ activation.streetAddress }}</span>
+                            </div>
+                            <div class="location-item">
+                              <label>City</label>
+                              <span>{{ activation.city || 'Not specified' }}</span>
+                            </div>
+                            <div class="location-item">
+                              <label>Zip Code</label>
+                              <span>{{ activation.zipCode || 'Not specified' }}</span>
+                            </div>
+                            <div class="location-item">
+                              <label>Coordinates</label>
+                              <span v-if="activation.latitude && activation.longitude">
+                                {{ activation.latitude }}, {{ activation.longitude }}
+                              </span>
+                              <span v-else>Not specified</span>
+                            </div>
+                            <div class="location-item" v-if="activation.centralLatitude && activation.centralLongitude">
+                              <label>Central Coordinates</label>
+                              <span>{{ activation.centralLatitude }}, {{ activation.centralLongitude }}</span>
+                            </div>
+                          </div>
                           <div class="location-actions">
                             <Button
                                 @click="openMaps"
@@ -239,6 +312,44 @@
                     </template>
                   </Card>
 
+                  <!-- Team Assignment -->
+                  <Card class="info-card">
+                    <template #header>
+                      <h3>Team Assignment</h3>
+                    </template>
+                    <template #content>
+                      <div class="team-assignment">
+                        <div class="team-item">
+                          <label>Activation Manager</label>
+                          <div class="manager-info">
+                            <span v-if="activation.activationManagerName">
+                              {{ activation.activationManagerName }}
+                            </span>
+                            <span v-else-if="activation.activationManagerId">
+                              Manager ID: {{ activation.activationManagerId }}
+                            </span>
+                            <span v-else class="not-assigned">Not assigned</span>
+                          </div>
+                        </div>
+                        
+                        <div class="team-item">
+                          <label>Assigned Promoters</label>
+                          <div class="promoters-list">
+                            <div v-if="activation.assignedPromoters && activation.assignedPromoters.length > 0" class="promoter-chips">
+                              <Tag v-for="promoter in activation.assignedPromoters" :key="promoter.id" 
+                                   :value="`${promoter.firstName} ${promoter.lastName}`" 
+                                   class="promoter-chip" />
+                            </div>
+                            <div v-else-if="activation.assignedPromoterIds && activation.assignedPromoterIds.length > 0" class="promoter-ids">
+                              <span>{{ activation.assignedPromoterIds.length }} promoter(s) assigned</span>
+                            </div>
+                            <span v-else class="not-assigned">No promoters assigned</span>
+                          </div>
+                        </div>
+                      </div>
+                    </template>
+                  </Card>
+
                   <!-- Budget Overview -->
                   <Card class="info-card">
                     <template #header>
@@ -249,33 +360,33 @@
                         <div class="budget-summary">
                           <div class="budget-total">
                             <span class="budget-label">Total Budget</span>
-                            <span class="budget-amount">${{ activation.budget.toLocaleString() }}</span>
+                            <span class="budget-amount">${{ (activation?.budget || 0).toLocaleString() }}</span>
                           </div>
                           <div class="budget-spent">
                             <span class="budget-label">Spent</span>
-                            <span class="budget-amount">${{ activation.budgetSpent.toLocaleString() }}</span>
+                            <span class="budget-amount">${{ (activation?.budgetSpent || 0).toLocaleString() }}</span>
                           </div>
                           <div class="budget-remaining">
                             <span class="budget-label">Remaining</span>
-                            <span class="budget-amount">${{ (activation.budget - activation.budgetSpent).toLocaleString() }}</span>
+                            <span class="budget-amount">${{ ((activation?.budget || 0) - (activation?.budgetSpent || 0)).toLocaleString() }}</span>
                           </div>
                         </div>
 
                         <div class="budget-progress">
                           <div class="progress-header">
                             <span>Budget Utilization</span>
-                            <span>{{ Math.round((activation.budgetSpent / activation.budget) * 100) }}%</span>
+                            <span>{{ Math.round(((activation?.budgetSpent || 0) / (activation?.budget || 1)) * 100) }}%</span>
                           </div>
                           <ProgressBar
-                              :value="(activation.budgetSpent / activation.budget) * 100"
-                              :class="{ 'over-budget': activation.budgetSpent > activation.budget }"
+                              :value="((activation?.budgetSpent || 0) / (activation?.budget || 1)) * 100"
+                              :class="{ 'over-budget': (activation?.budgetSpent || 0) > (activation?.budget || 0) }"
                           />
                         </div>
 
                         <div class="budget-breakdown">
                           <h5>Budget Breakdown</h5>
                           <div class="breakdown-items">
-                            <div class="breakdown-item" v-for="item in activation.budgetBreakdown" :key="item.category">
+                            <div class="breakdown-item" v-for="item in activation?.budgetBreakdown || []" :key="item.category">
                               <div class="item-info">
                                 <span class="item-label">{{ item.category }}</span>
                                 <span class="item-amount">${{ item.allocated.toLocaleString() }}</span>
@@ -286,6 +397,85 @@
                               </div>
                             </div>
                           </div>
+                        </div>
+                      </div>
+                    </template>
+                  </Card>
+
+                  <!-- Activation Brief -->
+                  <Card class="info-card brief-card" v-if="activation.briefDescription || activation.briefDocumentPath">
+                    <template #header>
+                      <div class="brief-header">
+                        <h3>
+                          <i class="pi pi-file-text brief-icon"></i>
+                          Activation Brief
+                        </h3>
+                        <Tag 
+                          value="Important" 
+                          severity="info" 
+                          class="brief-tag"
+                        />
+                      </div>
+                    </template>
+                    <template #content>
+                      <div class="brief-content">
+                        <div v-if="activation.briefDescription" class="brief-description">
+                          <div class="brief-description-header">
+                            <label>
+                              <i class="pi pi-align-left"></i>
+                              Brief Description
+                            </label>
+                          </div>
+                          <div class="brief-text-content" v-html="formatBriefDescription(activation.briefDescription)"></div>
+                        </div>
+                        
+                        <!-- Brief Document Actions -->
+                        <div v-if="activation.briefDocumentPath" class="brief-document">
+                          <div class="brief-document-header">
+                            <label>
+                              <i class="pi pi-file-pdf"></i>
+                              Brief Document
+                            </label>
+                          </div>
+                          <div class="document-item">
+                            <div class="document-info">
+                              <div class="document-preview">
+                                <div class="document-icon-wrapper">
+                                  <i class="pi pi-file-pdf document-icon"></i>
+                                  <div class="file-type-badge">PDF</div>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="document-actions">
+                              <Button
+                                @click="downloadBriefDocument"
+                                icon="pi pi-download"
+                                label="Download"
+                                class="p-button-outlined p-button-sm download-btn"
+                                v-tooltip.bottom="'Download PDF document from S3'"
+                              />
+                              <Button
+                                @click="emailBriefDocument"
+                                icon="pi pi-envelope"
+                                label="Email"
+                                class="p-button-outlined p-button-sm email-btn"
+                                v-tooltip.bottom="'Email document to team members'"
+                              />
+                              <Button
+                                @click="viewBriefDocument"
+                                icon="pi pi-eye"
+                                label="View PDF"
+                                class="p-button-outlined p-button-sm view-btn"
+                                v-tooltip.bottom="'Open PDF in new tab'"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <!-- If no brief content exists -->
+                        <div v-if="!activation.briefDescription" class="no-brief-content">
+                          <i class="pi pi-info-circle"></i>
+                          <span>No brief information available for this activation.</span>
                         </div>
                       </div>
                     </template>
@@ -302,10 +492,17 @@
                   <div class="team-actions">
                     <Button
                         v-if="canManageTeam"
-                        @click="addTeamMember"
-                        icon="pi pi-plus"
-                        label="Add Member"
+                        @click="showTeamAssignmentDialog = true"
+                        icon="pi pi-users"
+                        label="Manage Team"
                         class="p-button-success"
+                    />
+                    <Button
+                        v-if="canManageTeam"
+                        @click="showManagerAssignmentDialog = true"
+                        icon="pi pi-user-plus"
+                        label="Assign Manager"
+                        class="p-button-outlined"
                     />
                     <Button
                         @click="exportTeamData"
@@ -321,14 +518,14 @@
                   <div class="stat-item">
                     <i class="pi pi-users"></i>
                     <div>
-                      <span class="stat-value">{{ activation.teamMembers.length }}</span>
+                      <span class="stat-value">{{ allTeamMembers.length }}</span>
                       <span class="stat-label">Total Members</span>
                     </div>
                   </div>
                   <div class="stat-item">
                     <i class="pi pi-check-circle"></i>
                     <div>
-                      <span class="stat-value">{{ activation.teamMembers.filter(m => m.status === 'active').length }}</span>
+                      <span class="stat-value">{{ allTeamMembers.filter(m => (m.status || 'active') === 'active').length }}</span>
                       <span class="stat-label">Active</span>
                     </div>
                   </div>
@@ -350,9 +547,21 @@
 
                 <!-- Team Members List -->
                 <Card class="team-members-card">
+                  <template #header>
+                    <div class="card-header-with-actions">
+                      <h3>Team Members</h3>
+                      <Button
+                          v-if="canManageTeam"
+                          @click="openAddPromoterDialog"
+                          icon="pi pi-user-plus"
+                          label="Add Promoter"
+                          class="p-button-success p-button-sm"
+                      />
+                    </div>
+                  </template>
                   <template #content>
                     <DataTable
-                        :value="activation.teamMembers"
+                        :value="allTeamMembers"
                         responsiveLayout="scroll"
                         dataKey="id"
                     >
@@ -360,13 +569,13 @@
                         <template #body="{ data }">
                           <div class="member-cell">
                             <Avatar
-                                :label="data.name.split(' ').map(n => n.charAt(0)).join('')"
+                                :label="getInitials(data.firstName, data.lastName)"
                                 size="normal"
                                 shape="circle"
                                 :style="{ backgroundColor: data.avatarColor || '#3b82f6', color: 'white' }"
                             />
                             <div class="member-info">
-                              <span class="member-name">{{ data.name }}</span>
+                              <span class="member-name">{{ data.firstName }} {{ data.lastName }}</span>
                               <span class="member-role">{{ data.role }}</span>
                             </div>
                           </div>
@@ -376,8 +585,8 @@
                       <Column field="email" header="Contact" sortable>
                         <template #body="{ data }">
                           <div class="contact-info">
-                            <span class="member-email">{{ data.email }}</span>
-                            <span class="member-phone">{{ data.phone }}</span>
+                            <span class="member-email">{{ data.email || 'No email' }}</span>
+                            <span class="member-phone" v-if="data.phone">{{ data.phone }}</span>
                           </div>
                         </template>
                       </Column>
@@ -385,15 +594,15 @@
                       <Column field="status" header="Status" sortable>
                         <template #body="{ data }">
                           <Tag
-                              :value="data.status"
-                              :severity="getMemberStatusSeverity(data.status)"
+                              :value="data.status || 'active'"
+                              :severity="getMemberStatusSeverity(data.status || 'active')"
                           />
                         </template>
                       </Column>
 
                       <Column field="hoursWorked" header="Hours" sortable>
                         <template #body="{ data }">
-                          <span class="hours-worked">{{ data.hoursWorked }}h</span>
+                          <span class="hours-worked">{{ data.hoursWorked || 0 }}h</span>
                         </template>
                       </Column>
 
@@ -402,16 +611,16 @@
                           <div class="performance-cell">
                             <div class="rating">
                               <i class="pi pi-star-fill"></i>
-                              <span>{{ data.rating }}/5</span>
+                              <span>{{ data.rating || 'N/A' }}/5</span>
                             </div>
-                            <span class="performance-note">{{ data.performanceNote }}</span>
+                            <span class="performance-note">{{ data.performanceNote || 'No notes' }}</span>
                           </div>
                         </template>
                       </Column>
 
                       <Column field="lastActivity" header="Last Activity" sortable>
                         <template #body="{ data }">
-                          <span class="last-activity">{{ formatRelativeTime(data.lastActivity) }}</span>
+                          <span class="last-activity">{{ data.lastActivity ? formatRelativeTime(data.lastActivity) : 'No activity' }}</span>
                         </template>
                       </Column>
 
@@ -697,15 +906,229 @@
           />
         </div>
       </div>
+
+      <!-- Team Assignment Dialog -->
+      <Dialog 
+        v-model:visible="showTeamAssignmentDialog" 
+        modal 
+        header="Manage Team Assignment" 
+        :style="{ width: '800px' }"
+        class="team-assignment-dialog"
+      >
+        <div class="dialog-content">
+          <div class="assignment-sections">
+            <!-- Available Promoters -->
+            <div class="section">
+              <h4>
+                <i class="pi pi-users"></i>
+                Available Promoters
+              </h4>
+              <div class="promoters-search">
+                <InputText 
+                  v-model="promoterSearchTerm" 
+                  placeholder="Search promoters..." 
+                  class="w-full"
+                />
+              </div>
+              <div class="promoters-actions">
+                <Button 
+                  @click="createNewPromoter"
+                  icon="pi pi-user-plus"
+                  label="Create New Promoter"
+                  class="p-button-outlined p-button-sm"
+                />
+              </div>
+              <div class="available-promoters-list">
+                <div v-if="loadingPromoters" class="loading-promoters">
+                  <ProgressSpinner size="small" />
+                  <span>Loading available promoters...</span>
+                </div>
+                <div v-else-if="filteredAvailablePromoters.length === 0" class="no-promoters">
+                  <i class="pi pi-info-circle"></i>
+                  <span>No available promoters found</span>
+                </div>
+                <div v-else class="promoter-cards">
+                  <div 
+                    v-for="promoter in filteredAvailablePromoters" 
+                    :key="promoter.id"
+                    class="promoter-card"
+                    @click="selectPromoter(promoter)"
+                  >
+                    <Avatar 
+                      :label="getInitials(promoter.firstName, promoter.lastName)"
+                      size="normal"
+                      shape="circle"
+                      class="promoter-avatar"
+                    />
+                    <div class="promoter-info">
+                      <span class="promoter-name">{{ promoter.firstName }} {{ promoter.lastName }}</span>
+                      <span class="promoter-email">{{ promoter.email }}</span>
+                      <span class="promoter-skills">{{ promoter.skills?.join(', ') || 'No skills listed' }}</span>
+                    </div>
+                    <Button 
+                      @click="selectPromoter(promoter)"
+                      icon="pi pi-plus" 
+                      class="p-button-rounded p-button-success p-button-sm"
+                      v-tooltip.top="'Add to team'"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Assigned Team -->
+            <div class="section">
+              <h4>
+                <i class="pi pi-check-circle"></i>
+                Assigned Team Members
+              </h4>
+              <div class="assigned-team-list">
+                <div v-if="assignedTeamMembers.length === 0" class="no-team-members">
+                  <i class="pi pi-info-circle"></i>
+                  <span>No team members assigned yet</span>
+                </div>
+                <div v-else class="team-member-cards">
+                  <div 
+                    v-for="member in assignedTeamMembers" 
+                    :key="member.id"
+                    class="team-member-card"
+                  >
+                    <Avatar 
+                      :label="getInitials(member.firstName, member.lastName)"
+                      size="normal"
+                      shape="circle"
+                      class="member-avatar"
+                    />
+                    <div class="member-info">
+                      <span class="member-name">{{ member.firstName }} {{ member.lastName }}</span>
+                      <span class="member-email">{{ member.email }}</span>
+                      <span class="member-role">{{ member.role }}</span>
+                    </div>
+                    <Button 
+                      icon="pi pi-times" 
+                      class="p-button-rounded p-button-danger p-button-sm"
+                      @click="removeFromTeam(member.id)"
+                      v-tooltip.top="'Remove from team'"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <template #footer>
+          <div class="dialog-footer">
+            <Button 
+              label="Cancel" 
+              @click="cancelTeamAssignment" 
+              class="p-button-text" 
+            />
+            <Button 
+              label="Save Changes" 
+              @click="saveTeamAssignment" 
+              class="p-button-success"
+              :loading="savingTeamChanges"
+            />
+          </div>
+        </template>
+      </Dialog>
+
+      <!-- Manager Assignment Dialog -->
+      <Dialog 
+        v-model:visible="showManagerAssignmentDialog" 
+        modal 
+        header="Assign Activation Manager" 
+        :style="{ width: '600px' }"
+        class="manager-assignment-dialog"
+      >
+        <div class="dialog-content">
+          <div class="current-manager" v-if="activation?.currentManager || activation?.activationManagerName">
+            <h4>Current Manager</h4>
+            <div class="manager-info">
+              <Avatar 
+                :label="getInitials(activation.currentManager?.firstName || activation.activationManagerName, activation.currentManager?.lastName)"
+                size="large"
+                shape="circle"
+                class="current-manager-avatar"
+              />
+              <div class="manager-details">
+                <span class="manager-name">
+                  {{ activation.currentManager ? `${activation.currentManager.firstName} ${activation.currentManager.lastName}` : activation.activationManagerName }}
+                </span>
+                <span class="manager-email" v-if="activation.currentManager?.email">{{ activation.currentManager.email }}</span>
+                <span class="manager-id">ID: {{ activation.currentManager?.id || activation.activationManagerId }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="manager-selection">
+            <h4>Select New Manager</h4>
+            <div class="search-managers">
+              <InputText 
+                v-model="managerSearchTerm" 
+                placeholder="Search activation managers..." 
+                class="w-full"
+              />
+            </div>
+            <div class="managers-list">
+              <div v-if="loadingManagers" class="loading-managers">
+                <ProgressSpinner size="small" />
+                <span>Loading available managers...</span>
+              </div>
+              <div v-else class="manager-options">
+                <div 
+                  v-for="manager in filteredAvailableManagers" 
+                  :key="manager.id"
+                  class="manager-option"
+                  :class="{ selected: selectedManagerId === manager.id }"
+                  @click="selectedManagerId = manager.id"
+                >
+                  <Avatar 
+                    :label="getInitials(manager.firstName, manager.lastName)"
+                    size="normal"
+                    shape="circle"
+                    class="manager-option-avatar"
+                  />
+                  <div class="manager-option-info">
+                    <span class="manager-option-name">{{ manager.firstName }} {{ manager.lastName }}</span>
+                    <span class="manager-option-email">{{ manager.email }}</span>
+                    <span class="manager-experience">{{ manager.experience }} years experience</span>
+                  </div>
+                  <i class="pi pi-check" v-if="selectedManagerId === manager.id"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <template #footer>
+          <div class="dialog-footer">
+            <Button 
+              label="Cancel" 
+              @click="cancelManagerAssignment" 
+              class="p-button-text" 
+            />
+            <Button 
+              label="Assign Manager" 
+              @click="saveManagerAssignment" 
+              class="p-button-success"
+              :loading="savingManagerChanges"
+              :disabled="!selectedManagerId"
+            />
+          </div>
+        </template>
+      </Dialog>
     </div>
   </DashboardLayout>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
+import { activationService, fileService } from '@/services/api'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
 
 const route = useRoute()
@@ -715,9 +1138,34 @@ const authStore = useAuthStore()
 
 // State
 const loading = ref(true)
+const refreshing = ref(false)
 const activation = ref(null)
 const recentReports = ref([])
 const showActionsMenu = ref(false)
+const lastRefresh = ref(null)
+const error = ref(null)
+const retryCount = ref(0)
+const maxRetries = 3
+
+// Team Assignment State
+const showTeamAssignmentDialog = ref(false)
+const showManagerAssignmentDialog = ref(false)
+const loadingPromoters = ref(false)
+const loadingManagers = ref(false)
+const savingTeamChanges = ref(false)
+const savingManagerChanges = ref(false)
+const availablePromoters = ref([])
+const availableManagers = ref([])
+const assignedTeamMembers = ref([])
+const promoterSearchTerm = ref('')
+const managerSearchTerm = ref('')
+const selectedManagerId = ref(null)
+
+// Team roles configuration
+const teamRoles = ref([
+  'Promoter',
+  'Activation Manager'
+])
 
 // Computed
 const userRole = computed(() => authStore.user?.role)
@@ -731,48 +1179,117 @@ const canManageTeam = computed(() => {
   return ['ADMIN', 'ACTIVATION_MANAGER'].includes(userRole.value)
 })
 
+// Team Assignment Computed Properties
+const filteredAvailablePromoters = computed(() => {
+  if (!promoterSearchTerm.value) return availablePromoters.value
+  
+  const searchTerm = promoterSearchTerm.value.toLowerCase()
+  return availablePromoters.value.filter(promoter => 
+    `${promoter.firstName} ${promoter.lastName}`.toLowerCase().includes(searchTerm) ||
+    promoter.email.toLowerCase().includes(searchTerm) ||
+    promoter.skills?.some(skill => skill.toLowerCase().includes(searchTerm))
+  )
+})
+
+const filteredAvailableManagers = computed(() => {
+  if (!managerSearchTerm.value) return availableManagers.value
+  
+  const searchTerm = managerSearchTerm.value.toLowerCase()
+  return availableManagers.value.filter(manager => 
+    `${manager.firstName} ${manager.lastName}`.toLowerCase().includes(searchTerm) ||
+    manager.email.toLowerCase().includes(searchTerm)
+  )
+})
+
+// Combined team members (promoters + manager)
+const allTeamMembers = computed(() => {
+  const teamMembers = []
+  
+  // Add assigned promoters
+  if (activation.value?.assignedPromoters && Array.isArray(activation.value.assignedPromoters)) {
+    teamMembers.push(...activation.value.assignedPromoters)
+  }
+  
+  // Add assigned manager
+  if (activation.value?.currentManager) {
+    teamMembers.push(activation.value.currentManager)
+  }
+  
+  return teamMembers
+})
+
 // Methods
-const loadActivationData = async () => {
-  loading.value = true
+const loadActivationData = async (isRefresh = false) => {
+  if (isRefresh) {
+    refreshing.value = true
+  } else {
+    loading.value = true
+  }
+  
+  error.value = null
+  
   try {
     const activationId = route.params.id
+    if (!activationId) {
+      throw new Error('Activation ID is required')
+    }
 
-    // Mock API call - replace with actual API
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // Mock activation data
+    // Fetch activation data from API
+    const activationData = await activationService.getActivation(activationId)
+    
+    // Reset retry count on successful load
+    retryCount.value = 0
+    
+    // Use real backend data and supplement with calculated/mock fields for UI
     activation.value = {
-      id: activationId,
-      name: 'Summer Product Launch',
-      code: 'SPL-2024-001',
-      client: 'TechCorp Solutions',
-      clientEmail: 'john.smith@techcorp.com',
-      location: 'Central Mall, New York',
-      venue: 'Central Mall - Main Atrium',
-      address: '123 Shopping Center Blvd, New York, NY 10001',
-      startDate: '2024-07-15',
-      endDate: '2024-07-18',
-      startTime: '09:00',
-      endTime: '18:00',
-      type: 'Product Launch',
-      category: 'Technology',
-      priority: 'High',
-      status: 'Active',
-      progress: 65,
-      description: 'Launch event for the new TechCorp smartphone featuring interactive demos, product sampling, and customer engagement activities.',
-      objectives: 'Increase brand awareness, generate 500+ leads, achieve 200 unit sales, collect customer feedback',
-      budget: 75000,
-      budgetSpent: 48000,
-      customerInteractions: 1247,
-      salesGenerated: 145000,
-      unitsOld: 387,
-      budgetBreakdown: [
-        { category: 'Staff Costs', allocated: 25000, spent: 18500 },
-        { category: 'Materials', allocated: 20000, spent: 15000 },
-        { category: 'Venue', allocated: 15000, spent: 15000 },
-        { category: 'Transport', allocated: 10000, spent: 7500 },
-        { category: 'Other', allocated: 5000, spent: 2000 }
-      ],
+      // Core backend DTO fields
+      id: activationData.id || activationId,
+      name: activationData.name || 'Unnamed Activation',
+      clientId: activationData.clientId,
+      clientCompanyName: activationData.clientCompanyName || 'Unknown Company',
+      clientBrandName: activationData.clientBrandName || 'Unknown Brand',
+      status: activationData.status || 'PLANNED',
+      briefDescription: activationData.briefDescription,
+      briefDocumentPath: activationData.briefDocumentPath,
+      
+      // Schedule fields
+      startDate: activationData.startDate,
+      endDate: activationData.endDate,
+      startTime: activationData.startTime,
+      endTime: activationData.endTime,
+      
+      // Location fields
+      locationName: activationData.locationName || 'Location TBD',
+      streetAddress: activationData.streetAddress || 'Address TBD',
+      city: activationData.city,
+      zipCode: activationData.zipCode,
+      latitude: activationData.latitude,
+      longitude: activationData.longitude,
+      centralLatitude: activationData.centralLatitude,
+      centralLongitude: activationData.centralLongitude,
+      
+      // Team assignment
+      activationManagerId: activationData.activationManagerId,
+      activationManagerName: activationData.activationManagerName,
+      assignedPromoterIds: activationData.assignedPromoterIds || [],
+      assignedPromoters: activationData.assignedPromoters || [],
+      currentManager: activationData.currentManager || null,
+      
+      // Performance metrics (from backend)
+      totalRevenueUSD: activationData.totalRevenueUSD || 0,
+      totalRevenueZWL: activationData.totalRevenueZWL || 0,
+      totalUnitsSold: activationData.totalUnitsSold || 0,
+      totalCustomerEngagements: activationData.totalCustomerEngagements || 0,
+      totalHoursWorked: activationData.totalHoursWorked || 0,
+      performancePercentage: activationData.performancePercentage || 0,
+      dateCreated: activationData.dateCreated,
+      lastUpdated: activationData.lastUpdated,
+      
+      // Computed/derived fields for UI compatibility
+      customerInteractions: activationData.totalCustomerEngagements || 0,
+      salesGenerated: activationData.totalRevenueUSD || 0,
+      unitsOld: activationData.totalUnitsSold || 0,
+      progress: activationData.performancePercentage || 0,
       teamMembers: [
         {
           id: 1,
@@ -819,7 +1336,8 @@ const loadActivationData = async () => {
           2: 12,
           1: 5
         }
-      }
+      },
+      // Use actual backend data for brief - no mock override
     }
 
     // Load recent reports
@@ -847,25 +1365,119 @@ const loadActivationData = async () => {
       }
     ]
 
-  } catch (error) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to load activation data',
-      life: 3000
-    })
+    lastRefresh.value = new Date()
+    
+    // Load full details of assigned team members
+    const loadAssignedTeamDetailsInline = async () => {
+      try {
+        const { apiService } = await import('@/services/api')
+        
+        // Load assigned promoters details
+        if (activation.value?.assignedPromoterIds?.length > 0) {
+          const promotersPromises = activation.value.assignedPromoterIds.map(id => 
+            apiService.get(`/promoters/${id}`)
+          )
+          
+          const promotersResults = await Promise.allSettled(promotersPromises)
+          const promoters = promotersResults
+            .filter(result => result.status === 'fulfilled')
+            .map(result => ({ ...result.value, role: 'Promoter' }))
+          
+          activation.value.assignedPromoters = promoters
+        }
+        
+        // Load assigned manager details
+        if (activation.value?.activationManagerId) {
+          try {
+            const manager = await apiService.get(`/staff/${activation.value.activationManagerId}`)
+            activation.value.currentManager = { ...manager, role: 'Activation Manager' }
+          } catch (error) {
+            console.warn('Failed to load manager details:', error)
+          }
+        }
+        
+      } catch (error) {
+        console.error('Failed to load assigned team details:', error)
+      }
+    }
+    
+    await loadAssignedTeamDetailsInline()
+    
+  } catch (err) {
+    console.error('Failed to load activation data:', err)
+    error.value = err.message || 'Failed to load activation data'
+    
+    // Only show toast for non-refresh operations or if retries exhausted
+    if (!isRefresh || retryCount.value >= maxRetries) {
+      toast.add({
+        severity: 'error',
+        summary: 'Loading Error',
+        detail: error.value,
+        life: 5000
+      })
+    }
+    
+    // Set activation to null on error
+    activation.value = null
+    
   } finally {
     loading.value = false
+    refreshing.value = false
+  }
+}
+
+// Enhanced refresh function with retry logic
+const refreshData = async () => {
+  if (refreshing.value) return
+  
+  try {
+    await loadActivationData(true)
+    
+    toast.add({
+      severity: 'success',
+      summary: 'Data Refreshed',
+      detail: 'Activation data has been updated',
+      life: 3000
+    })
+    
+  } catch (err) {
+    // Error handling is done in loadActivationData
+  }
+}
+
+
+// Retry function for failed loads
+const retryLoad = async () => {
+  if (retryCount.value < maxRetries) {
+    retryCount.value++
+    toast.add({
+      severity: 'info',
+      summary: 'Retrying',
+      detail: `Attempt ${retryCount.value} of ${maxRetries}`,
+      life: 2000
+    })
+    await loadActivationData()
+  } else {
+    toast.add({
+      severity: 'error',
+      summary: 'Max Retries Reached',
+      detail: 'Unable to load activation data after multiple attempts',
+      life: 5000
+    })
   }
 }
 
 const getStatusSeverity = (status) => {
   const severityMap = {
+    'ACTIVE': 'success',
     'Active': 'success',
+    'COMPLETED': 'info',
     'Completed': 'info',
+    'PLANNED': 'warning',
     'Planned': 'warning',
-    'On Hold': 'secondary',
-    'Cancelled': 'danger'
+    'CANCELLED': 'danger',
+    'Cancelled': 'danger',
+    'On Hold': 'secondary'
   }
   return severityMap[status] || 'info'
 }
@@ -887,6 +1499,15 @@ const getMemberStatusSeverity = (status) => {
     'break': 'warning'
   }
   return severityMap[status] || 'info'
+}
+
+const formatDate = (date) => {
+  if (!date) return 'Not specified'
+  return new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  })
 }
 
 const formatDateRange = (startDate, endDate) => {
@@ -947,25 +1568,26 @@ const calculateDailyAverage = () => {
 
 const calculateTotalHours = () => {
   if (!activation.value) return 0
-  return activation.value.teamMembers.reduce((total, member) => total + member.hoursWorked, 0)
+  return allTeamMembers.value.reduce((total, member) => total + (member.hoursWorked || 0), 0)
 }
 
 const calculateAverageRating = () => {
-  if (!activation.value || activation.value.teamMembers.length === 0) return 0
-  const totalRating = activation.value.teamMembers.reduce((total, member) => total + member.rating, 0)
-  return (totalRating / activation.value.teamMembers.length).toFixed(1)
+  if (!activation.value || allTeamMembers.value.length === 0) return 0
+  const totalRating = allTeamMembers.value.reduce((total, member) => total + (member.rating || 0), 0)
+  return (totalRating / allTeamMembers.value.length).toFixed(1)
 }
 
 const formatKpiValue = (value, unit) => {
+  const safeValue = value || 0
   switch (unit) {
     case 'currency':
-      return `${value.toLocaleString()}`
+      return `${safeValue.toLocaleString()}`
     case 'rating':
-      return `${value}/5`
+      return `${safeValue}/5`
     case 'percentage':
-      return `${value}%`
+      return `${safeValue}%`
     default:
-      return value.toLocaleString()
+      return safeValue.toLocaleString()
   }
 }
 
@@ -998,21 +1620,293 @@ const editActivation = () => {
 }
 
 const manageTeam = () => {
+  // Initialize team assignment data
+  assignedTeamMembers.value = activation.value?.assignedPromoters ? [...activation.value.assignedPromoters] : []
+  
+  // Load available promoters and managers
+  loadAvailablePromoters()
+  loadAvailableManagers()
+  
+  // Open team assignment dialog
+  showTeamAssignmentDialog.value = true
+}
+
+const openAddPromoterDialog = () => {
+  // Initialize team assignment data
+  assignedTeamMembers.value = activation.value?.assignedPromoters ? [...activation.value.assignedPromoters] : []
+  
+  // Load available promoters
+  loadAvailablePromoters()
+  
+  // Open team assignment dialog
+  showTeamAssignmentDialog.value = true
+}
+
+const createNewPromoter = () => {
+  // Navigate to create promoter page
+  router.push('/promoters/create')
+}
+
+// Team Assignment Functions
+const getInitials = (firstName, lastName) => {
+  // Handle case where both are provided
+  if (firstName && lastName) {
+    return (firstName.charAt(0) || '') + (lastName.charAt(0) || '')
+  }
+  
+  // Handle case where only firstName is provided
+  if (firstName) {
+    const parts = firstName.split(' ')
+    if (parts.length >= 2) {
+      return parts[0].charAt(0) + parts[1].charAt(0)
+    }
+    return firstName.charAt(0) || '?'
+  }
+  
+  // Handle case where lastName is provided but firstName is not
+  if (lastName) {
+    return lastName.charAt(0) || '?'
+  }
+  
+  // Fallback for completely undefined values
+  return '?'
+}
+
+const loadAvailablePromoters = async () => {
+  try {
+    loadingPromoters.value = true
+    
+    // Call API to get available promoters
+    const { apiService } = await import('@/services/api')
+    const response = await apiService.get('/promoters/available')
+    
+    // Handle different response structures
+    let promoters = []
+    if (response.data && Array.isArray(response.data)) {
+      promoters = response.data
+    } else if (Array.isArray(response)) {
+      promoters = response
+    } else if (response.content && Array.isArray(response.content)) {
+      promoters = response.content
+    } else {
+      console.warn('Unexpected promoters response structure:', response)
+      promoters = []
+    }
+    
+    availablePromoters.value = promoters
+    
+  } catch (error) {
+    console.error('Failed to load promoters:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Loading Error',
+      detail: 'Failed to load available promoters',
+      life: 5000
+    })
+  } finally {
+    loadingPromoters.value = false
+  }
+}
+
+const loadAvailableManagers = async () => {
+  try {
+    loadingManagers.value = true
+    
+    // Call API to get available staff/managers
+    const { apiService } = await import('@/services/api')
+    const response = await apiService.get('/staff')
+    
+    // Handle different response structures
+    let allStaff = []
+    if (response.data && Array.isArray(response.data)) {
+      allStaff = response.data
+    } else if (Array.isArray(response)) {
+      allStaff = response
+    } else if (response.content && Array.isArray(response.content)) {
+      allStaff = response.content
+    } else {
+      console.warn('Unexpected staff response structure:', response)
+      allStaff = []
+    }
+    
+    // Filter only activation managers
+    availableManagers.value = allStaff.filter(staff => staff.role === 'ACTIVATION_MANAGER')
+    
+  } catch (error) {
+    console.error('Failed to load managers:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Loading Error', 
+      detail: 'Failed to load available managers',
+      life: 5000
+    })
+  } finally {
+    loadingManagers.value = false
+  }
+}
+
+const selectPromoter = (promoter) => {
+  // Check if already assigned as promoter
+  const isAlreadyAssignedAsPromoter = assignedTeamMembers.value.some(member => member.id === promoter.id)
+  
+  // Check if already assigned as manager
+  const isAlreadyAssignedAsManager = activation.value?.currentManager?.id === promoter.id
+  
+  if (isAlreadyAssignedAsPromoter || isAlreadyAssignedAsManager) {
+    const role = isAlreadyAssignedAsManager ? 'manager' : 'promoter'
+    toast.add({
+      severity: 'warn',
+      summary: 'Already Assigned',
+      detail: `${promoter.firstName} ${promoter.lastName} is already on the team as ${role}`,
+      life: 3000
+    })
+    return
+  }
+  
+  // Add to assigned team with default role
+  assignedTeamMembers.value.push({
+    ...promoter,
+    role: 'Promoter' // Default role
+  })
+  
   toast.add({
-    severity: 'info',
-    summary: 'Team Management',
-    detail: 'Team management interface will be implemented',
+    severity: 'success',
+    summary: 'Added to Team',
+    detail: `${promoter.firstName} ${promoter.lastName} added to the team`,
     life: 3000
   })
 }
 
-const addTeamMember = () => {
-  toast.add({
-    severity: 'info',
-    summary: 'Add Team Member',
-    detail: 'Add team member functionality will be implemented',
-    life: 3000
-  })
+const removeFromTeam = async (memberId) => {
+  const index = assignedTeamMembers.value.findIndex(member => member.id === memberId)
+  if (index !== -1) {
+    const removedMember = assignedTeamMembers.value[index]
+    
+    try {
+      // Call API to remove promoter
+      const { apiService } = await import('@/services/api')
+      await apiService.delete(`/activations/${activation.value.id}/unassign-promoter/${memberId}`)
+      
+      // Remove from local state
+      assignedTeamMembers.value.splice(index, 1)
+      
+      // Update activation data
+      activation.value.assignedPromoterIds = activation.value.assignedPromoterIds?.filter(id => id !== memberId) || []
+      activation.value.assignedPromoters = activation.value.assignedPromoters?.filter(p => p.id !== memberId) || []
+      
+      toast.add({
+        severity: 'success',
+        summary: 'Removed from Team',
+        detail: `${removedMember.firstName} ${removedMember.lastName} removed from the team`,
+        life: 3000
+      })
+      
+    } catch (error) {
+      console.error('Failed to remove promoter:', error)
+      toast.add({
+        severity: 'error',
+        summary: 'Removal Failed',
+        detail: 'Failed to remove promoter from team',
+        life: 5000
+      })
+    }
+  }
+}
+
+const saveTeamAssignment = async () => {
+  try {
+    savingTeamChanges.value = true
+    
+    // Get promoter IDs to assign
+    const promoterIds = assignedTeamMembers.value
+      .filter(member => member.role === 'Promoter')
+      .map(member => member.id)
+    
+    // Call promoter assignment API
+    const { apiService } = await import('@/services/api')
+    
+    if (promoterIds.length > 0) {
+      await apiService.post(`/activations/${activation.value.id}/assign-promoters`, promoterIds)
+    }
+    
+    // Update activation data
+    activation.value.assignedPromoterIds = promoterIds
+    activation.value.assignedPromoters = assignedTeamMembers.value.filter(member => member.role === 'Promoter')
+    
+    showTeamAssignmentDialog.value = false
+    
+    toast.add({
+      severity: 'success',
+      summary: 'Team Updated',
+      detail: 'Promoters assigned successfully',
+      life: 3000
+    })
+    
+  } catch (error) {
+    console.error('Failed to save team assignment:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Save Failed',
+      detail: 'Failed to assign promoters',
+      life: 5000
+    })
+  } finally {
+    savingTeamChanges.value = false
+  }
+}
+
+const cancelTeamAssignment = () => {
+  // Reset assigned team to original state
+  assignedTeamMembers.value = activation.value?.assignedPromoters ? [...activation.value.assignedPromoters] : []
+  promoterSearchTerm.value = ''
+  showTeamAssignmentDialog.value = false
+}
+
+const saveManagerAssignment = async () => {
+  try {
+    savingManagerChanges.value = true
+    
+    const selectedManager = availableManagers.value.find(manager => manager.id === selectedManagerId.value)
+    
+    if (!selectedManager) {
+      throw new Error('Selected manager not found')
+    }
+    
+    // Call manager assignment API
+    const { apiService } = await import('@/services/api')
+    await apiService.post(`/activations/${activation.value.id}/assign-manager?managerId=${selectedManager.id}`)
+    
+    // Update activation data
+    activation.value.activationManagerId = selectedManager.id
+    activation.value.activationManagerName = `${selectedManager.firstName} ${selectedManager.lastName}`
+    
+    showManagerAssignmentDialog.value = false
+    selectedManagerId.value = null
+    
+    toast.add({
+      severity: 'success',
+      summary: 'Manager Assigned',
+      detail: `${selectedManager.firstName} ${selectedManager.lastName} assigned as activation manager`,
+      life: 3000
+    })
+    
+  } catch (error) {
+    console.error('Failed to assign manager:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Assignment Failed',
+      detail: 'Failed to assign activation manager',
+      life: 5000
+    })
+  } finally {
+    savingManagerChanges.value = false
+  }
+}
+
+const cancelManagerAssignment = () => {
+  selectedManagerId.value = null
+  managerSearchTerm.value = ''
+  showManagerAssignmentDialog.value = false
 }
 
 const exportTeamData = () => {
@@ -1059,6 +1953,124 @@ const downloadReport = (reportId) => {
   })
 }
 
+const formatBriefDescription = (text) => {
+  if (!text) return ''
+  
+  let html = text
+  
+  // Escape HTML first to prevent XSS
+  html = html.replace(/&/g, '&amp;')
+             .replace(/</g, '&lt;')
+             .replace(/>/g, '&gt;')
+  
+  // Process markdown in order (most specific first)
+  
+  // Headers (need to handle line breaks properly)
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>')
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>')
+  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>')
+  
+  // Bold and italic (process bold first to avoid conflicts)
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>')
+  html = html.replace(/~~([^~]+)~~/g, '<del>$1</del>')
+  
+  // Links
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+  
+  // Lists
+  html = html.replace(/^- (.+)$/gm, '<li>$1</li>')
+  html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+  
+  // Wrap consecutive list items in ul tags
+  html = html.replace(/(<li>.*<\/li>)/gs, (match) => {
+    const items = match.match(/<li>.*?<\/li>/g)
+    if (items && items.length > 0) {
+      return '<ul>' + items.join('') + '</ul>'
+    }
+    return match
+  })
+  
+  // Line breaks (convert remaining newlines to <br>)
+  html = html.replace(/\n/g, '<br>')
+  
+  // Clean up extra line breaks around block elements
+  html = html.replace(/<br>\s*(<\/?(h[1-6]|ul|li)[^>]*>)/g, '$1')
+  html = html.replace(/(<\/?(h[1-6]|ul|li)[^>]*>)\s*<br>/g, '$1')
+  
+  return html
+}
+
+const getBriefDocumentName = (path) => {
+  if (!path) return 'Brief Document'
+  return path.split('/').pop() || 'brief-document.pdf'
+}
+
+const downloadBriefDocument = async () => {
+  if (!activation.value?.briefDocumentPath) return
+  
+  try {
+    // Use direct S3 URL construction with VITE_AWS_S3_BUCKET
+    const s3Url = await fileService.getS3FileUrl(activation.value.briefDocumentPath)
+    
+    // Create a temporary link to download the file
+    const link = document.createElement('a')
+    link.href = s3Url
+    link.download = getBriefDocumentName(activation.value.briefDocumentPath)
+    link.target = '_blank' // Ensure secure download from S3
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    toast.add({
+      severity: 'success',
+      summary: 'Download Started',
+      detail: `Brief document download started from S3`
+    })
+  } catch (error) {
+    console.error('S3 download error:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Download Failed',
+      detail: 'Failed to download brief document from S3 bucket. Please check if the file exists.'
+    })
+  }
+}
+
+const viewBriefDocument = async () => {
+  if (!activation.value?.briefDocumentPath) return
+  
+  try {
+    // Use direct S3 URL construction with VITE_AWS_S3_BUCKET
+    const s3Url = await fileService.getS3FileUrl(activation.value.briefDocumentPath)
+    
+    // Open PDF in new tab using S3 URL
+    window.open(s3Url, '_blank', 'noopener,noreferrer')
+    
+    toast.add({
+      severity: 'success',
+      summary: 'Document Opened',
+      detail: 'Brief document opened from S3'
+    })
+  } catch (error) {
+    console.error('S3 view error:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'View Failed',
+      detail: 'Failed to open brief document from S3 bucket. Please check if the file exists.'
+    })
+  }
+}
+
+const emailBriefDocument = () => {
+  toast.add({
+    severity: 'info',
+    summary: 'Email Feature',
+    detail: 'Email document feature will be implemented in the next update',
+    life: 3000
+  })
+}
+
 const viewReport = (reportId) => {
   toast.add({
     severity: 'info',
@@ -1069,14 +2081,106 @@ const viewReport = (reportId) => {
 }
 
 const openMaps = () => {
-  const address = encodeURIComponent(activation.value.address)
-  window.open(`https://maps.google.com?q=${address}`, '_blank')
+  if (!activation.value) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Location Unavailable',
+      detail: 'Activation data not available',
+      life: 3000
+    })
+    return
+  }
+
+  // Prefer coordinates if available, otherwise use address
+  let query = ''
+  if (activation.value.latitude && activation.value.longitude) {
+    query = `${activation.value.latitude},${activation.value.longitude}`
+  } else {
+    const address = formatFullAddress()
+    if (!address.trim()) {
+      toast.add({
+        severity: 'warn',
+        summary: 'Location Unavailable',
+        detail: 'No location information available for this activation',
+        life: 3000
+      })
+      return
+    }
+    query = encodeURIComponent(address)
+  }
+  
+  window.open(`https://maps.google.com?q=${query}`, '_blank')
 }
 
 const getDirections = () => {
-  const address = encodeURIComponent(activation.value.address)
-  window.open(`https://maps.google.com/dir/?api=1&destination=${address}`, '_blank')
+  if (!activation.value) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Location Unavailable',
+      detail: 'Activation data not available',
+      life: 3000
+    })
+    return
+  }
+
+  // Prefer coordinates if available, otherwise use address
+  let destination = ''
+  if (activation.value.latitude && activation.value.longitude) {
+    destination = `${activation.value.latitude},${activation.value.longitude}`
+  } else {
+    const address = formatFullAddress()
+    if (!address.trim()) {
+      toast.add({
+        severity: 'warn',
+        summary: 'Location Unavailable',
+        detail: 'No location information available for directions',
+        life: 3000
+      })
+      return
+    }
+    destination = encodeURIComponent(address)
+  }
+  
+  window.open(`https://maps.google.com/dir/?api=1&destination=${destination}`, '_blank')
 }
+
+const formatFullAddress = () => {
+  if (!activation.value) return ''
+  const parts = [
+    activation.value.streetAddress,
+    activation.value.city,
+    activation.value.zipCode
+  ].filter(Boolean)
+  return parts.join(', ')
+}
+
+const getPerformanceClass = (percentage) => {
+  if (!percentage) return ''
+  if (percentage >= 90) return 'progress-excellent'
+  if (percentage >= 70) return 'progress-good'
+  if (percentage >= 50) return 'progress-warning'
+  return 'progress-danger'
+}
+
+
+// Watch for dialog opens to load data
+watch(showTeamAssignmentDialog, (newValue) => {
+  if (newValue) {
+    // Initialize assigned team members from current activation data
+    assignedTeamMembers.value = activation.value?.assignedPromoters ? [...activation.value.assignedPromoters] : []
+    // Load available promoters
+    loadAvailablePromoters()
+  }
+})
+
+watch(showManagerAssignmentDialog, (newValue) => {
+  if (newValue) {
+    // Load available managers
+    loadAvailableManagers()
+    // Set current manager as selected if exists
+    selectedManagerId.value = activation.value?.activationManagerId || null
+  }
+})
 
 onMounted(() => {
   loadActivationData()
@@ -1089,6 +2193,7 @@ onMounted(() => {
 }
 
 .loading-container,
+.error-container,
 .not-found-container {
   display: flex;
   flex-direction: column;
@@ -1096,6 +2201,41 @@ onMounted(() => {
   justify-content: center;
   min-height: 50vh;
   text-align: center;
+}
+
+.error-card {
+  max-width: 500px;
+  width: 100%;
+}
+
+.error-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.error-icon {
+  font-size: 3rem;
+  color: #ef4444;
+  margin-bottom: 1rem;
+}
+
+.error-message {
+  color: #6b7280;
+  margin: 1rem 0;
+  line-height: 1.5;
+}
+
+.error-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+  margin-top: 1.5rem;
+}
+
+.retry-info {
+  color: #6b7280;
+  font-size: 0.875rem;
 }
 
 .not-found-content {
@@ -1287,6 +2427,68 @@ onMounted(() => {
 
 .info-item span {
   color: #111827;
+}
+
+.brief-description-content {
+  color: #111827;
+  line-height: 1.5;
+  margin-top: 0.25rem;
+}
+
+.brief-description-content h1,
+.brief-description-content h2,
+.brief-description-content h3 {
+  color: #111827;
+  margin: 0.25rem 0;
+}
+
+.brief-description-content h1 {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.brief-description-content h2 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.brief-description-content h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.brief-description-content strong {
+  font-weight: 600;
+  color: #111827;
+}
+
+.brief-description-content em {
+  font-style: italic;
+  color: #374151;
+}
+
+.brief-description-content del {
+  text-decoration: line-through;
+  color: #6b7280;
+}
+
+.brief-description-content a {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
+.brief-description-content a:hover {
+  color: #1d4ed8;
+}
+
+.brief-description-content ul {
+  margin: 0.25rem 0;
+  padding-left: 1.25rem;
+}
+
+.brief-description-content li {
+  margin-bottom: 0.125rem;
+  list-style-type: disc;
 }
 
 .schedule-info {
@@ -1531,6 +2733,31 @@ onMounted(() => {
 
 .team-members-card {
   margin-top: 1rem;
+}
+
+.card-header-with-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.card-header-with-actions h3 {
+  margin: 0;
+  color: #495057;
+  font-weight: 600;
+}
+
+.promoters-actions {
+  margin: 1rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+.promoters-actions .p-button {
+  margin: 0 0.5rem;
 }
 
 .member-cell {
@@ -1835,9 +3062,544 @@ onMounted(() => {
   background: #ef4444;
 }
 
+/* Brief Card Styles */
+.brief-card {
+  border-left: 4px solid #3b82f6;
+}
+
+.brief-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.brief-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: #111827;
+}
+
+.brief-icon {
+  color: #3b82f6;
+}
+
+.brief-tag {
+  font-size: 0.75rem;
+}
+
+.brief-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.brief-description,
+.brief-document {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.brief-description-header,
+.brief-document-header {
+  display: flex;
+  align-items: center;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.brief-description-header label,
+.brief-document-header label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.brief-description-header i,
+.brief-document-header i {
+  color: #6b7280;
+}
+
+.brief-text-content {
+  background: #f9fafb;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  line-height: 1.6;
+  color: #374151;
+}
+
+.brief-text-content h1,
+.brief-text-content h2,
+.brief-text-content h3 {
+  color: #111827;
+  margin: 0.5rem 0;
+}
+
+.brief-text-content h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.brief-text-content h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.brief-text-content h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.brief-text-content strong {
+  font-weight: 600;
+  color: #111827;
+}
+
+.brief-text-content em {
+  font-style: italic;
+  color: #374151;
+}
+
+.brief-text-content del {
+  text-decoration: line-through;
+  color: #6b7280;
+}
+
+.brief-text-content a {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
+.brief-text-content a:hover {
+  color: #1d4ed8;
+}
+
+.brief-text-content li {
+  margin-bottom: 0.25rem;
+  list-style-position: inside;
+}
+
+/* Brief Document Display Styles */
+.document-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.document-item:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.document-preview {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.document-icon-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+}
+
+.document-icon {
+  font-size: 1.75rem;
+  color: white;
+}
+
+.file-type-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  background: #111827;
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  letter-spacing: 0.025em;
+}
+
+.document-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.document-name {
+  font-weight: 600;
+  color: #111827;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.document-attachment-icon {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.document-status {
+  color: #059669;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.status-icon {
+  color: #10b981;
+  font-size: 0.75rem;
+}
+
+.document-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.download-btn {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-color: #10b981;
+  color: white;
+}
+
+.download-btn:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  border-color: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+.email-btn {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border-color: #f59e0b;
+  color: white;
+}
+
+.email-btn:hover {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  border-color: #d97706;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
+}
+
+.view-btn {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border-color: #3b82f6;
+  color: white;
+}
+
+.view-btn:hover {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.no-brief-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border: 1px dashed #d1d5db;
+  border-radius: 0.5rem;
+  color: #6b7280;
+  font-style: italic;
+  text-align: center;
+  justify-content: center;
+}
+
+.no-brief-content i {
+  color: #9ca3af;
+}
+
+/* Team Assignment Dialog Styles */
+.team-assignment-dialog .dialog-content {
+  padding: 0;
+}
+
+.assignment-sections {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  min-height: 500px;
+}
+
+.section h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem 0;
+  color: #111827;
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.section h4 i {
+  color: #3b82f6;
+}
+
+.promoters-search,
+.search-managers {
+  margin-bottom: 1rem;
+}
+
+.available-promoters-list,
+.assigned-team-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.loading-promoters,
+.loading-managers,
+.no-promoters,
+.no-team-members {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  color: #6b7280;
+  font-style: italic;
+  text-align: center;
+}
+
+.promoter-cards,
+.team-member-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.promoter-card,
+.team-member-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.promoter-card:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  transform: translateY(-1px);
+}
+
+.promoter-avatar,
+.member-avatar {
+  flex-shrink: 0;
+  background: #3b82f6;
+}
+
+.promoter-info,
+.member-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.promoter-name,
+.member-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.promoter-email,
+.member-email {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.promoter-skills {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.role-dropdown {
+  width: 100%;
+  font-size: 0.875rem;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 0 0 0;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Manager Assignment Dialog Styles */
+.manager-assignment-dialog .dialog-content {
+  padding: 0;
+}
+
+.current-manager {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.current-manager h4 {
+  margin: 0 0 1rem 0;
+  color: #111827;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.manager-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.current-manager-avatar {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.manager-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.manager-name {
+  font-weight: 600;
+  color: #111827;
+  font-size: 1.1rem;
+}
+
+.manager-id {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-family: monospace;
+}
+
+.manager-selection h4 {
+  margin: 0 0 1rem 0;
+  color: #111827;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.managers-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 1rem;
+}
+
+.manager-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.manager-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.manager-option:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.manager-option.selected {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+
+.manager-option-avatar {
+  flex-shrink: 0;
+  background: #6366f1;
+}
+
+.manager-option-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.manager-option-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.manager-option-email {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.manager-experience {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.manager-option .pi-check {
+  color: #10b981;
+  font-size: 1.25rem;
+}
+
 @media (max-width: 768px) {
   .activation-details-page {
     padding: 1rem;
+  }
+  
+  .assignment-sections {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .team-assignment-dialog,
+  .manager-assignment-dialog {
+    margin: 1rem;
+    width: calc(100vw - 2rem) !important;
   }
 
   .header-main {

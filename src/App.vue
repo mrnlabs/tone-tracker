@@ -7,7 +7,20 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
+import { useAuthStore } from '@/stores/auth'
 import GlobalLoader from '@/components/ui/GlobalLoader.vue'
+
+const authStore = useAuthStore()
+
+// Initialize authentication state on app startup
+onMounted(async () => {
+  try {
+    await authStore.initializeAuth()
+  } catch (error) {
+    console.warn('Failed to initialize auth on app startup:', error)
+  }
+})
 </script>
 
 <style>

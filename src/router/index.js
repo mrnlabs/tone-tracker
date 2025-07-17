@@ -1,8 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { STORAGE_KEYS } from '@/utils/constants'
 
 // Auth views - keep these non-lazy for faster initial load
 import Login from '@/views/auth/Login.vue'
 import ForgotPassword from '@/views/auth/ForgotPassword.vue'
+import ResetPassword from '@/views/auth/ResetPassword.vue'
 
 // Dashboard - keep this non-lazy as it's frequently accessed
 import Dashboard from '@/views/dashboard/Dashboard.vue'
@@ -30,6 +32,15 @@ const routes = [
         meta: {
             requiresAuth: false,
             title: 'Forgot Password - Activation Tracker'
+        }
+    },
+    {
+        path: '/reset-password',
+        name: 'reset-password',
+        component: ResetPassword,
+        meta: {
+            requiresAuth: false,
+            title: 'Reset Password - Activation Tracker'
         }
     },
 
@@ -236,6 +247,28 @@ const routes = [
         }
     },
 
+    // Profile Routes - Accessible to all authenticated users
+    {
+        path: '/profile',
+        name: 'profile',
+        component: () => import('@/views/dashboard/Profile.vue'),
+        meta: {
+            requiresAuth: true,
+            title: 'My Profile - Activation Tracker'
+        }
+    },
+
+    // Test route for component development
+    {
+        path: '/test/components',
+        name: 'component-test',
+        component: () => import('@/views/test/ComponentTest.vue'),
+        meta: {
+            requiresAuth: false,
+            title: 'Component Test - Debug'
+        }
+    },
+
     // Catch-all route
     {
         path: '/:pathMatch(.*)*',
@@ -258,9 +291,16 @@ router.beforeEach((to, from, next) => {
 
     // Check if route requires authentication
     if (to.meta.requiresAuth) {
-        // Check for authentication token
-        const token = localStorage.getItem('activation_auth_token')
-        const user = JSON.parse(localStorage.getItem('user') || 'null')
+        // Check for authentication token using consistent storage key
+        const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)
+        let user = null
+        try {
+            const userStr = localStorage.getItem('user')
+            user = userStr && userStr !== 'undefined' ? JSON.parse(userStr) : null
+        } catch (error) {
+            console.warn('Failed to parse user from localStorage:', error)
+            user = null
+        }
 
         console.log(`🔍 Auth check - Token: ${token ? 'EXISTS' : 'MISSING'}, User: ${user ? 'EXISTS' : 'MISSING'}`)
 

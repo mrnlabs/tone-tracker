@@ -332,11 +332,18 @@ export const API_ENDPOINTS = {
     // Users
     USERS: '/users',
     USER_PROFILE: '/users/profile',
-    UPDATE_PROFILE: '/users/profile/update',
+    UPDATE_PROFILE: '/users/profile',
 
     // Clients
     CLIENTS: '/clients',
     CLIENT_ACTIVATIONS: '/clients/:id/activations',
+    
+    // Contacts
+    CONTACTS: '/contacts',
+    CONTACTS_BY_CLIENT: '/contacts/by-client/:clientId',
+    CONTACT_PRIMARY: '/contacts/primary/:clientId',
+    CONTACT_SET_PRIMARY: '/contacts/:id/set-primary',
+    CONTACT_SEARCH: '/contacts/search/:clientId',
 
     // Activations
     ACTIVATIONS: '/activations',

@@ -391,6 +391,27 @@ export const useWarehouseStore = defineStore('warehouse', () => {
         }
     }
 
+    /**
+     * Create warehouse stock
+     */
+    const createWarehouseStock = async (warehouseId, stockData) => {
+        try {
+            loading.value = true
+            error.value = null
+            const result = await warehouseService.createWarehouseStock(warehouseId, stockData)
+            
+            // Refresh warehouse stocks after creation
+            await getWarehouseStocks(warehouseId)
+            
+            return result
+        } catch (err) {
+            error.value = err.message || 'Failed to create warehouse stock'
+            throw err
+        } finally {
+            loading.value = false
+        }
+    }
+
     // === INVENTORY MANAGEMENT ===
 
     /**
