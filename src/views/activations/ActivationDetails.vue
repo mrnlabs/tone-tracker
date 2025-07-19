@@ -655,6 +655,219 @@
               </div>
             </TabPanel>
 
+            <!-- Sales & Inventory Tab -->
+            <TabPanel header="Sales & Inventory">
+              <div class="sales-inventory-content">
+                <!-- Sales Section -->
+                <div class="section-header">
+                  <h3>Sales & Product Movements</h3>
+                  <div class="section-actions">
+                    <Button
+                      v-if="canRecordSales"
+                      @click="showRecordSaleDialog = true"
+                      icon="pi pi-plus"
+                      label="Record Sale"
+                      class="p-button-success"
+                    />
+                  </div>
+                </div>
+                
+                <StockMovementList
+                  :activation-id="activation.id"
+                  :show-summary="true"
+                  :hide-activation-column="true"
+                  :show-activation-filter="false"
+                  :can-export="true"
+                  :can-refresh="true"
+                  @movement-selected="handleMovementSelected"
+                />
+              </div>
+            </TabPanel>
+
+            <!-- Lead Management Tab -->
+            <TabPanel header="Lead Management" v-if="canCaptureLeads">
+              <div class="lead-management-content">
+                <!-- Lead Capture Section -->
+                <div class="section-header">
+                  <h3>Customer Lead Capture</h3>
+                  <div class="section-actions">
+                    <Button
+                      @click="showLeadCaptureDialog = true"
+                      icon="pi pi-plus"
+                      label="Capture Lead"
+                      class="p-button-success"
+                    />
+                    <Button
+                      @click="showLeadExportDialog = true"
+                      icon="pi pi-download"
+                      label="Export Leads"
+                      class="p-button-outlined"
+                    />
+                  </div>
+                </div>
+
+                <!-- Lead Statistics -->
+                <div class="lead-stats-section" v-if="leadStats">
+                  <div class="stats-grid">
+                    <Card class="stat-card">
+                      <template #content>
+                        <div class="stat-content">
+                          <div class="stat-icon total">
+                            <i class="pi pi-users"></i>
+                          </div>
+                          <div class="stat-info">
+                            <h3>Total Leads</h3>
+                            <p class="stat-number">{{ leadStats.totalLeads || 0 }}</p>
+                          </div>
+                        </div>
+                      </template>
+                    </Card>
+
+                    <Card class="stat-card">
+                      <template #content>
+                        <div class="stat-content">
+                          <div class="stat-icon opted-in">
+                            <i class="pi pi-check-circle"></i>
+                          </div>
+                          <div class="stat-info">
+                            <h3>Opted In</h3>
+                            <p class="stat-number">{{ leadStats.optedInLeads || 0 }}</p>
+                          </div>
+                        </div>
+                      </template>
+                    </Card>
+
+                    <Card class="stat-card">
+                      <template #content>
+                        <div class="stat-content">
+                          <div class="stat-icon whatsapp">
+                            <i class="pi pi-comment"></i>
+                          </div>
+                          <div class="stat-info">
+                            <h3>WhatsApp Opted In</h3>
+                            <p class="stat-number">{{ leadStats.whatsAppOptedIn || 0 }}</p>
+                          </div>
+                        </div>
+                      </template>
+                    </Card>
+
+                    <Card class="stat-card">
+                      <template #content>
+                        <div class="stat-content">
+                          <div class="stat-icon conversion">
+                            <i class="pi pi-star"></i>
+                          </div>
+                          <div class="stat-info">
+                            <h3>Conversion Rate</h3>
+                            <p class="stat-number">{{ calculateConversionRate() }}%</p>
+                          </div>
+                        </div>
+                      </template>
+                    </Card>
+                  </div>
+                </div>
+
+                <!-- Leads Table -->
+                <Card class="leads-table-card">
+                  <template #header>
+                    <div class="table-header">
+                      <h3>Captured Leads</h3>
+                      <div class="table-filters">
+                        <IconField iconPosition="left">
+                          <InputIcon class="pi pi-search" />
+                          <InputText
+                            v-model="leadSearchQuery"
+                            placeholder="Search leads..."
+                            @input="debounceLeadSearch"
+                          />
+                        </IconField>
+                      </div>
+                    </div>
+                  </template>
+                  <template #content>
+                    <DataTable
+                      :value="activationLeads"
+                      :loading="leadsLoading"
+                      :paginator="true"
+                      :rows="10"
+                      :totalRecords="totalLeads"
+                      :lazy="true"
+                      @page="onLeadPageChange"
+                      @sort="onLeadSort"
+                      sortMode="multiple"
+                      :rowHover="true"
+                      class="activation-leads-table"
+                    >
+                      <Column field="name" header="Name" sortable>
+                        <template #body="{ data }">
+                          <div class="lead-name-cell">
+                            <strong>{{ data.name }} {{ data.surname }}</strong>
+                            <small>{{ data.email }}</small>
+                          </div>
+                        </template>
+                      </Column>
+                      
+                      <Column field="phone" header="Phone" sortable>
+                        <template #body="{ data }">
+                          {{ formatPhoneNumber(data.phone) }}
+                        </template>
+                      </Column>
+                      
+                      <Column field="customerGender" header="Gender" sortable>
+                        <template #body="{ data }">
+                          {{ getGenderLabel(data.customerGender) }}
+                        </template>
+                      </Column>
+                      
+                      <Column field="optedIn" header="Marketing" sortable>
+                        <template #body="{ data }">
+                          <Tag
+                            :value="data.optedIn ? 'Opted In' : 'No'"
+                            :severity="data.optedIn ? 'success' : 'secondary'"
+                          />
+                        </template>
+                      </Column>
+                      
+                      <Column field="whatsAppOptedIn" header="WhatsApp" sortable>
+                        <template #body="{ data }">
+                          <Tag
+                            :value="data.whatsAppOptedIn ? 'Opted In' : 'No'"
+                            :severity="data.whatsAppOptedIn ? 'success' : 'secondary'"
+                          />
+                        </template>
+                      </Column>
+                      
+                      <Column field="dateCreated" header="Date Captured" sortable>
+                        <template #body="{ data }">
+                          {{ formatDate(data.dateCreated) }}
+                        </template>
+                      </Column>
+                      
+                      <Column header="Actions">
+                        <template #body="{ data }">
+                          <div class="action-buttons">
+                            <Button
+                              icon="pi pi-eye"
+                              class="p-button-text p-button-sm"
+                              @click="viewLeadDetails(data)"
+                              v-tooltip.top="'View Details'"
+                            />
+                            <Button
+                              v-if="canEditLeads"
+                              icon="pi pi-pencil"
+                              class="p-button-text p-button-sm"
+                              @click="editLead(data)"
+                              v-tooltip.top="'Edit Lead'"
+                            />
+                          </div>
+                        </template>
+                      </Column>
+                    </DataTable>
+                  </template>
+                </Card>
+              </div>
+            </TabPanel>
+
             <!-- Performance Tab -->
             <TabPanel header="Performance">
               <div class="performance-content">
@@ -907,6 +1120,157 @@
         </div>
       </div>
 
+      <!-- Record Sale Dialog -->
+      <RecordSale
+        v-model:visible="showRecordSaleDialog"
+        :activation-id="activation?.id"
+        @sale-recorded="handleSaleRecorded"
+      />
+
+      <!-- Lead Capture Dialog -->
+      <Dialog
+        v-model:visible="showLeadCaptureDialog"
+        header="Capture Customer Lead"
+        :modal="true"
+        :style="{ width: '90vw', maxWidth: '900px' }"
+        :maximizable="true"
+        class="lead-capture-dialog"
+      >
+        <LeadCaptureForm
+          :activation-id="activation?.id"
+          @lead-captured="onLeadCaptured"
+          @form-reset="onLeadFormReset"
+        />
+      </Dialog>
+
+      <!-- Lead Details Dialog -->
+      <Dialog
+        v-model:visible="showLeadDetailsDialog"
+        header="Lead Details"
+        :modal="true"
+        :style="{ width: '600px' }"
+        class="lead-details-dialog"
+      >
+        <div v-if="selectedLead" class="lead-details">
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>Full Name</label>
+              <span>{{ selectedLead.name }} {{ selectedLead.surname }}</span>
+            </div>
+            
+            <div class="detail-item">
+              <label>Email</label>
+              <span>{{ selectedLead.email }}</span>
+            </div>
+            
+            <div class="detail-item">
+              <label>Phone</label>
+              <span>{{ formatPhoneNumber(selectedLead.phone) }}</span>
+            </div>
+            
+            <div class="detail-item">
+              <label>Gender</label>
+              <span>{{ getGenderLabel(selectedLead.customerGender) }}</span>
+            </div>
+            
+            <div class="detail-item">
+              <label>Age Group</label>
+              <span>{{ getAgeGroupLabel(selectedLead.ageGroup) }}</span>
+            </div>
+            
+            <div class="detail-item">
+              <label>Customer Type</label>
+              <span>{{ getCustomerTypeLabel(selectedLead.customerType) }}</span>
+            </div>
+            
+            <div class="detail-item" v-if="selectedLead.address">
+              <label>Address</label>
+              <span>{{ selectedLead.address }}</span>
+            </div>
+            
+            <div class="detail-item">
+              <label>Marketing Opt-in</label>
+              <Tag
+                :value="selectedLead.optedIn ? 'Yes' : 'No'"
+                :severity="selectedLead.optedIn ? 'success' : 'secondary'"
+              />
+            </div>
+            
+            <div class="detail-item">
+              <label>WhatsApp Opt-in</label>
+              <Tag
+                :value="selectedLead.whatsAppOptedIn ? 'Yes' : 'No'"
+                :severity="selectedLead.whatsAppOptedIn ? 'success' : 'secondary'"
+              />
+            </div>
+            
+            <div class="detail-item">
+              <label>Repeat Purchase Intent</label>
+              <span>{{ getRepeatPurchaseLabel(selectedLead.repeatPurchaseIntent) }}</span>
+            </div>
+            
+            <div class="detail-item">
+              <label>Date Captured</label>
+              <span>{{ formatDateTime(selectedLead.dateCreated, null) }}</span>
+            </div>
+            
+            <div class="detail-item full-width" v-if="selectedLead.customerFeedback">
+              <label>Customer Feedback</label>
+              <span>{{ selectedLead.customerFeedback }}</span>
+            </div>
+          </div>
+        </div>
+      </Dialog>
+
+      <!-- Lead Export Dialog -->
+      <Dialog
+        v-model:visible="showLeadExportDialog"
+        header="Export Activation Leads"
+        :modal="true"
+        :style="{ width: '450px' }"
+        class="lead-export-dialog"
+      >
+        <div class="export-options">
+          <div class="form-group">
+            <label>Export Format</label>
+            <div class="format-options">
+              <div class="format-option">
+                <RadioButton
+                  v-model="leadExportFormat"
+                  inputId="lead-format-xlsx"
+                  value="xlsx"
+                />
+                <label for="lead-format-xlsx">Excel (.xlsx)</label>
+              </div>
+              
+              <div class="format-option">
+                <RadioButton
+                  v-model="leadExportFormat"
+                  inputId="lead-format-csv"
+                  value="csv"
+                />
+                <label for="lead-format-csv">CSV (.csv)</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <template #footer>
+          <Button
+            label="Cancel"
+            icon="pi pi-times"
+            class="p-button-outlined"
+            @click="showLeadExportDialog = false"
+          />
+          <Button
+            label="Export"
+            icon="pi pi-download"
+            :loading="leadExportLoading"
+            @click="exportActivationLeads"
+          />
+        </template>
+      </Dialog>
+
       <!-- Team Assignment Dialog -->
       <Dialog 
         v-model:visible="showTeamAssignmentDialog" 
@@ -1129,7 +1493,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
 import { activationService, fileService } from '@/services/api'
+import leadService from '@/services/leadService'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
+import { StockMovementList, RecordSale } from '@/components'
+import LeadCaptureForm from '@/components/leads/LeadCaptureForm.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -1160,6 +1527,22 @@ const assignedTeamMembers = ref([])
 const promoterSearchTerm = ref('')
 const managerSearchTerm = ref('')
 const selectedManagerId = ref(null)
+
+// Sales & Inventory State
+const showRecordSaleDialog = ref(false)
+
+// Lead Management State
+const showLeadCaptureDialog = ref(false)
+const showLeadDetailsDialog = ref(false)
+const showLeadExportDialog = ref(false)
+const selectedLead = ref(null)
+const activationLeads = ref([])
+const leadStats = ref(null)
+const leadsLoading = ref(false)
+const totalLeads = ref(0)
+const leadSearchQuery = ref('')
+const leadExportFormat = ref('xlsx')
+const leadExportLoading = ref(false)
 
 // Team roles configuration
 const teamRoles = ref([
@@ -1216,6 +1599,20 @@ const allTeamMembers = computed(() => {
   }
   
   return teamMembers
+})
+
+// Sales & Inventory permissions
+const canRecordSales = computed(() => {
+  return authStore.isPromoter || authStore.isActivationManager || authStore.isAdmin
+})
+
+// Lead Management permissions
+const canCaptureLeads = computed(() => {
+  return ['ADMIN', 'ACTIVATION_MANAGER', 'PROMOTER'].includes(userRole.value)
+})
+
+const canEditLeads = computed(() => {
+  return ['ADMIN', 'ACTIVATION_MANAGER'].includes(userRole.value)
 })
 
 // Methods
@@ -2182,8 +2579,217 @@ watch(showManagerAssignmentDialog, (newValue) => {
   }
 })
 
+// Sales & Inventory Methods
+const handleMovementSelected = (movement) => {
+  console.log('Movement selected:', movement)
+}
+
+const handleSaleRecorded = (saleData) => {
+  console.log('Sale recorded:', saleData)
+  // You could refresh activation data here if needed
+  // loadActivationData(true)
+}
+
+// Lead Management Methods
+const loadActivationLeads = async (page = 0) => {
+  if (!activation.value?.id) {
+    console.log('No activation ID, skipping lead load')
+    return
+  }
+  
+  console.log('Loading leads for activation ID:', activation.value.id)
+  leadsLoading.value = true
+  try {
+    const params = {
+      page,
+      size: 10,
+      searchTerm: leadSearchQuery.value || undefined
+    }
+    
+    console.log('Fetching leads with params:', params)
+    const response = await leadService.getLeadsByActivation(activation.value.id, params)
+    console.log('Lead response:', response)
+    
+    // Handle different response structures
+    if (response && typeof response === 'object') {
+      if (response.content !== undefined) {
+        // Spring Boot pagination response
+        activationLeads.value = response.content || []
+        totalLeads.value = response.totalElements || 0
+      } else if (response.data !== undefined) {
+        // Custom API response with data field
+        activationLeads.value = response.data || []
+        totalLeads.value = response.total || response.totalElements || 0
+      } else if (Array.isArray(response)) {
+        // Direct array response
+        activationLeads.value = response
+        totalLeads.value = response.length
+      } else {
+        // Unknown structure, log for debugging
+        console.warn('Unexpected response structure:', response)
+        activationLeads.value = []
+        totalLeads.value = 0
+      }
+    } else {
+      activationLeads.value = []
+      totalLeads.value = 0
+    }
+    
+    console.log('Loaded leads:', activationLeads.value)
+    console.log('Total leads:', totalLeads.value)
+  } catch (error) {
+    console.error('Error loading activation leads:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to load leads',
+      life: 3000
+    })
+  } finally {
+    leadsLoading.value = false
+  }
+}
+
+const loadLeadStats = async () => {
+  if (!activation.value?.id) return
+  
+  try {
+    const params = { activationId: activation.value.id }
+    const stats = await leadService.getLeadStatistics(params)
+    leadStats.value = stats
+  } catch (error) {
+    console.error('Error loading lead statistics:', error)
+  }
+}
+
+const calculateConversionRate = () => {
+  if (!leadStats.value || !leadStats.value.totalLeads) return 0
+  const converted = leadStats.value.optedInLeads || 0
+  return Math.round((converted / leadStats.value.totalLeads) * 100)
+}
+
+const onLeadCaptured = async (lead) => {
+  showLeadCaptureDialog.value = false
+  toast.add({
+    severity: 'success',
+    summary: 'Success',
+    detail: 'Lead captured successfully!',
+    life: 3000
+  })
+  
+  // Small delay to ensure backend has processed the lead
+  setTimeout(async () => {
+    console.log('Refreshing leads after capture...')
+    await loadActivationLeads()
+    await loadLeadStats()
+  }, 500)
+}
+
+const onLeadFormReset = () => {
+  // Handle form reset if needed
+}
+
+const viewLeadDetails = (lead) => {
+  selectedLead.value = lead
+  showLeadDetailsDialog.value = true
+}
+
+const editLead = (lead) => {
+  // TODO: Implement edit functionality if needed
+  toast.add({
+    severity: 'info',
+    summary: 'Info',
+    detail: 'Edit functionality coming soon',
+    life: 3000
+  })
+}
+
+const onLeadPageChange = (event) => {
+  loadActivationLeads(event.page)
+}
+
+const onLeadSort = () => {
+  loadActivationLeads(0)
+}
+
+let leadSearchTimeout
+const debounceLeadSearch = () => {
+  clearTimeout(leadSearchTimeout)
+  leadSearchTimeout = setTimeout(() => {
+    loadActivationLeads(0)
+  }, 500)
+}
+
+const exportActivationLeads = async () => {
+  if (!activation.value?.id) return
+  
+  leadExportLoading.value = true
+  try {
+    // Use the specific activation export endpoint
+    const blob = await leadService.exportActivationLeads(activation.value.id, leadExportFormat.value)
+    
+    // Generate filename with activation name and date
+    const activationName = activation.value.name ? activation.value.name.replace(/[^a-zA-Z0-9]/g, '_') : 'activation'
+    const dateStr = new Date().toISOString().split('T')[0]
+    const filename = `${activationName}_leads_${dateStr}.${leadExportFormat.value}`
+    
+    // Download the file
+    leadService.downloadExportFile(blob, filename)
+    
+    showLeadExportDialog.value = false
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: `Leads exported successfully as ${filename}`,
+      life: 3000
+    })
+  } catch (error) {
+    console.error('Error exporting activation leads:', error)
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to export leads'
+    toast.add({
+      severity: 'error',
+      summary: 'Export Failed',
+      detail: errorMessage,
+      life: 5000
+    })
+  } finally {
+    leadExportLoading.value = false
+  }
+}
+
+// Utility methods for lead display
+const formatPhoneNumber = (phone) => {
+  return leadService.formatPhoneNumber(phone)
+}
+
+const getGenderLabel = (gender) => {
+  return leadService.getGenderLabel(gender)
+}
+
+const getAgeGroupLabel = (ageGroup) => {
+  return leadService.getAgeGroupLabel(ageGroup)
+}
+
+const getCustomerTypeLabel = (customerType) => {
+  return leadService.getCustomerTypeLabel(customerType)
+}
+
+const getRepeatPurchaseLabel = (intent) => {
+  return leadService.getRepeatPurchaseLabel(intent)
+}
+
+// Update the onMounted to also load leads if user can capture leads
 onMounted(() => {
   loadActivationData()
+  
+  // Set up a watcher to load leads when activation data is available
+  watch(() => activation.value?.id, (newId) => {
+    if (newId && canCaptureLeads.value) {
+      console.log('Loading leads for activation:', newId)
+      loadActivationLeads()
+      loadLeadStats()
+    }
+  }, { immediate: true })
 })
 </script>
 
@@ -3657,6 +4263,179 @@ onMounted(() => {
   .reports-actions {
     justify-content: center;
     flex-wrap: wrap;
+  }
+}
+
+/* Sales & Inventory Tab Styles */
+.sales-inventory-content {
+  padding: 1rem 0;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.section-header h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.section-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+/* Lead Management Styles */
+.lead-management-content {
+  .lead-stats-section {
+    margin: 1.5rem 0;
+  }
+  
+  .leads-table-card {
+    margin-top: 1.5rem;
+    
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1rem 0 1rem;
+      
+      h3 {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+      }
+    }
+    
+    .activation-leads-table {
+      .lead-name-cell {
+        strong {
+          display: block;
+          color: #111827;
+        }
+        
+        small {
+          color: #6b7280;
+          font-size: 0.75rem;
+        }
+      }
+      
+      .action-buttons {
+        display: flex;
+        gap: 0.25rem;
+      }
+    }
+  }
+}
+
+.lead-details {
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    
+    .detail-item {
+      &.full-width {
+        grid-column: 1 / -1;
+      }
+      
+      label {
+        display: block;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 0.25rem;
+        font-size: 0.875rem;
+      }
+      
+      span {
+        color: #111827;
+      }
+    }
+  }
+}
+
+.export-options {
+  .form-group {
+    margin-bottom: 1.5rem;
+    
+    label {
+      display: block;
+      margin-bottom: 0.75rem;
+      font-weight: 500;
+      color: #374151;
+    }
+    
+    .format-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      
+      .format-option {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        
+        label {
+          margin-bottom: 0;
+          font-weight: normal;
+          cursor: pointer;
+        }
+      }
+    }
+  }
+}
+
+/* Lead statistics icons */
+.stat-icon {
+  &.opted-in {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+  }
+  
+  &.whatsapp {
+    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+    color: white;
+  }
+  
+  &.conversion {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+  }
+}
+
+@media (max-width: 768px) {
+  .section-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .section-actions {
+    justify-content: center;
+  }
+  
+  .lead-details .detail-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .export-options .format-options {
+    .format-option {
+      padding: 0.5rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.375rem;
+      
+      &:hover {
+        background-color: #f9fafb;
+      }
+    }
   }
 }
 </style>

@@ -81,6 +81,36 @@ export const warehouseRoutes = [
       roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER'],
       title: 'Warehouse Reports'
     }
+  },
+  {
+    path: '/warehouses/stock-movements',
+    name: 'StockMovements',
+    component: () => import('@/views/warehouses/StockMovements.vue'),
+    meta: {
+      requiresAuth: true,
+      roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER', 'PROMOTER'],
+      title: 'Stock Movements'
+    }
+  },
+  {
+    path: '/warehouses/stock-adjustments',
+    name: 'StockAdjustments',
+    component: () => import('@/views/warehouses/StockAdjustments.vue'),
+    meta: {
+      requiresAuth: true,
+      roles: ['ADMIN', 'WAREHOUSE_MANAGER'],
+      title: 'Stock Adjustments'
+    }
+  },
+  {
+    path: '/warehouses/stock-transfers',
+    name: 'StockTransfers',
+    component: () => import('@/views/warehouses/StockTransfers.vue'),
+    meta: {
+      requiresAuth: true,
+      roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER'],
+      title: 'Stock Transfers'
+    }
   }
 ]
 

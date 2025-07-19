@@ -7,7 +7,7 @@ import { activationService } from '@/services/api'
 import { ACTIVATION_STATUS, ACTIVATION_TYPES, PRIORITY_LEVELS } from '@/utils/constants'
 import { useAuthStore } from './auth'
 
-export const useActivationsStore = defineStore('activations', () => {
+export const useActivationStore = defineStore('activations', () => {
     // === STATE ===
     const activations = ref([])
     const currentActivation = ref(null)
@@ -632,4 +632,4 @@ export const useActivationsStore = defineStore('activations', () => {
     }
 })
 
-export default useActivationsStore
+export default useActivationStore

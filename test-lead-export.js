@@ -1,0 +1,26 @@
+// Script to get the current JWT token from browser localStorage
+console.log("To test the lead export API, open your browser console and run:");
+console.log("");
+console.log("// Get your current JWT token:");
+console.log("const token = localStorage.getItem('activation_auth_token');");
+console.log("console.log('Your token:', token);");
+console.log("");
+console.log("// Export all leads as CSV:");
+console.log("curl -X GET \"http://localhost:8080/api/leads/export\" \\");
+console.log("  -H \"Authorization: Bearer YOUR_JWT_TOKEN\" \\");
+console.log("  -o all_leads.csv");
+console.log("");
+console.log("// Export all leads as Excel:");
+console.log("curl -X GET \"http://localhost:8080/api/leads/export?format=xlsx\" \\");
+console.log("  -H \"Authorization: Bearer YOUR_JWT_TOKEN\" \\");
+console.log("  -o all_leads.xlsx");
+console.log("");
+console.log("// Export leads for specific activation ID 123 (using dedicated endpoint):");
+console.log("curl -X GET \"http://localhost:8080/api/leads/export/activation/123\" \\");
+console.log("  -H \"Authorization: Bearer YOUR_JWT_TOKEN\" \\");
+console.log("  -o activation_123_leads.csv");
+console.log("");
+console.log("// Export leads for activation as Excel:");
+console.log("curl -X GET \"http://localhost:8080/api/leads/export/activation/123?format=xlsx\" \\");
+console.log("  -H \"Authorization: Bearer YOUR_JWT_TOKEN\" \\");
+console.log("  -o activation_123_leads.xlsx");

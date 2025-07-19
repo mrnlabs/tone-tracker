@@ -3,19 +3,21 @@
 
 // Import all stores
 export { useAuthStore } from './auth'
-export { useActivationsStore } from './activations'
+export { useActivationStore } from './activations'
 export { useClientsStore } from './clients'
 export { useWarehouseStore } from './warehouse'
 export { useUsersStore } from './users'
 export { useReportsStore } from './reports'
+export { useStockMovementStore } from './stockMovement'
 
 // Import store utilities
 import { useAuthStore } from './auth'
-import { useActivationsStore } from './activations'
+import { useActivationStore } from './activations'
 import { useClientsStore } from './clients'
 import { useWarehouseStore } from './warehouse'
 import { useUsersStore } from './users'
 import { useReportsStore } from './reports'
+import { useStockMovementStore } from './stockMovement'
 
 /**
  * Composite store hook that provides access to all stores
@@ -24,11 +26,12 @@ import { useReportsStore } from './reports'
 export const useStores = () => {
     return {
         auth: useAuthStore(),
-        activations: useActivationsStore(),
+        activations: useActivationStore(),
         clients: useClientsStore(),
         warehouse: useWarehouseStore(),
         users: useUsersStore(),
-        reports: useReportsStore()
+        reports: useReportsStore(),
+        stockMovement: useStockMovementStore()
     }
 }
 
@@ -45,7 +48,7 @@ export const initializeStores = async () => {
 
         // If user is authenticated, initialize other stores
         if (authStore.isAuthenticated) {
-            const activationsStore = useActivationsStore()
+            const activationsStore = useActivationStore()
             const clientsStore = useClientsStore()
             const warehouseStore = useWarehouseStore()
             const usersStore = useUsersStore()
@@ -73,6 +76,9 @@ export const initializeStores = async () => {
             if (authStore.canManageWarehouse) {
                 initPromises.push(warehouseStore.fetchAllStocks())
                 initPromises.push(warehouseStore.fetchLowStockAlerts())
+                // Initialize stock movement store with recent movements
+                const stockMovementStore = useStockMovementStore()
+                initPromises.push(stockMovementStore.fetchMovements(null, { limit: 50 }))
             }
 
             if (authStore.isClient) {

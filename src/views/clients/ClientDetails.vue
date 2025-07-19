@@ -277,6 +277,7 @@
                   </div>
                 </div>
 
+
                 <DataTable
                     :value="filteredActivations"
                     :loading="activationsLoading"
@@ -284,6 +285,7 @@
                     :paginator="true"
                     :rows="10"
                     dataKey="id"
+                    :key="filteredActivations.length"
                 >
                   <Column field="name" header="Activation Name" sortable>
                     <template #body="{ data }">
@@ -548,7 +550,6 @@ const clientsStore = useClientsStore()
 const { withLoading, isLoading } = useLoading()
 
 // State
-const activations = ref([])
 const activityLog = ref([])
 const selectedActivationStatus = ref(null)
 const showActions = ref(false)
@@ -556,7 +557,15 @@ const showActions = ref(false)
 // Computed
 const loading = computed(() => isLoading('fetch-client') || clientsStore.isLoading)
 const client = computed(() => clientsStore.currentClient)
-const clientActivations = computed(() => clientsStore.getCachedClientActivations(route.params.id))
+const clientActivations = computed(() => {
+  const activations = clientsStore.getCachedClientActivations(route.params.id);
+  console.log('clientActivations computed:', {
+    clientId: route.params.id,
+    activations: activations,
+    count: activations?.length || 0
+  });
+  return activations || [];
+});
 const activationsLoading = computed(() => isLoading('fetch-client-activations'))
 
 // Options
@@ -568,10 +577,23 @@ const activationStatusOptions = [
 ]
 
 const filteredActivations = computed(() => {
-  if (!selectedActivationStatus.value) {
-    return activations.value
+  const allActivations = clientActivations.value || []
+  
+  // Log the first activation to see its structure
+  if (allActivations.length > 0) {
+    console.log('Sample activation object:', JSON.stringify(allActivations[0], null, 2))
+    console.log('All activations:', allActivations.map(a => ({
+      id: a.id,
+      name: a.name,
+      status: a.status,
+      startDate: a.startDate
+    })))
   }
-  return activations.value.filter(activation =>
+  
+  if (!selectedActivationStatus.value) {
+    return allActivations
+  }
+  return allActivations.filter(activation =>
       activation.status === selectedActivationStatus.value
   )
 })
@@ -593,11 +615,14 @@ const loadClientData = async () => {
 
 const loadActivations = async () => {
   try {
-    const response = await withLoading('fetch-client-activations', () => 
+    const result = await withLoading('fetch-client-activations', () => 
       clientsStore.getClientActivations(route.params.id)
     )
-    // Update local activations if needed for additional processing
-    activations.value = response.data || []
+    console.log('loadActivations result:', result)
+    
+    // Check what's in the cache after loading
+    const cached = clientsStore.getCachedClientActivations(route.params.id)
+    console.log('Cached activations after load:', cached)
   } catch (error) {
     console.error('Failed to load activations:', error)
     toast.add({
@@ -752,6 +777,7 @@ watch(() => clientsStore.error, (error) => {
 })
 
 onMounted(async () => {
+  console.log('onMounted called');
   await Promise.all([
     loadClientData(),
     loadActivations(),

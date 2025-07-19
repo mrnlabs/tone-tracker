@@ -23,61 +23,6 @@
         @reset="resetFilters"
       />
 
-      <!-- Quick Navigation Cards -->
-      <div class="nav-cards">
-        <Card
-            class="nav-card"
-            @click="$router.push('/warehouses/inventory')"
-        >
-          <template #content>
-            <div class="nav-card-content">
-              <div class="nav-icon inventory">
-                <i class="pi pi-box"></i>
-              </div>
-              <div class="nav-info">
-                <h3>Inventory Management</h3>
-                <p>Monitor stock levels and manage inventory across all warehouses</p>
-              </div>
-            </div>
-          </template>
-        </Card>
-
-        <Card
-            class="nav-card"
-            @click="$router.push('/warehouses/stock')"
-        >
-          <template #content>
-            <div class="nav-card-content">
-              <div class="nav-icon stock">
-                <i class="pi pi-arrow-right-arrow-left"></i>
-              </div>
-              <div class="nav-info">
-                <h3>Stock Management</h3>
-                <p>Handle stock movements, transfers, and allocations</p>
-              </div>
-            </div>
-          </template>
-        </Card>
-
-        <Card
-            class="nav-card"
-            @click="$router.push('/warehouses/reports')"
-        >
-          <template #content>
-            <div class="nav-card-content">
-              <div class="nav-icon reports">
-                <i class="pi pi-chart-bar"></i>
-              </div>
-              <div class="nav-info">
-                <h3>Reports & Analytics</h3>
-                <p>Generate reports and analyze warehouse performance</p>
-              </div>
-            </div>
-          </template>
-        </Card>
-      </div>
-
-
       <!-- Warehouses Table -->
       <Card class="warehouses-table-card">
         <template #content>

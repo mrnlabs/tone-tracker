@@ -141,6 +141,64 @@ export const STOCK_STATUS_LABELS = {
     [STOCK_STATUS.RETURNED]: 'Returned'
 }
 
+// Stock Movement Types - Must match API specification exactly
+export const STOCK_MOVEMENT_TYPE = {
+    SALE: 'SALE',
+    ALLOCATION: 'ALLOCATION',
+    REPLENISHMENT: 'REPLENISHMENT',
+    ADJUSTMENT: 'ADJUSTMENT',
+    DISTRIBUTION: 'DISTRIBUTION',
+    RETURN: 'RETURN',
+    SAMPLE: 'SAMPLE',
+    IN: 'IN',
+    OUT: 'OUT'
+}
+
+export const STOCK_MOVEMENT_TYPE_LABELS = {
+    [STOCK_MOVEMENT_TYPE.SALE]: 'Sale',
+    [STOCK_MOVEMENT_TYPE.ALLOCATION]: 'Allocation',
+    [STOCK_MOVEMENT_TYPE.REPLENISHMENT]: 'Replenishment',
+    [STOCK_MOVEMENT_TYPE.ADJUSTMENT]: 'Adjustment',
+    [STOCK_MOVEMENT_TYPE.DISTRIBUTION]: 'Distribution',
+    [STOCK_MOVEMENT_TYPE.RETURN]: 'Return',
+    [STOCK_MOVEMENT_TYPE.SAMPLE]: 'Sample',
+    [STOCK_MOVEMENT_TYPE.IN]: 'Stock In',
+    [STOCK_MOVEMENT_TYPE.OUT]: 'Stock Out'
+}
+
+// Stock Movement Reasons
+export const STOCK_MOVEMENT_REASON = {
+    PURCHASE: 'purchase',
+    SALE: 'sale',
+    DAMAGE: 'damage',
+    THEFT: 'theft',
+    EXPIRY: 'expiry',
+    QUALITY_ISSUE: 'quality_issue',
+    INVENTORY_COUNT: 'inventory_count',
+    PROMOTION: 'promotion',
+    TRANSFER_IN: 'transfer_in',
+    TRANSFER_OUT: 'transfer_out',
+    CUSTOMER_RETURN: 'customer_return',
+    SUPPLIER_RETURN: 'supplier_return',
+    OTHER: 'other'
+}
+
+export const STOCK_MOVEMENT_REASON_LABELS = {
+    [STOCK_MOVEMENT_REASON.PURCHASE]: 'Purchase',
+    [STOCK_MOVEMENT_REASON.SALE]: 'Sale',
+    [STOCK_MOVEMENT_REASON.DAMAGE]: 'Damage',
+    [STOCK_MOVEMENT_REASON.THEFT]: 'Theft',
+    [STOCK_MOVEMENT_REASON.EXPIRY]: 'Expiry',
+    [STOCK_MOVEMENT_REASON.QUALITY_ISSUE]: 'Quality Issue',
+    [STOCK_MOVEMENT_REASON.INVENTORY_COUNT]: 'Inventory Count',
+    [STOCK_MOVEMENT_REASON.PROMOTION]: 'Promotional Activity',
+    [STOCK_MOVEMENT_REASON.TRANSFER_IN]: 'Transfer In',
+    [STOCK_MOVEMENT_REASON.TRANSFER_OUT]: 'Transfer Out',
+    [STOCK_MOVEMENT_REASON.CUSTOMER_RETURN]: 'Customer Return',
+    [STOCK_MOVEMENT_REASON.SUPPLIER_RETURN]: 'Supplier Return',
+    [STOCK_MOVEMENT_REASON.OTHER]: 'Other'
+}
+
 // Client Statuses
 export const CLIENT_STATUS = {
     NEW: 'NEW',
@@ -331,8 +389,8 @@ export const API_ENDPOINTS = {
 
     // Users
     USERS: '/users',
-    USER_PROFILE: '/users/profile',
-    UPDATE_PROFILE: '/users/profile',
+    USER_PROFILE: '/users/current',
+    UPDATE_PROFILE: '/users/current',
 
     // Clients
     CLIENTS: '/clients',
@@ -361,6 +419,15 @@ export const API_ENDPOINTS = {
     STOCK_ALLOCATION: '/inventory/allocate',
     STOCK_MOVEMENTS: '/inventory/movements',
     STOCK_TRANSFERS: '/warehouses/transfers',
+    
+    // Stock Management
+    STOCKS: '/stocks',
+    STOCK_DETAILS: '/stocks/:id',
+    STOCK_MOVEMENT_HISTORY: '/stocks/:id/movements',
+    
+    // Sales
+    SALES: '/api/sales',
+    CREATE_SALE: '/api/sales',
 
     // Reports
     REPORTS: '/reports',
@@ -538,13 +605,116 @@ export const APP_SETTINGS = {
     DEFAULT_THEME: THEMES.LIGHT
 }
 
+// Lead Management Constants
+export const LEAD_GENDERS = {
+    MALE: 'MALE',
+    FEMALE: 'FEMALE',
+    OTHER: 'OTHER'
+}
+
+export const LEAD_GENDER_LABELS = {
+    [LEAD_GENDERS.MALE]: 'Male',
+    [LEAD_GENDERS.FEMALE]: 'Female',
+    [LEAD_GENDERS.OTHER]: 'Other'
+}
+
+export const LEAD_AGE_GROUPS = {
+    UNDER_18: 'UNDER_18',
+    BETWEEN_18_25: 'BETWEEN_18_25',
+    BETWEEN_26_35: 'BETWEEN_26_35',
+    BETWEEN_36_45: 'BETWEEN_36_45',
+    BETWEEN_46_55: 'BETWEEN_46_55',
+    OVER_55: 'OVER_55'
+}
+
+export const LEAD_AGE_GROUP_LABELS = {
+    [LEAD_AGE_GROUPS.UNDER_18]: 'Under 18',
+    [LEAD_AGE_GROUPS.BETWEEN_18_25]: '18-25',
+    [LEAD_AGE_GROUPS.BETWEEN_26_35]: '26-35',
+    [LEAD_AGE_GROUPS.BETWEEN_36_45]: '36-45',
+    [LEAD_AGE_GROUPS.BETWEEN_46_55]: '46-55',
+    [LEAD_AGE_GROUPS.OVER_55]: 'Over 55'
+}
+
+export const LEAD_CUSTOMER_TYPES = {
+    SHOPPER: 'SHOPPER',
+    RETAILER: 'RETAILER',
+    DISTRIBUTOR: 'DISTRIBUTOR'
+}
+
+export const LEAD_CUSTOMER_TYPE_LABELS = {
+    [LEAD_CUSTOMER_TYPES.SHOPPER]: 'Shopper',
+    [LEAD_CUSTOMER_TYPES.RETAILER]: 'Retailer',
+    [LEAD_CUSTOMER_TYPES.DISTRIBUTOR]: 'Distributor'
+}
+
+export const LEAD_REPEAT_PURCHASE_INTENT = {
+    YES: 'YES',
+    NO: 'NO',
+    MAYBE: 'MAYBE'
+}
+
+export const LEAD_REPEAT_PURCHASE_LABELS = {
+    [LEAD_REPEAT_PURCHASE_INTENT.YES]: 'Yes',
+    [LEAD_REPEAT_PURCHASE_INTENT.NO]: 'No',
+    [LEAD_REPEAT_PURCHASE_INTENT.MAYBE]: 'Maybe'
+}
+
+export const LEAD_STATUSES = {
+    NEW: 'NEW',
+    CONTACTED: 'CONTACTED',
+    QUALIFIED: 'QUALIFIED',
+    CONVERTED: 'CONVERTED',
+    UNQUALIFIED: 'UNQUALIFIED'
+}
+
+export const LEAD_STATUS_LABELS = {
+    [LEAD_STATUSES.NEW]: 'New Lead',
+    [LEAD_STATUSES.CONTACTED]: 'Contacted',
+    [LEAD_STATUSES.QUALIFIED]: 'Qualified',
+    [LEAD_STATUSES.CONVERTED]: 'Converted',
+    [LEAD_STATUSES.UNQUALIFIED]: 'Unqualified'
+}
+
+export const LEAD_SOURCES = {
+    ACTIVATION: 'ACTIVATION',
+    WEBSITE: 'WEBSITE',
+    REFERRAL: 'REFERRAL',
+    SOCIAL_MEDIA: 'SOCIAL_MEDIA',
+    EMAIL: 'EMAIL',
+    PHONE: 'PHONE',
+    OTHER: 'OTHER'
+}
+
+export const LEAD_SOURCE_LABELS = {
+    [LEAD_SOURCES.ACTIVATION]: 'Activation Campaign',
+    [LEAD_SOURCES.WEBSITE]: 'Website',
+    [LEAD_SOURCES.REFERRAL]: 'Referral',
+    [LEAD_SOURCES.SOCIAL_MEDIA]: 'Social Media',
+    [LEAD_SOURCES.EMAIL]: 'Email',
+    [LEAD_SOURCES.PHONE]: 'Phone',
+    [LEAD_SOURCES.OTHER]: 'Other'
+}
+
+// Lead API Endpoints
+export const LEAD_ENDPOINTS = {
+    LEADS: '/leads',
+    LEAD_SEARCH: '/leads/search',
+    LEADS_BY_ACTIVATION: '/leads/activation/:activationId',
+    OPTED_IN_LEADS: '/leads/opted-in',
+    WHATSAPP_OPTED_IN: '/leads/whatsapp-opted-in',
+    LEAD_STATISTICS: '/leads/statistics',
+    LEAD_EXPORT: '/leads/export'
+}
+
 // Export helper functions
 export const getStatusLabel = (status, type = 'activation') => {
     const labelMaps = {
         activation: ACTIVATION_STATUS_LABELS,
         user: USER_STATUS_LABELS,
         stock: STOCK_STATUS_LABELS,
-        client: CLIENT_STATUS_LABELS
+        client: CLIENT_STATUS_LABELS,
+        lead: LEAD_STATUS_LABELS
     }
     return labelMaps[type]?.[status] || status
 }

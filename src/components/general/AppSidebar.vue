@@ -185,9 +185,7 @@ const navigationItems = [
     icon: 'pi pi-box',
     roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER'],
     children: [
-      { label: 'All Warehouses', path: '/warehouses', icon: 'pi pi-box' },
-      { label: 'Inventory', path: '/warehouses/inventory', icon: 'pi pi-list' },
-      { label: 'Stock Management', path: '/warehouses/stock', icon: 'pi pi-shopping-cart' }
+      { label: 'All Warehouses', path: '/warehouses', icon: 'pi pi-box' }
     ]
   },
   {
@@ -207,6 +205,8 @@ const navigationItems = [
     icon: 'pi pi-chart-bar',
     roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT', 'WAREHOUSE_MANAGER'],
     children: [
+      { label: 'All Reports', path: '/reports', icon: 'pi pi-chart-bar' },
+      { label: 'Stock Movement', path: '/reports/stock-movements', icon: 'pi pi-box', roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER'] },
       { label: 'Activation Reports', path: '/reports/activations', icon: 'pi pi-calendar' },
       { label: 'Performance Reports', path: '/reports/performance', icon: 'pi pi-chart-line' },
       { label: 'Inventory Reports', path: '/reports/inventory', icon: 'pi pi-box' }

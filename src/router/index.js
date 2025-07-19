@@ -195,6 +195,7 @@ const routes = [
     // Warehouse routes (imported from separate file)
     ...warehouseRoutes,
 
+
     {
         path: '/reports',
         name: 'reports',
@@ -203,6 +204,16 @@ const routes = [
             requiresAuth: true,
             title: 'Reports - Activation Tracker',
             roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT']
+        }
+    },
+    {
+        path: '/reports/stock-movements',
+        name: 'stock-movement-report',
+        component: () => import('@/views/reports/StockMovementReport.vue'),
+        meta: {
+            requiresAuth: true,
+            title: 'Stock Movement Report - Activation Tracker',
+            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
         }
     },
     // User Management Routes

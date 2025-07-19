@@ -615,7 +615,15 @@ const apiService = new ApiService()
 
     async getClientActivations(clientId, params = {}) {
         const url = API_ENDPOINTS.CLIENT_ACTIVATIONS.replace(':id', clientId)
-        return await apiService.getPaginated(url, params)
+        // Override default sort for activations
+        const activationParams = {
+            ...params,
+            sort: params.sort || ['startDate,desc']
+        }
+        console.log('getClientActivations URL:', url, 'params:', activationParams)
+        const result = await apiService.getPaginated(url, activationParams)
+        console.log('getClientActivations result:', result)
+        return result
     },
 
     async getClientReports(clientId, params = {}) {
@@ -787,16 +795,21 @@ const apiService = new ApiService()
         return await apiService.post(API_ENDPOINTS.STOCK_ALLOCATION, allocationData)
     },
 
-    async getStockMovements(params = {}) {
-        return await apiService.getPaginated(API_ENDPOINTS.STOCK_MOVEMENTS, params)
+    async getStockMovements(stockId, params = {}) {
+        return await apiService.getPaginated(`/stocks/${stockId}/movements`, params)
     },
 
-    async updateStock(itemId, quantity, type = 'adjustment', notes = '') {
-        return await apiService.post(`${API_ENDPOINTS.INVENTORY}/${itemId}/movements`, {
+    async updateStock(itemId, quantity, type = 'adjustment', notes = '', openingStock = null, closingStock = null, activationId = null) {
+        const payload = {
             quantity,
-            type,
-            notes
-        })
+            movementType: type.toUpperCase(),
+            reason: notes || `${type} movement`,
+            openingStock,
+            closingStock,
+            activationId
+        }
+        console.log('updateStock payload:', payload)
+        return await apiService.post(`/stocks/${itemId}/movements`, payload)
     },
 
     async getLowStockAlerts() {
@@ -862,6 +875,44 @@ const warehouseService = {
 
     async createWarehouseStock(warehouseId, stockData) {
         return await apiService.post('/stocks', stockData)
+    },
+    async updateWarehouseStock(warehouseId, stockId, stockData) {
+        return await apiService.put(`/stocks/${stockId}`, stockData)
+    },
+    async deleteWarehouseStock(warehouseId, stockId) {
+        return await apiService.delete(`/stocks/${stockId}`)
+    },
+    async deactivateStock(stockId) {
+        return await apiService.post(`/stocks/${stockId}/deactivate`)
+    },
+    async assignWarehouseManager(warehouseId, managerId) {
+        console.log('=== API SERVICE DEBUG ===')
+        console.log('assignWarehouseManager called with:')
+        console.log('- warehouseId:', warehouseId, 'Type:', typeof warehouseId)
+        console.log('- managerId:', managerId, 'Type:', typeof managerId)
+        
+        const endpoint = `/warehouses/${warehouseId}/assign-manager/${managerId}`
+        console.log('- Full endpoint:', endpoint)
+        console.log('- Request method: PUT')
+        console.log('- Request body: (none - path parameters only)')
+        console.log('=== END API SERVICE DEBUG ===')
+        
+        return await apiService.put(endpoint)
+    },
+    
+    async removeWarehouseManager(warehouseId) {
+        console.log('=== REMOVE WAREHOUSE MANAGER DEBUG ===')
+        console.log('removeWarehouseManager called with:')
+        console.log('- warehouseId:', warehouseId, 'Type:', typeof warehouseId)
+        
+        const endpoint = `/warehouses/${warehouseId}/remove-manager`
+        console.log('- Full endpoint:', endpoint)
+        console.log('- Base URL:', apiService.client.defaults.baseURL)
+        console.log('- Full URL:', `${apiService.client.defaults.baseURL}${endpoint}`)
+        console.log('- Request method: DELETE')
+        console.log('=== END REMOVE MANAGER DEBUG ===')
+        
+        return await apiService.delete(endpoint)
     }
 }
 

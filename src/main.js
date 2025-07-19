@@ -39,6 +39,10 @@ import TabPanel from 'primevue/tabpanel'
 import Timeline from 'primevue/timeline'
 import Calendar from 'primevue/calendar'
 import MultiSelect from 'primevue/multiselect'
+import InputIcon from 'primevue/inputicon'
+import IconField from 'primevue/iconfield'
+import RadioButton from 'primevue/radiobutton'
+import Message from 'primevue/message'
 
 // Create app
 const app = createApp(App)
@@ -82,6 +86,10 @@ app.component('TabPanel', TabPanel)
 app.component('Timeline', Timeline)
 app.component('Calendar', Calendar)
 app.component('MultiSelect', MultiSelect)
+app.component('InputIcon', InputIcon)
+app.component('IconField', IconField)
+app.component('RadioButton', RadioButton)
+app.component('Message', Message)
 
 // Global error handler
 app.config.errorHandler = (err, instance, info) => {

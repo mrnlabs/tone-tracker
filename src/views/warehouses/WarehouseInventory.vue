@@ -12,9 +12,9 @@
           />
         </div>
         <div class="header-info">
-          <h1 class="page-title">Inventory Management</h1>
+          <h1 class="page-title">{{ warehouseData?.name || 'Warehouse' }} Inventory</h1>
           <p class="page-description">
-            Monitor and manage stock levels across all warehouses
+            Monitor and manage stock levels for {{ warehouseData?.name || 'this warehouse' }}
           </p>
         </div>
       </div>
@@ -30,7 +30,7 @@
               <div class="stat-info">
                 <h3>Total SKUs</h3>
                 <p class="stat-number">{{ inventoryStats.totalSKUs }}</p>
-                <span class="stat-detail">{{ inventoryStats.activeWarehouses }} warehouses</span>
+                <span class="stat-detail">in this warehouse</span>
               </div>
             </div>
           </template>
@@ -60,7 +60,7 @@
               <div class="stat-info">
                 <h3>Inventory Value</h3>
                 <p class="stat-number">${{ inventoryStats.totalValue.toLocaleString() }}</p>
-                <span class="stat-detail">across all locations</span>
+                <span class="stat-detail">in this warehouse</span>
               </div>
             </div>
           </template>
@@ -129,17 +129,6 @@
               </span>
             </div>
 
-            <div class="filter-field">
-              <Dropdown
-                  v-model="selectedWarehouse"
-                  :options="warehouseOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="All Warehouses"
-                  showClear
-                  @change="handleFilter"
-              />
-            </div>
 
             <div class="filter-field">
               <Dropdown
@@ -302,8 +291,14 @@
                       v-tooltip.top="'View Details'"
                   />
                   <Button
-                      @click="adjustStock(data)"
+                      @click="editStock(data)"
                       icon="pi pi-pencil"
+                      class="p-button-text p-button-sm"
+                      v-tooltip.top="'Edit Stock'"
+                  />
+                  <Button
+                      @click="adjustStock(data)"
+                      icon="pi pi-plus-circle"
                       class="p-button-text p-button-sm"
                       v-tooltip.top="'Adjust Stock'"
                   />
@@ -318,6 +313,12 @@
                       icon="pi pi-send"
                       class="p-button-text p-button-sm"
                       v-tooltip.top="'Allocate'"
+                  />
+                  <Button
+                      @click="deleteStock(data)"
+                      icon="pi pi-trash"
+                      class="p-button-text p-button-sm p-button-danger"
+                      v-tooltip.top="'Delete Stock'"
                   />
                 </div>
               </template>
@@ -340,40 +341,29 @@
         </template>
       </Card>
 
-      <!-- Warehouse Stock Distribution -->
-      <Card class="distribution-card">
+      <!-- Warehouse Information Card -->
+      <Card class="warehouse-info-card">
         <template #header>
-          <h3>Stock Distribution by Warehouse</h3>
+          <h3>Warehouse Information</h3>
         </template>
         <template #content>
-          <div class="distribution-grid">
-            <div
-                v-for="warehouse in warehouseDistribution"
-                :key="warehouse.id"
-                class="distribution-item"
-                @click="filterByWarehouse(warehouse.id)"
-            >
-              <div class="warehouse-header">
-                <h4>{{ warehouse.name }}</h4>
-                <span class="warehouse-code">{{ warehouse.code }}</span>
+          <div v-if="warehouseData" class="warehouse-details">
+            <div class="detail-grid">
+              <div class="detail-item">
+                <label>Warehouse Name:</label>
+                <span>{{ warehouseData.name }}</span>
               </div>
-              <div class="warehouse-stats">
-                <div class="stat-row">
-                  <span class="stat-label">SKUs:</span>
-                  <span class="stat-value">{{ warehouse.skuCount }}</span>
-                </div>
-                <div class="stat-row">
-                  <span class="stat-label">Total Units:</span>
-                  <span class="stat-value">{{ warehouse.totalUnits.toLocaleString() }}</span>
-                </div>
-                <div class="stat-row">
-                  <span class="stat-label">Value:</span>
-                  <span class="stat-value">${{ warehouse.totalValue.toLocaleString() }}</span>
-                </div>
-                <div class="stat-row">
-                  <span class="stat-label">Utilization:</span>
-                  <ProgressBar :value="warehouse.utilization" class="utilization-mini" />
-                </div>
+              <div class="detail-item">
+                <label>Location:</label>
+                <span>{{ warehouseData.city || 'N/A' }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Address:</label>
+                <span>{{ warehouseData.streetAddress || 'N/A' }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Manager:</label>
+                <span>{{ warehouseData.warehouseManager ? `${warehouseData.warehouseManager.firstName} ${warehouseData.warehouseManager.lastName}` : 'Not assigned' }}</span>
               </div>
             </div>
           </div>
@@ -404,13 +394,11 @@
 
         <div class="form-group">
           <label for="adjustmentWarehouse">Warehouse</label>
-          <Dropdown
+          <InputText
               id="adjustmentWarehouse"
-              v-model="stockAdjustment.warehouseId"
-              :options="warehouseOptions"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Select warehouse"
+              :value="warehouseData?.name || 'Current Warehouse'"
+              readonly
+              class="readonly-field"
           />
         </div>
 
@@ -554,6 +542,164 @@
         />
       </template>
     </Dialog>
+
+    <!-- Edit Stock Dialog -->
+    <Dialog
+        v-model:visible="showEditStock"
+        :style="{ width: '600px' }"
+        header="Edit Stock Item"
+        :modal="true"
+    >
+      <div class="edit-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editSku">SKU</label>
+            <InputText
+                id="editSku"
+                v-model="editStockForm.sku"
+                placeholder="Enter SKU"
+                :readonly="true"
+                class="readonly-field"
+            />
+          </div>
+          <div class="form-group">
+            <label for="editProductName">Product Name</label>
+            <InputText
+                id="editProductName"
+                v-model="editStockForm.productName"
+                placeholder="Enter product name"
+            />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editCategory">Category</label>
+            <Dropdown
+                id="editCategory"
+                v-model="editStockForm.category"
+                :options="categoryOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select category"
+            />
+          </div>
+          <div class="form-group">
+            <label for="editUnit">Unit</label>
+            <InputText
+                id="editUnit"
+                v-model="editStockForm.unit"
+                placeholder="Enter unit (e.g., pieces, kg)"
+            />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editMinThreshold">Min Threshold</label>
+            <InputNumber
+                id="editMinThreshold"
+                v-model="editStockForm.minThreshold"
+                :min="0"
+                placeholder="Minimum stock level"
+            />
+          </div>
+          <div class="form-group">
+            <label for="editUnitCost">Unit Cost</label>
+            <InputNumber
+                id="editUnitCost"
+                v-model="editStockForm.unitCost"
+                mode="currency"
+                currency="USD"
+                locale="en-US"
+                :min="0"
+                placeholder="Cost per unit"
+            />
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button
+            label="Cancel"
+            icon="pi pi-times"
+            @click="closeEditStock"
+            class="p-button-text"
+        />
+        <Button
+            label="Save Changes"
+            icon="pi pi-check"
+            @click="saveEditStock"
+            :disabled="!isEditFormValid"
+        />
+      </template>
+    </Dialog>
+
+    <!-- Delete Confirmation Dialog -->
+    <Dialog
+        v-model:visible="showDeleteConfirm"
+        :style="{ width: '450px' }"
+        header="Confirm Delete"
+        :modal="true"
+    >
+      <div class="confirmation-content">
+        <i class="pi pi-exclamation-triangle" style="font-size: 2rem; color: #f56565; margin-right: 1rem;"></i>
+        <div>
+          <h3>Delete Stock Item</h3>
+          <p>Are you sure you want to delete the stock item <strong>{{ selectedStock?.sku }}</strong>?</p>
+          <p class="warning-text">This action cannot be undone and will remove all stock data for this item.</p>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button
+            label="Cancel"
+            icon="pi pi-times"
+            @click="showDeleteConfirm = false"
+            class="p-button-text"
+        />
+        <Button
+            label="Delete"
+            icon="pi pi-trash"
+            @click="confirmDeleteStock"
+            class="p-button-danger"
+        />
+      </template>
+    </Dialog>
+
+    <!-- Movement History Dialog -->
+    <Dialog
+        v-model:visible="showMovementHistory"
+        :style="{ width: '90vw', maxWidth: '1200px' }"
+        header="Stock Movement History"
+        :modal="true"
+        :maximizable="true"
+    >
+      <div v-if="selectedStock" class="movement-history-content">
+        <div class="history-header">
+          <h4>{{ selectedStock.productName }}</h4>
+          <span class="sku-badge">{{ selectedStock.sku }}</span>
+        </div>
+        
+        <StockMovementList
+          :stock-id="selectedStock.id"
+          :show-summary="true"
+          :show-activation-filter="true"
+          :hide-activation-column="false"
+          :can-export="true"
+          :can-refresh="true"
+        />
+      </div>
+
+      <template #footer>
+        <BaseButton
+            label="Close"
+            icon="pi pi-times"
+            @click="showMovementHistory = false"
+            variant="secondary"
+        />
+      </template>
+    </Dialog>
   </DashboardLayout>
 </template>
 
@@ -562,20 +708,25 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
+import { useWarehouseStore } from '@/stores/warehouse'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
+import { StockMovementList, BaseButton } from '@/components'
 
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const authStore = useAuthStore()
+const warehouseStore = useWarehouseStore()
+
+// Get warehouse ID from route
+const warehouseId = computed(() => route.params.id)
 
 // State
 const loading = ref(false)
 const inventory = ref([])
 const selectedItems = ref([])
-const warehouseDistribution = ref([])
+const warehouseData = ref(null)
 const searchQuery = ref('')
-const selectedWarehouse = ref(null)
 const selectedCategory = ref(null)
 const selectedStockStatus = ref(null)
 
@@ -583,6 +734,9 @@ const selectedStockStatus = ref(null)
 const showStockAdjustment = ref(false)
 const showBulkUpdate = ref(false)
 const showStockDetails = ref(false)
+const showEditStock = ref(false)
+const showDeleteConfirm = ref(false)
+const showMovementHistory = ref(false)
 const selectedStock = ref(null)
 
 // Form data
@@ -592,6 +746,16 @@ const stockAdjustment = ref({
   type: '',
   quantity: null,
   reason: ''
+})
+
+const editStockForm = ref({
+  id: null,
+  sku: '',
+  productName: '',
+  category: '',
+  minThreshold: null,
+  unitCost: null,
+  unit: ''
 })
 
 // Stats
@@ -604,7 +768,6 @@ const inventoryStats = ref({
 })
 
 // Options
-const warehouseOptions = ref([])
 const categoryOptions = ref([])
 const skuOptions = ref([])
 
@@ -638,11 +801,7 @@ const filteredInventory = computed(() => {
     )
   }
 
-  // Warehouse filter
-  if (selectedWarehouse.value) {
-    // This would filter by specific warehouse in real implementation
-    // For now, showing all items but would need warehouse-specific data
-  }
+  // Warehouse filter is automatically applied since we're only loading data for this warehouse
 
   // Category filter
   if (selectedCategory.value) {
@@ -668,14 +827,26 @@ const isAdjustmentFormValid = computed(() => {
       stockAdjustment.value.reason
 })
 
+const isEditFormValid = computed(() => {
+  return editStockForm.value.sku &&
+      editStockForm.value.productName &&
+      editStockForm.value.category &&
+      editStockForm.value.minThreshold &&
+      editStockForm.value.unitCost &&
+      editStockForm.value.unit
+})
+
 // Methods
 const loadInventoryData = async () => {
   loading.value = true
   try {
-    // Mock API call - replace with actual API
+    // Load warehouse data first
+    await loadWarehouseData()
+    
+    // Mock API call - replace with actual API for warehouse-specific inventory
     await new Promise(resolve => setTimeout(resolve, 1000))
 
-    // Mock inventory data
+    // Mock inventory data for this specific warehouse
     inventory.value = [
       {
         id: 1,
@@ -733,12 +904,8 @@ const loadInventoryData = async () => {
       }
     ]
 
-    // Load options
-    warehouseOptions.value = [
-      { label: 'Main Distribution Center', value: 1 },
-      { label: 'West Coast Depot', value: 2 },
-      { label: 'Central Hub', value: 3 }
-    ]
+    // Load options (categories remain the same)
+    // Warehouse options removed since this is warehouse-specific
 
     categoryOptions.value = [
       { label: 'Hair Care', value: 'Hair Care' },
@@ -752,45 +919,16 @@ const loadInventoryData = async () => {
       value: item.sku
     }))
 
-    // Calculate stats
+    // Calculate warehouse-specific stats
     inventoryStats.value = {
       totalSKUs: inventory.value.length,
       totalUnits: inventory.value.reduce((sum, item) => sum + item.totalStock, 0),
       totalValue: inventory.value.reduce((sum, item) => sum + (item.totalStock * item.unitCost), 0),
       lowStockItems: inventory.value.filter(item => item.availableStock <= item.minThreshold).length,
-      activeWarehouses: 3
+      activeWarehouses: 1
     }
 
-    // Load warehouse distribution
-    warehouseDistribution.value = [
-      {
-        id: 1,
-        name: 'Main Distribution Center',
-        code: 'MDC-001',
-        skuCount: 245,
-        totalUnits: 12450,
-        totalValue: 485000,
-        utilization: 78
-      },
-      {
-        id: 2,
-        name: 'West Coast Depot',
-        code: 'WCD-002',
-        skuCount: 180,
-        totalUnits: 8960,
-        totalValue: 320000,
-        utilization: 65
-      },
-      {
-        id: 3,
-        name: 'Central Hub',
-        code: 'CH-003',
-        skuCount: 210,
-        totalUnits: 10580,
-        totalValue: 395000,
-        utilization: 85
-      }
-    ]
+    // No warehouse distribution needed for single warehouse view
 
   } catch (error) {
     toast.add({
@@ -848,8 +986,33 @@ const resetFilters = () => {
   selectedStockStatus.value = null
 }
 
-const filterByWarehouse = (warehouseId) => {
-  selectedWarehouse.value = warehouseId
+const loadWarehouseData = async () => {
+  try {
+    if (warehouseId.value) {
+      // In a real app, this would fetch from the warehouse store
+      // For now, using mock data based on warehouse ID
+      warehouseData.value = {
+        id: parseInt(warehouseId.value),
+        name: `Warehouse ${warehouseId.value}`,
+        city: 'Sample City',
+        streetAddress: '123 Warehouse Street',
+        warehouseManager: {
+          firstName: 'John',
+          lastName: 'Doe'
+        }
+      }
+      
+      // Try to get actual warehouse data from store if available
+      await warehouseStore.fetchWarehouses()
+      const warehouses = warehouseStore.warehouses || []
+      const actualWarehouse = warehouses.find(w => w.id === parseInt(warehouseId.value))
+      if (actualWarehouse) {
+        warehouseData.value = actualWarehouse
+      }
+    }
+  } catch (error) {
+    console.error('Error loading warehouse data:', error)
+  }
 }
 
 const formatDate = (dateString) => {
@@ -865,27 +1028,129 @@ const viewStockDetails = (item) => {
   showStockDetails.value = true
 }
 
+const editStock = (item) => {
+  console.log('Edit stock clicked for item:', item)
+  editStockForm.value = {
+    id: item.id,
+    sku: item.sku,
+    productName: item.productName,
+    category: item.category,
+    minThreshold: item.minThreshold,
+    unitCost: item.unitCost,
+    unit: item.unit
+  }
+  showEditStock.value = true
+}
+
 const adjustStock = (item) => {
   stockAdjustment.value.sku = item.sku
+  stockAdjustment.value.warehouseId = warehouseId.value
   showStockAdjustment.value = true
 }
 
 const viewMovementHistory = (item) => {
-  router.push(`/warehouses/inventory/${item.sku}/history`)
+  selectedStock.value = item
+  showMovementHistory.value = true
 }
 
 const allocateStock = (item) => {
   router.push(`/warehouses/inventory/${item.sku}/allocate`)
 }
 
+const deleteStock = (item) => {
+  console.log('Delete stock clicked for item:', item)
+  selectedStock.value = item
+  showDeleteConfirm.value = true
+}
+
 const closeStockAdjustment = () => {
   showStockAdjustment.value = false
   stockAdjustment.value = {
     sku: '',
-    warehouseId: '',
+    warehouseId: warehouseId.value || '',
     type: '',
     quantity: null,
     reason: ''
+  }
+}
+
+const closeEditStock = () => {
+  showEditStock.value = false
+  editStockForm.value = {
+    id: null,
+    sku: '',
+    productName: '',
+    category: '',
+    minThreshold: null,
+    unitCost: null,
+    unit: ''
+  }
+}
+
+const saveEditStock = async () => {
+  try {
+    // Mock API call - replace with actual API
+    await new Promise(resolve => setTimeout(resolve, 1000))
+
+    // Find and update the item in the inventory array
+    const index = inventory.value.findIndex(item => item.id === editStockForm.value.id)
+    if (index !== -1) {
+      inventory.value[index] = {
+        ...inventory.value[index],
+        sku: editStockForm.value.sku,
+        productName: editStockForm.value.productName,
+        category: editStockForm.value.category,
+        minThreshold: editStockForm.value.minThreshold,
+        unitCost: editStockForm.value.unitCost,
+        unit: editStockForm.value.unit
+      }
+    }
+
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Stock item updated successfully',
+      life: 3000
+    })
+
+    closeEditStock()
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to update stock item',
+      life: 3000
+    })
+  }
+}
+
+const confirmDeleteStock = async () => {
+  try {
+    // Mock API call - replace with actual API
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    // Remove the item from the inventory array
+    const index = inventory.value.findIndex(item => item.id === selectedStock.value.id)
+    if (index !== -1) {
+      inventory.value.splice(index, 1)
+    }
+
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: `Stock item ${selectedStock.value.sku} deleted successfully`,
+      life: 3000
+    })
+
+    showDeleteConfirm.value = false
+    selectedStock.value = null
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to delete stock item',
+      life: 3000
+    })
   }
 }
 
@@ -1156,7 +1421,15 @@ onMounted(() => {
 
 .action-buttons {
   display: flex;
-  gap: 0.25rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  min-width: 300px;
+}
+
+.action-buttons .p-button {
+  min-width: 40px;
+  min-height: 32px;
 }
 
 .empty-state {
@@ -1180,72 +1453,39 @@ onMounted(() => {
   margin-bottom: 1.5rem;
 }
 
-.distribution-card {
+.warehouse-info-card {
   margin-bottom: 1.5rem;
 }
 
-.distribution-grid {
+.warehouse-details {
+  padding: 1rem 0;
+}
+
+.detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
 }
 
-.distribution-item {
-  padding: 1rem;
-  border: 1px solid #e5e7eb;
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: #f9fafb;
   border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  border: 1px solid #e5e7eb;
 }
 
-.distribution-item:hover {
-  border-color: #3b82f6;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
-}
-
-.warehouse-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.warehouse-header h4 {
-  margin: 0;
-  color: #111827;
-}
-
-.warehouse-code {
-  font-family: monospace;
-  font-size: 0.8rem;
-  color: #6b7280;
-}
-
-.warehouse-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.stat-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.stat-label {
-  font-size: 0.875rem;
-  color: #6b7280;
-}
-
-.stat-value {
+.detail-item label {
   font-weight: 500;
-  color: #111827;
+  color: #6b7280;
+  font-size: 0.875rem;
 }
 
-.utilization-mini {
-  height: 0.25rem;
-  width: 60px;
+.detail-item span {
+  color: #111827;
+  font-weight: 500;
 }
 
 .adjustment-form {
@@ -1333,6 +1573,77 @@ onMounted(() => {
   margin: 0 0 1rem 0;
 }
 
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.readonly-field {
+  background-color: #f9fafb;
+  color: #6b7280;
+}
+
+.confirmation-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+.confirmation-content h3 {
+  margin: 0 0 0.5rem 0;
+  color: #111827;
+}
+
+.confirmation-content p {
+  margin: 0.5rem 0;
+  color: #6b7280;
+}
+
+.warning-text {
+  color: #f56565;
+  font-weight: 500;
+}
+
+.movement-history-content {
+  padding: 1rem 0;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.history-header h4 {
+  margin: 0;
+  color: #111827;
+  font-size: 1.25rem;
+}
+
 @media (max-width: 768px) {
   .inventory-page {
     padding: 1rem;
@@ -1366,7 +1677,7 @@ onMounted(() => {
     justify-content: center;
   }
 
-  .distribution-grid {
+  .detail-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1374,16 +1685,10 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 
-  .warehouse-header {
+  .detail-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
-  }
-
-  .stat-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
   }
 }
 
@@ -1400,6 +1705,15 @@ onMounted(() => {
   .action-buttons {
     flex-direction: column;
     gap: 0.5rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .confirmation-content {
+    flex-direction: column;
+    text-align: center;
   }
 }
 </style>

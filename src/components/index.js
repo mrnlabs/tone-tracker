@@ -11,107 +11,27 @@ export { default as BaseTable } from './ui/BaseTable.vue'
 export { default as StatusBadge } from './ui/StatusBadge.vue'
 export { default as LoadingSpinner } from './ui/LoadingSpinner.vue'
 export { default as InputError } from './form-components/InputError.vue'
+export { default as BaseLoader } from './ui/BaseLoader.vue'
 
-// // Additional UI Components (to be created)
-// export { default as BaseAlert } from './ui/BaseAlert.vue'
-// export { default as BaseBadge } from './ui/BaseBadge.vue'
-// export { default as BaseAvatar } from './ui/BaseAvatar.vue'
-// export { default as BaseProgressBar } from './ui/BaseProgressBar.vue'
-// export { default as BaseTabs } from './ui/BaseTabs.vue'
-// export { default as BaseAccordion } from './ui/BaseAccordion.vue'
-// export { default as BaseTooltip } from './ui/BaseTooltip.vue'
-// export { default as BaseBreadcrumb } from './ui/BaseBreadcrumb.vue'
-// export { default as BasePagination } from './ui/BasePagination.vue'
-//
-// // === FORM COMPONENTS ===
-// export { default as BaseForm } from './forms/BaseForm.vue'
-// export { default as BaseFormGroup } from './forms/BaseFormGroup.vue'
-// export { default as BaseCheckbox } from './forms/BaseCheckbox.vue'
-// export { default as BaseRadio } from './forms/BaseRadio.vue'
-// export { default as BaseSwitch } from './forms/BaseSwitch.vue'
-// export { default as BaseSlider } from './forms/BaseSlider.vue'
-// export { default as BaseFileUpload } from './forms/BaseFileUpload.vue'
-// export { default as BaseDatePicker } from './forms/BaseDatePicker.vue'
-// export { default as BaseTimePicker } from './forms/BaseTimePicker.vue'
-// export { default as BaseColorPicker } from './forms/BaseColorPicker.vue'
-// export { default as FileUploadGeneric } from './forms/FileUploadGeneric.vue'
-//
-// // === LAYOUT COMPONENTS ===
-// export { default as BaseContainer } from './layout/BaseContainer.vue'
-// export { default as BaseGrid } from './layout/BaseGrid.vue'
-// export { default as BaseColumn } from './layout/BaseColumn.vue'
-// export { default as BaseSidebar } from './layout/BaseSidebar.vue'
-// export { default as BaseNavbar } from './layout/BaseNavbar.vue'
-// export { default as BaseFooter } from './layout/BaseFooter.vue'
-//
-// // === GENERAL/LAYOUT COMPONENTS ===
-// export { default as DashboardLayout } from './layout/DashboardLayout.vue'
-// export { default as Sidebar } from './layout/Sidebar.vue'
-// export { default as TopBar } from './layout/TopBar.vue'
-//
-// // === DASHBOARD COMPONENTS ===
-// export { default as DashboardStats } from './dashboard/DashboardStats.vue'
-// export { default as StatsCard } from './dashboard/StatsCard.vue'
-// export { default as ChartCard } from './dashboard/ChartCard.vue'
-// export { default as MetricCard } from './dashboard/MetricCard.vue'
-// export { default as TrendIndicator } from './dashboard/TrendIndicator.vue'
-//
-// // === ACTIVATION TRACKING SPECIFIC COMPONENTS ===
-// export { default as ActivationCard } from './activations/ActivationCard.vue'
-// export { default as ActivationForm } from './activations/ActivationForm.vue'
-// export { default as ActivationList } from './activations/ActivationList.vue'
-// export { default as ActivationMap } from './activations/ActivationMap.vue'
-// export { default as ActivationStats } from './activations/ActivationStats.vue'
-// export { default as ActivationTimeline } from './activations/ActivationTimeline.vue'
-// export { default as ActivationTeam } from './activations/ActivationTeam.vue'
-//
-// // === CLIENT COMPONENTS ===
-// export { default as ClientCard } from './clients/ClientCard.vue'
-// export { default as ClientForm } from './clients/ClientForm.vue'
-// export { default as ClientList } from './clients/ClientList.vue'
-// export { default as ClientProfile } from './clients/ClientProfile.vue'
-//
-// // === PROMOTER/USER COMPONENTS ===
-// export { default as PromoterCard } from './promoters/PromoterCard.vue'
-// export { default as PromoterForm } from './promoters/PromoterForm.vue'
-// export { default as PromoterList } from './promoters/PromoterList.vue'
-// export { default as PromoterProfile } from './promoters/PromoterProfile.vue'
-// export { default as AttendanceTracker } from './promoters/AttendanceTracker.vue'
-// export { default as TeamMemberCard } from './promoters/TeamMemberCard.vue'
-//
-// // === WAREHOUSE/INVENTORY COMPONENTS ===
-// export { default as InventoryCard } from './warehouse/InventoryCard.vue'
-// export { default as InventoryForm } from './warehouse/InventoryForm.vue'
-// export { default as InventoryList } from './warehouse/InventoryList.vue'
-// export { default as StockTracker } from './warehouse/StockTracker.vue'
-// export { default as ReplenishmentAlert } from './warehouse/ReplenishmentAlert.vue'
-// export { default as StockAllocation } from './warehouse/StockAllocation.vue'
-//
-// // === REPORT COMPONENTS ===
-// export { default as ReportCard } from './reports/ReportCard.vue'
-// export { default as ReportGenerator } from './reports/ReportGenerator.vue'
-// export { default as ReportViewer } from './reports/ReportViewer.vue'
-// export { default as ChartComponent } from './reports/ChartComponent.vue'
-// export { default as DataVisualization } from './reports/DataVisualization.vue'
-// export { default as ExportOptions } from './reports/ExportOptions.vue'
-//
-// // === AUTH COMPONENTS ===
-// export { default as LoginForm } from './auth/LoginForm.vue'
-// export { default as RegisterForm } from './auth/RegisterForm.vue'
-// export { default as ForgotPasswordForm } from './auth/ForgotPasswordForm.vue'
-// export { default as ResetPasswordForm } from './auth/ResetPasswordForm.vue'
-// export { default as UserProfile } from './auth/UserProfile.vue'
-//
-// // === SPECIALIZED COMPONENTS ===
-// export { default as GoogleMapsIntegration } from './maps/GoogleMapsIntegration.vue'
-// export { default as LocationPicker } from './maps/LocationPicker.vue'
-// export { default as RouteTracker } from './maps/RouteTracker.vue'
-// export { default as NotificationCenter } from './notifications/NotificationCenter.vue'
-// export { default as NotificationItem } from './notifications/NotificationItem.vue'
-// export { default as SearchBox } from './common/SearchBox.vue'
-// export { default as FilterPanel } from './common/FilterPanel.vue'
-// export { default as DataExporter } from './common/DataExporter.vue'
-// export { default as ImageUploader } from './common/ImageUploader.vue'
+// === WAREHOUSE COMPONENTS ===
+export { default as StockMovementList } from './warehouses/StockMovementList.vue'
+export { default as StockSummary } from './warehouses/StockSummary.vue'
+
+// === MAP COMPONENTS ===
+export { default as ActivationMap } from './maps/ActivationMap.vue'
+
+// === SALES COMPONENTS ===
+export { default as RecordSale } from './sales/RecordSale.vue'
+
+// === SAMPLE COMPONENTS ===
+export { default as RecordSample } from './samples/RecordSample.vue'
+
+// === SERVICES ===
+export { default as salesService } from '../services/salesService.js'
+export { default as stockMovementService } from '../services/stockMovementService.js'
+export { default as stockReportService } from '../services/stockReportService.js'
+
+
 
 /**
  * Component registration helper for bulk registration

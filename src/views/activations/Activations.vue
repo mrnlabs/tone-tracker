@@ -271,7 +271,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
-import { useActivationsStore } from '@/stores/activation'
+import { useActivationStore } from '@/stores/activation'
 import { useLoading } from '@/composables/useLoading'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -284,7 +284,7 @@ const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const authStore = useAuthStore()
-const activationsStore = useActivationsStore()
+const activationStore = useActivationStore()
 const { withLoading, isLoading } = useLoading()
 
 // State
@@ -330,10 +330,10 @@ const clientOptions = ref([])
 
 // Computed
 const userRole = computed(() => authStore.user?.role)
-const loading = computed(() => isLoading('fetch-activations') || activationsStore.isLoading)
-const activations = computed(() => activationsStore.activations || [])
+const loading = computed(() => isLoading('fetch-activations') || activationStore.isLoading)
+const activations = computed(() => activationStore.activations || [])
 const activationStats = computed(() => {
-  const stats = activationsStore.activationStats
+  const stats = activationStore.activationStats
   return {
     total: stats.total || 0,
     activeToday: stats.active || 0,
@@ -341,7 +341,7 @@ const activationStats = computed(() => {
     totalBudget: activations.value.reduce((sum, a) => sum + (a.totalRevenueUSD || 0), 0)
   }
 })
-const pagination = computed(() => activationsStore.pagination)
+const pagination = computed(() => activationStore.pagination)
 
 const canCreateActivation = computed(() => {
   return ['ADMIN', 'ACTIVATION_MANAGER'].includes(userRole.value)
@@ -448,9 +448,9 @@ const tableActions = [
 const loadActivations = async (showLoading = true) => {
   try {
     if (showLoading) {
-      await withLoading('fetch-activations', () => activationsStore.fetchActivations())
+      await withLoading('fetch-activations', () => activationStore.fetchActivations())
     } else {
-      await activationsStore.fetchActivations()
+      await activationStore.fetchActivations()
     }
     
     // Load client options from activations
@@ -493,7 +493,7 @@ const refreshActivations = async () => {
   refreshing.value = true
   try {
     // Clear any existing errors before refreshing
-    activationsStore.clearError()
+    activationStore.clearError()
     
     await loadActivations(false)
     
@@ -511,7 +511,7 @@ const refreshActivations = async () => {
 }
 
 const handleSearch = () => {
-  activationsStore.setFilters({ search: searchQuery.value })
+  activationStore.setFilters({ search: searchQuery.value })
   debouncedFetch()
 }
 
@@ -522,7 +522,7 @@ const debouncedFetch = () => {
   searchTimeout = setTimeout(async () => {
     try {
       // Reset to first page when searching
-      activationsStore.setPagination({ page: 1 })
+      activationStore.setPagination({ page: 1 })
       await loadActivations(true)
       
       // Clear selection when search changes
@@ -541,12 +541,12 @@ const debouncedFetch = () => {
 
 const handleFilter = async () => {
   try {
-    activationsStore.setFilters({ 
+    activationStore.setFilters({ 
       status: selectedStatus.value
     })
     
     // Reset to first page when filters change
-    activationsStore.setPagination({ page: 1 })
+    activationStore.setPagination({ page: 1 })
     await loadActivations(true)
     
     // Clear selection when filters change
@@ -568,8 +568,8 @@ const resetFilters = async () => {
     selectedStatus.value = null
     
     // Clear filters and reset pagination
-    activationsStore.clearFilters()
-    activationsStore.setPagination({ page: 1 })
+    activationStore.clearFilters()
+    activationStore.setPagination({ page: 1 })
     
     await loadActivations(true)
     
@@ -709,7 +709,7 @@ const deleteActivation = (activation) => {
 
 const confirmDelete = async () => {
   try {
-    await activationsStore.deleteActivation(activationToDelete.value.id)
+    await activationStore.deleteActivation(activationToDelete.value.id)
 
     toast.add({
       severity: 'success',
@@ -845,7 +845,7 @@ const onPageChange = async (event) => {
     const newLimit = event.rows
     
     // Update pagination in store
-    activationsStore.setPagination({
+    activationStore.setPagination({
       page: newPage,
       limit: newLimit
     })
@@ -869,13 +869,13 @@ const onPageChange = async (event) => {
 const onSort = async (event) => {
   try {
     // Update sort in store
-    activationsStore.setSorting(
+    activationStore.setSorting(
       event.sortField,
       event.sortOrder === 1 ? 'asc' : 'desc'
     )
     
     // Reset to first page and fetch data
-    activationsStore.setPagination({ page: 1 })
+    activationStore.setPagination({ page: 1 })
     await loadActivations(true)
     
     // Clear selection when sorting changes
@@ -893,13 +893,13 @@ const onSort = async (event) => {
 
 // Initialize filters from store
 const initializeFilters = () => {
-  const storeFilters = activationsStore.filters || {}
+  const storeFilters = activationStore.filters || {}
   searchQuery.value = storeFilters.search || ''
   selectedStatus.value = storeFilters.status || null
 }
 
 // Enhanced error handling watcher
-watch(() => activationsStore.error, (error) => {
+watch(() => activationStore.error, (error) => {
   if (error) {
     // Only show toast if we're not already handling the error elsewhere
     if (!loading.value && !refreshing.value) {
@@ -913,7 +913,7 @@ watch(() => activationsStore.error, (error) => {
     
     // Auto-clear error after showing
     setTimeout(() => {
-      activationsStore.clearError()
+      activationStore.clearError()
     }, 1000)
   }
 })

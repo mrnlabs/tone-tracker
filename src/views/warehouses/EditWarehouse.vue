@@ -81,19 +81,6 @@
                     />
                   </div>
 
-                  <div class="form-group">
-                    <label for="warehouseManagerId" class="form-label">Warehouse Manager</label>
-                    <Select
-                        id="warehouseManagerId"
-                        v-model="form.warehouseManagerId"
-                        :options="managerOptions"
-                        option-label="name"
-                        option-value="id"
-                        placeholder="Select warehouse manager"
-                        class="form-input"
-                        :loading="loadingManagers"
-                    />
-                  </div>
                 </div>
               </div>
 
@@ -129,7 +116,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
 import { useWarehouseStore } from '@/stores/warehouse'
-import { useUsersStore } from '@/stores/user'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
@@ -140,22 +126,18 @@ const router = useRouter()
 const toast = useToast()
 const authStore = useAuthStore()
 const warehouseStore = useWarehouseStore()
-const userStore = useUsersStore()
 
 // State
 const loading = ref(true)
 const saving = ref(false)
-const loadingManagers = ref(false)
 const error = ref(null)
 const warehouse = ref(null)
 const form = ref({
   name: '',
   streetAddress: '',
-  city: '',
-  warehouseManagerId: ''
+  city: ''
 })
 const errors = ref({})
-const managerOptions = ref([])
 
 // Computed
 const isFormValid = computed(() => {
@@ -198,8 +180,7 @@ const loadWarehouseData = async () => {
       form.value = {
         name: warehouse.value.name || '',
         streetAddress: warehouse.value.streetAddress || '',
-        city: warehouse.value.city || '',
-        warehouseManagerId: warehouse.value.warehouseManager?.id || ''
+        city: warehouse.value.city || ''
       }
       console.log('EditWarehouse: Form populated:', form.value)
     }
@@ -217,26 +198,6 @@ const loadWarehouseData = async () => {
   }
 }
 
-const loadManagers = async () => {
-  try {
-    loadingManagers.value = true
-    // Load staff members who can be warehouse managers
-    await userStore.getPaginated({ role: 'WAREHOUSE_MANAGER' })
-    
-    managerOptions.value = userStore.users
-      .filter(user => user.role === 'WAREHOUSE_MANAGER')
-      .map(manager => ({
-        id: manager.id,
-        name: `${manager.firstName} ${manager.lastName}`,
-        email: manager.email
-      }))
-  } catch (error) {
-    console.error('Failed to load managers:', error)
-    managerOptions.value = []
-  } finally {
-    loadingManagers.value = false
-  }
-}
 
 const validateForm = () => {
   errors.value = {}
@@ -257,8 +218,7 @@ const submitForm = async () => {
     const warehouseData = {
       name: form.value.name,
       streetAddress: form.value.streetAddress,
-      city: form.value.city || null,
-      warehouseManager: form.value.warehouseManagerId ? { id: form.value.warehouseManagerId } : null
+      city: form.value.city || null
     }
 
     // Use warehouse store to update warehouse
@@ -300,10 +260,7 @@ const handleEmptyStateAction = (action) => {
 }
 
 onMounted(async () => {
-  await Promise.all([
-    loadWarehouseData(),
-    loadManagers()
-  ])
+  await loadWarehouseData()
 })
 </script>
 

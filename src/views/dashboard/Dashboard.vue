@@ -29,195 +29,47 @@
         </div>
       </div>
 
-      <!-- Stats Cards -->
-      <DashboardStatsCard :stats="dashboardStats" />
-
-      <!-- Main Dashboard Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Recent Activity -->
-        <Card>
-          <template #header>
-            <div class="flex items-center justify-between">
-              <h3 class="text-lg font-medium text-gray-900">Recent Activity</h3>
-              <router-link
-                  to="/activity"
-                  class="text-sm text-blue-600 hover:text-blue-800"
-              >
-                View all
-              </router-link>
-            </div>
-          </template>
-          <template #content>
-            <div class="space-y-4">
-              <div
-                  v-for="activity in recentActivity"
-                  :key="activity.id"
-                  class="flex items-start space-x-3"
-              >
-                <div class="flex-shrink-0">
-                  <div :class="[
-                    'w-8 h-8 rounded-full flex items-center justify-center',
-                    activity.bgColor
-                  ]">
-                    <i :class="[activity.icon, activity.iconColor, 'text-sm']"></i>
-                  </div>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm text-gray-900">{{ activity.title }}</p>
-                  <p class="text-xs text-gray-500 mt-1">{{ formatTime(activity.timestamp) }}</p>
-                </div>
-              </div>
-            </div>
-          </template>
-        </Card>
-
-        <!-- Performance Overview -->
-        <Card>
-          <template #header>
-            <h3 class="text-lg font-medium text-gray-900">Performance Overview</h3>
-          </template>
-          <template #content>
-            <div class="space-y-4">
-              <div
-                  v-for="metric in performanceMetrics"
-                  :key="metric.label"
-                  class="flex items-center justify-between"
-              >
-                <span class="text-sm text-gray-500">{{ metric.label }}</span>
-                <div class="flex items-center space-x-2">
-                  <span class="text-sm font-medium text-gray-900">{{ metric.value }}%</span>
-                  <ProgressBar
-                      :value="metric.value"
-                      class="w-16 h-2"
-                      :pt="{
-                      value: { class: metric.color }
-                    }"
-                  />
-                </div>
-              </div>
-            </div>
-          </template>
-        </Card>
-      </div>
-
-      <!-- Role-specific Content -->
-      <div v-if="userRole === 'ADMIN'" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- System Health -->
-        <Card>
-          <template #header>
-            <h3 class="text-lg font-medium text-gray-900">System Health</h3>
-          </template>
-          <template #content>
-            <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-500">Server Status</span>
-                <Tag value="Online" severity="success" />
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-500">Database</span>
-                <Tag value="Connected" severity="success" />
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-500">API Response</span>
-                <span class="text-sm font-medium text-gray-900">45ms</span>
-              </div>
-            </div>
-          </template>
-        </Card>
-
-        <!-- User Activity -->
-        <Card>
-          <template #header>
-            <h3 class="text-lg font-medium text-gray-900">User Activity</h3>
-          </template>
-          <template #content>
-            <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-500">Active Users</span>
-                <span class="text-sm font-medium text-gray-900">24</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-500">New Registrations</span>
-                <span class="text-sm font-medium text-gray-900">3</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-500">Login Rate</span>
-                <span class="text-sm font-medium text-gray-900">87%</span>
-              </div>
-            </div>
-          </template>
-        </Card>
-
-        <!-- Quick Links -->
-        <Card>
-          <template #header>
-            <h3 class="text-lg font-medium text-gray-900">Quick Actions</h3>
-          </template>
-          <template #content>
-            <div class="space-y-2">
-              <router-link
-                  to="/users/create"
-                  class="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-              >
-                <i class="pi pi-user-plus mr-2"></i>
-                Add New User
-              </router-link>
-              <router-link
-                  to="/system/backup"
-                  class="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-              >
-                <i class="pi pi-download mr-2"></i>
-                System Backup
-              </router-link>
-              <router-link
-                  to="/system/logs"
-                  class="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-              >
-                <i class="pi pi-file mr-2"></i>
-                View Logs
-              </router-link>
-            </div>
-          </template>
-        </Card>
-      </div>
-
-      <!-- Upcoming Events/Schedule -->
-      <Card v-if="upcomingEvents.length > 0">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-medium text-gray-900">Upcoming Events</h3>
+      <!-- Full-Screen Activation Map -->
+      <div class="full-screen-map-container">
+        <div class="map-header">
+          <h2 class="text-2xl font-bold text-gray-900">
+            <i class="pi pi-map-marker mr-3"></i>
+            Active Activations Map - Zimbabwe
+          </h2>
+          <div class="map-header-actions">
             <router-link
-                to="/calendar"
+                to="/activations"
+                class="text-sm text-blue-600 hover:text-blue-800 mr-4"
+            >
+              View all activations
+            </router-link>
+            <router-link
+                to="/reports"
                 class="text-sm text-blue-600 hover:text-blue-800"
             >
-              View calendar
+              View reports
             </router-link>
           </div>
-        </template>
-        <template #content>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div
-                v-for="event in upcomingEvents"
-                :key="event.id"
-                class="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
-            >
-              <div class="flex items-center space-x-3">
-                <div :class="[
-                  'w-10 h-10 rounded-lg flex items-center justify-center',
-                  event.bgColor
-                ]">
-                  <i :class="[event.icon, event.iconColor]"></i>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <h4 class="text-sm font-medium text-gray-900 truncate">{{ event.title }}</h4>
-                  <p class="text-xs text-gray-500">{{ event.date }}</p>
-                  <p class="text-xs text-gray-500">{{ event.location }}</p>
-                </div>
-              </div>
+        </div>
+
+        <div class="map-content">
+          <div v-if="!showMap" class="map-placeholder">
+            <div class="text-center py-8">
+              <i class="pi pi-map text-4xl text-gray-400 mb-4"></i>
+              <p class="text-gray-500">Map is initializing...</p>
             </div>
           </div>
-        </template>
-      </Card>
+          <LeafletActivationMap
+            v-else
+            :key="'leaflet-activation-map'"
+            :height="'600px'"
+            :center="mapCenter"
+            :zoom="mapZoom"
+            @activation-selected="onActivationSelected"
+            @map-ready="onMapReady"
+          />
+        </div>
+      </div>
     </div>
   </DashboardLayout>
 </template>
@@ -225,10 +77,15 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
+import { useToast } from 'primevue/usetoast'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
 import DashboardStatsCard from '@/components/cards/DashboardStatsCard.vue'
+import LeafletActivationMap from '@/components/maps/LeafletActivationMap.vue'
 
 const authStore = useAuthStore()
+const router = useRouter()
+const toast = useToast()
 
 // Computed properties
 const userRole = computed(() => authStore.user?.role)
@@ -270,6 +127,12 @@ const recentActivity = ref([])
 const performanceMetrics = ref([])
 const upcomingEvents = ref([])
 
+// Map configuration
+const showMap = ref(false) // Start false, will be set to true after DOM is ready
+const mapCenter = ref({ lat: -17.8292, lng: 31.0522 }) // Harare, Zimbabwe
+const mapZoom = ref(7)
+const selectedActivation = ref(null)
+
 // Methods
 const getWelcomeMessage = () => {
   const hour = new Date().getHours()
@@ -304,6 +167,22 @@ const formatTime = (timestamp) => {
   } else {
     return `${hours} hours ago`
   }
+}
+
+// Map event handlers
+const onActivationSelected = (activation) => {
+  selectedActivation.value = activation
+  toast.add({
+    severity: 'info',
+    summary: 'Activation Selected',
+    detail: `Selected: ${activation.name}`,
+    life: 2000
+  })
+}
+
+const onMapReady = (mapInstance) => {
+  console.log('✅ Leaflet map loaded successfully and ready for activations')
+  console.log('🗺️ Map instance:', mapInstance)
 }
 
 const loadDashboardData = async () => {
@@ -385,7 +264,162 @@ const loadDashboardData = async () => {
   ]
 }
 
-onMounted(() => {
-  loadDashboardData()
+onMounted(async () => {
+  try {
+    // Load dashboard data first
+    await loadDashboardData()
+    
+    // Initialize map after a short delay to ensure DOM is ready
+    setTimeout(() => {
+      showMap.value = true
+    }, 100)
+  } catch (error) {
+    console.error('Error loading dashboard:', error)
+  }
 })
 </script>
+
+<style scoped>
+/* Full-screen map layout */
+.full-screen-map-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  min-height: 700px;
+  display: flex;
+  flex-direction: column;
+}
+
+.map-header {
+  padding: 24px 32px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.map-header h2 {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  color: #1f2937;
+}
+
+.map-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.map-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.map-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f9fafb;
+  min-height: 400px;
+}
+
+.map-placeholder .text-center {
+  text-align: center;
+}
+
+.map-placeholder i {
+  display: block;
+  margin: 0 auto 16px;
+}
+
+/* Map container styling for full-screen */
+.full-screen-map-container :deep(.activation-map-container) {
+  height: 600px !important;
+  display: flex !important;
+  flex-direction: column;
+  visibility: visible !important;
+}
+
+.full-screen-map-container :deep(.map-container) {
+  height: 600px !important;
+  border-radius: 0;
+  display: block !important;
+  visibility: visible !important;
+  position: relative !important;
+}
+
+/* Ensure Google Maps div stays visible */
+.full-screen-map-container :deep(.map-container > div) {
+  display: block !important;
+  visibility: visible !important;
+  height: 100% !important;
+  width: 100% !important;
+}
+
+.full-screen-map-container :deep(.map-controls) {
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  padding: 16px 24px;
+  flex-shrink: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .map-header {
+    padding: 16px 20px 12px;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .map-header h2 {
+    font-size: 1.5rem;
+  }
+  
+  .map-header-actions {
+    align-self: stretch;
+    justify-content: space-between;
+  }
+  
+  .full-screen-map-container {
+    height: calc(100vh - 160px);
+  }
+  
+  .full-screen-map-container :deep(.map-controls) {
+    padding: 12px 16px;
+  }
+  
+  .full-screen-map-container :deep(.control-group) {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+  
+  .full-screen-map-container :deep(.filter-dropdown) {
+    width: 100%;
+  }
+}
+
+/* Enhanced map styling */
+.full-screen-map-container :deep(.legend) {
+  gap: 20px;
+}
+
+.full-screen-map-container :deep(.legend-item) {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.full-screen-map-container :deep(.legend-marker) {
+  width: 14px;
+  height: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+</style>

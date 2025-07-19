@@ -224,6 +224,12 @@ export const useWarehouseStore = defineStore('warehouse', () => {
 
             try {
                 const warehouse = await warehouseService.getWarehouse(id)
+                console.log('=== WAREHOUSE STORE: API RESPONSE ===')
+                console.log('Raw warehouse data from API:', warehouse)
+                console.log('Warehouse manager field:', warehouse?.warehouseManager)
+                console.log('Manager ID:', warehouse?.warehouseManager?.id)
+                console.log('Manager name:', warehouse?.warehouseManager ? `${warehouse.warehouseManager.firstName} ${warehouse.warehouseManager.lastName}` : 'No manager')
+                console.log('=== END WAREHOUSE STORE DEBUG ===')
                 currentWarehouse.value = warehouse
                 return warehouse
             } catch (apiError) {
@@ -562,11 +568,11 @@ export const useWarehouseStore = defineStore('warehouse', () => {
     /**
      * Update stock quantity
      */
-    const updateStock = async (itemId, quantity, type = 'adjustment', notes = '') => {
+    const updateStock = async (itemId, quantity, type = 'adjustment', notes = '', openingStock = null, closingStock = null, activationId = null) => {
         try {
             error.value = null
 
-            const movement = await inventoryService.updateStock(itemId, quantity, type, notes)
+            const movement = await inventoryService.updateStock(itemId, quantity, type, notes, openingStock, closingStock, activationId)
 
             // Update inventory item quantity
             const index = inventory.value.findIndex(item => item.id === itemId)
@@ -976,7 +982,46 @@ export const useWarehouseStore = defineStore('warehouse', () => {
         reserveStock,
         confirmReservation,
         cancelReservation,
-        getStockForecast
+        getStockForecast,
+        
+        // Manager Actions
+        removeWarehouseManager: async (warehouseId) => {
+            try {
+                console.log('=== WAREHOUSE STORE: removeWarehouseManager ===')
+                console.log('Called with warehouseId:', warehouseId)
+                console.log('Current warehouse:', currentWarehouse.value)
+                
+                isUpdating.value = true
+                error.value = null
+                
+                // Call API to remove manager
+                console.log('Calling warehouseService.removeWarehouseManager...')
+                await warehouseService.removeWarehouseManager(warehouseId)
+                console.log('API call successful')
+                
+                // Update the current warehouse if it's the same
+                if (currentWarehouse.value?.id === warehouseId) {
+                    console.log('Updating current warehouse manager to null')
+                    currentWarehouse.value.warehouseManager = null
+                }
+                
+                // Update in the warehouses list
+                const index = warehouses.value.findIndex(w => w.id === warehouseId)
+                if (index !== -1) {
+                    console.log('Updating warehouse in list at index:', index)
+                    warehouses.value[index].warehouseManager = null
+                }
+                
+                console.log('=== END WAREHOUSE STORE DEBUG ===')
+                return true
+            } catch (err) {
+                console.error('Error in removeWarehouseManager:', err)
+                error.value = err.message || 'Failed to remove warehouse manager'
+                throw err
+            } finally {
+                isUpdating.value = false
+            }
+        }
     }
 })
 
