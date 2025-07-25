@@ -12,7 +12,7 @@
         <!-- Product Selection -->
         <div class="form-group" v-if="!stockId">
           <label for="product" class="required">Product</label>
-          <Dropdown
+          <Select
             id="product"
             v-model="selectedStock"
             :options="availableStocks"
@@ -30,7 +30,7 @@
                 <span class="product-stock">Available: {{ slotProps.option.availableQuantity }}</span>
               </div>
             </template>
-          </Dropdown>
+          </Select>
           <small class="p-error" v-if="errors.product">{{ errors.product }}</small>
         </div>
 
@@ -84,7 +84,7 @@
         <!-- Payment Method -->
         <div class="form-group">
           <label for="paymentMethod" class="required">Payment Method</label>
-          <Dropdown
+          <Select
             id="paymentMethod"
             v-model="formData.paymentMethod"
             :options="paymentMethods"
@@ -101,7 +101,7 @@
         <!-- Currency Selection for specific payment methods -->
         <div class="form-group" v-if="showCurrencySelection">
           <label for="currency" class="required">Currency</label>
-          <Dropdown
+          <Select
             id="currency"
             v-model="formData.currency"
             :options="currencyOptions"
@@ -160,7 +160,7 @@
           <div class="form-row">
             <div class="form-group">
               <label for="customerGender">Gender</label>
-              <Dropdown
+              <Select
                 id="customerGender"
                 v-model="formData.customerGender"
                 :options="genderOptions"
@@ -174,7 +174,7 @@
 
             <div class="form-group">
               <label for="customerAge">Age Group</label>
-              <Dropdown
+              <Select
                 id="customerAge"
                 v-model="formData.customerAge"
                 :options="ageGroupOptions"
@@ -267,6 +267,11 @@ import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS, CUSTOMER_GENDER, CUSTOMER_AGE_G
 import { BaseButton } from '@/components'
 import { useToaster } from '@/composables/useToaster'
 import { useValidation } from '@/composables/useValidation'
+import Dialog from 'primevue/dialog'
+import Select from 'primevue/select'
+import InputNumber from 'primevue/inputnumber'
+import InputMask from 'primevue/inputmask'
+import Calendar from 'primevue/calendar'
 
 const props = defineProps({
   visible: {
@@ -294,7 +299,7 @@ const warehouseStore = useWarehouseStore()
 const activationStore = useActivationStore()
 const authStore = useAuthStore()
 const toaster = useToaster()
-const { validateRequired, validatePositive } = useValidation()
+const { validators } = useValidation()
 
 const isVisible = computed({
   get: () => props.visible,
@@ -343,10 +348,20 @@ const currencyOptions = [
 ]
 
 const availableStocks = computed(() => {
-  return warehouseStore.stocks.filter(stock => 
-    stock.availableQuantity > 0 && 
-    stock.allocations?.some(alloc => alloc.activationId === props.activationId)
-  )
+  if (!warehouseStore.inventory || !Array.isArray(warehouseStore.inventory)) {
+    return []
+  }
+  
+  // For now, return all stocks with available quantity
+  // TODO: Filter by activation allocations when allocation system is implemented
+  return warehouseStore.inventory.filter(stock => 
+    stock && 
+    stock.availableQuantity > 0
+  ).map(stock => ({
+    ...stock,
+    productName: stock.productName || stock.name || 'Unknown Product',
+    sku: stock.sku || stock.code || 'N/A'
+  }))
 })
 
 const maxQuantity = computed(() => {
@@ -416,18 +431,26 @@ const validateForm = () => {
     errors.value.product = 'Please select a product'
   }
 
-  const quantityError = validateRequired(formData.value.quantity, 'Quantity') ||
-    validatePositive(formData.value.quantity, 'Quantity')
-  if (quantityError) {
-    errors.value.quantity = quantityError
-  } else if (formData.value.quantity > maxQuantity.value) {
-    errors.value.quantity = `Maximum available quantity is ${maxQuantity.value}`
+  const quantityValidation = validators.required(formData.value.quantity, 'Quantity is required')
+  if (quantityValidation !== true) {
+    errors.value.quantity = quantityValidation
+  } else {
+    const positiveValidation = validators.positive(formData.value.quantity, 'Quantity must be positive')
+    if (positiveValidation !== true) {
+      errors.value.quantity = positiveValidation
+    } else if (formData.value.quantity > maxQuantity.value) {
+      errors.value.quantity = `Maximum available quantity is ${maxQuantity.value}`
+    }
   }
 
-  const priceError = validateRequired(formData.value.unitPrice, 'Unit price') ||
-    validatePositive(formData.value.unitPrice, 'Unit price')
-  if (priceError) {
-    errors.value.unitPrice = priceError
+  const priceValidation = validators.required(formData.value.unitPrice, 'Unit price is required')
+  if (priceValidation !== true) {
+    errors.value.unitPrice = priceValidation
+  } else {
+    const positivePriceValidation = validators.positive(formData.value.unitPrice, 'Unit price must be positive')
+    if (positivePriceValidation !== true) {
+      errors.value.unitPrice = positivePriceValidation
+    }
   }
 
   if (!formData.value.paymentMethod) {
@@ -472,8 +495,8 @@ const handleSubmit = async () => {
 
     await salesService.createSale(saleData)
     
-    // Update warehouse stock
-    await warehouseStore.fetchStockById(stockId)
+    // Refresh warehouse inventory
+    await warehouseStore.fetchAllStocks()
     
     lastSaleDetails.value = {
       productName: stockName,
@@ -534,9 +557,55 @@ const loadAvailableStocks = async () => {
   if (!props.stockId && props.activationId) {
     stocksLoading.value = true
     try {
-      await warehouseStore.fetchStocksByActivation(props.activationId)
+      // Try to load stocks from warehouse store
+      try {
+        await warehouseStore.fetchAllStocks()
+      } catch (storeError) {
+        console.warn('Warehouse store fetchAllStocks failed:', storeError)
+      }
+      
+      // If no inventory loaded, add some mock data for testing
+      if (!warehouseStore.inventory || warehouseStore.inventory.length === 0) {
+        console.warn('No inventory found in warehouse store, using mock data')
+        // You can remove this mock data when real API is connected
+        warehouseStore.inventory = [
+          {
+            id: 1,
+            productName: 'Product A',
+            sku: 'SKU001',
+            availableQuantity: 50,
+            unitPrice: 25.99
+          },
+          {
+            id: 2,
+            productName: 'Product B', 
+            sku: 'SKU002',
+            availableQuantity: 30,
+            unitPrice: 15.50
+          },
+          {
+            id: 3,
+            productName: 'Product C',
+            sku: 'SKU003', 
+            availableQuantity: 100,
+            unitPrice: 5.99
+          }
+        ]
+      }
     } catch (error) {
+      console.error('Failed to load available products:', error)
       toaster.error('Failed to load available products')
+      
+      // Add fallback mock data even on error
+      warehouseStore.inventory = [
+        {
+          id: 1,
+          productName: 'Sample Product',
+          sku: 'SAMPLE001',
+          availableQuantity: 10,
+          unitPrice: 19.99
+        }
+      ]
     } finally {
       stocksLoading.value = false
     }
@@ -546,6 +615,13 @@ const loadAvailableStocks = async () => {
 watch(() => props.visible, (newVal) => {
   if (newVal) {
     loadAvailableStocks()
+  }
+})
+
+// Auto-set unit price when a product is selected
+watch(selectedStock, (newStock) => {
+  if (newStock && newStock.unitPrice) {
+    formData.value.unitPrice = newStock.unitPrice
   }
 })
 

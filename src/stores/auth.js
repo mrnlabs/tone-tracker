@@ -329,11 +329,21 @@ export const useAuthStore = defineStore('auth', () => {
     const getCurrentUser = async (retryCount = 0) => {
         try {
             const response = await authService.getCurrentUser()
-            user.value = response.user
-            permissions.value = response.permissions || []
+            console.log('getCurrentUser response:', response)
+            
+            // Handle both response.user and direct response formats
+            const userData = response.user || response
+            user.value = userData
+            permissions.value = response.permissions || userData.permissions || []
+            
+            console.log('User profile picture fields:', {
+                profilePictureUrl: userData.profilePictureUrl,
+                profileImagePath: userData.profileImagePath,
+                profilePicture: userData.profilePicture
+            })
 
             // Update user in localStorage
-            storeUserData(response.user)
+            storeUserData(userData)
 
             return response
         } catch (error) {
@@ -608,17 +618,34 @@ export const useAuthStore = defineStore('auth', () => {
             const formData = new FormData()
             formData.append('file', file)
 
+            console.log('Uploading profile picture for user:', userId.value || 'current')
+            console.log('Current user role:', userRole.value)
             const response = await authService.uploadProfilePicture(userId.value || 'current', formData)
+            console.log('Profile picture upload response:', response)
+            console.log('Response data structure:', {
+                hasData: !!response.data,
+                hasUrl: !!response.url,
+                hasProfilePictureUrl: !!response.profilePictureUrl,
+                hasProfileImagePath: !!response.profileImagePath,
+                fullResponse: JSON.stringify(response)
+            })
             
-            // Update user profile picture URL
+            // Update user profile picture URL - check all possible response fields
             if (user.value) {
-                user.value.profilePictureUrl = response.url || response.profilePictureUrl || response.profileImagePath
-                user.value.profileImagePath = response.url || response.profilePictureUrl || response.profileImagePath
+                const newProfileUrl = response.url || response.profilePictureUrl || response.profileImagePath || response.filePath || response.data?.url || response.data?.profilePictureUrl
+                console.log('Setting new profile picture URL to:', newProfileUrl)
+                
+                user.value.profilePictureUrl = newProfileUrl
+                user.value.profileImagePath = newProfileUrl
                 storeUserData(user.value)
+                
+                // Force a refresh to ensure consistency
+                console.log('Updated user data:', user.value)
             }
 
             return response
         } catch (error) {
+            console.error('Profile picture upload error:', error)
             throw error
         } finally {
             isLoading.value = false

@@ -51,19 +51,88 @@ class LeadService {
     }
 
     /**
-     * Get leads by activation ID
+     * Get leads by activation ID with role-based access
      * @param {number} activationId - Activation ID
      * @param {Object} params - Query parameters
+     * @param {string} userRole - Current user role for role-based access
+     * @param {number} userId - Current user ID for promoter-specific access
      * @returns {Promise} Leads for specific activation
      */
-    async getLeadsByActivation(activationId, params = {}) {
+    async getLeadsByActivation(activationId, params = {}, userRole = null, userId = null) {
+        console.log('LeadService: Fetching leads for activation:', activationId, 'with params:', params, 'role:', userRole)
+        
+        // For promoters, try alternative endpoints
+        if (userRole === 'PROMOTER') {
+            return await this.getLeadsForPromoter(activationId, params, userId)
+        }
+        
+        // For other roles, use direct access
         try {
             const response = await api.get(`/leads/activation/${activationId}`, { params })
-            // API service already returns response.data, so just return response
+            console.log('LeadService: Raw API response:', response)
             return response
         } catch (error) {
-            console.error('Error fetching leads by activation:', error)
+            console.error('LeadService: Error fetching leads by activation:', error)
+            console.error('LeadService: Error status:', error.status)
+            console.error('LeadService: Error details:', error.details)
+            
+            // Check if it's a permission error
+            if (error.status === 403 || error.status === 401) {
+                console.log('LeadService: Permission error detected for leads endpoint')
+                return {
+                    content: [],
+                    totalElements: 0,
+                    page: {
+                        number: 0,
+                        size: params.size || 10,
+                        totalPages: 0
+                    }
+                }
+            }
+            
             throw error
+        }
+    }
+
+    /**
+     * Get leads for promoter with new backend endpoints
+     * @param {number} activationId - Activation ID
+     * @param {Object} params - Query parameters
+     * @param {number} userId - Promoter user ID
+     * @returns {Promise} Leads accessible to promoter
+     */
+    async getLeadsForPromoter(activationId, params = {}, userId = null) {
+        console.log('LeadService: Attempting promoter-specific lead access for activation:', activationId)
+        
+        // Try 1: New promoter activation-specific endpoint
+        try {
+            const response = await api.get(`/leads/my-activations/${activationId}`, { params })
+            console.log('LeadService: Successfully fetched via /leads/my-activations/{activationId}')
+            return response
+        } catch (activationError) {
+            console.log('LeadService: Failed to fetch via /leads/my-activations/{activationId}:', activationError)
+        }
+        
+        // Try 2: Fallback to user-specific leads endpoint with activation filter
+        try {
+            const response = await api.get(`/users/current/leads`, { params: { ...params, activationId } })
+            console.log('LeadService: Successfully fetched via /users/current/leads')
+            return response
+        } catch (currentUserError) {
+            console.log('LeadService: Failed to fetch via /users/current/leads:', currentUserError)
+        }
+        
+        // Fallback: Return empty structure
+        console.log('LeadService: All lead endpoints failed for promoter, returning empty structure')
+        
+        return {
+            content: [],
+            totalElements: 0,
+            page: {
+                number: 0,
+                size: params.size || 10,
+                totalPages: 0
+            }
         }
     }
 
@@ -195,6 +264,30 @@ class LeadService {
         link.click()
         document.body.removeChild(link)
         window.URL.revokeObjectURL(url)
+    }
+
+    /**
+     * Get all leads for current promoter across all activations
+     * @param {Object} params - Query parameters (page, size, sort)
+     * @returns {Promise} All promoter leads data
+     */
+    async getMyActivationLeads(params = {}) {
+        try {
+            const response = await api.get('/leads/my-activations', { params })
+            console.log('LeadService: Successfully fetched all promoter leads via /leads/my-activations')
+            return response
+        } catch (error) {
+            console.error('Error fetching promoter leads:', error)
+            // Fallback to user current leads
+            try {
+                const fallbackResponse = await api.get('/users/current/leads', { params })
+                console.log('LeadService: Fallback to /users/current/leads successful')
+                return fallbackResponse
+            } catch (fallbackError) {
+                console.error('Error with fallback endpoint:', fallbackError)
+                throw error
+            }
+        }
     }
 
     /**
@@ -347,6 +440,239 @@ class LeadService {
             'MAYBE': 'Maybe'
         }
         return labels[intent] || intent
+    }
+
+    // =================== PROMOTER LEAD COMMENTING SYSTEM ===================
+
+    /**
+     * Add or update promoter comments on a lead
+     * @param {number} leadId - Lead ID
+     * @param {Object} commentData - Promoter comment data
+     * @returns {Promise} Updated lead data
+     */
+    async addPromoterComment(leadId, commentData) {
+        try {
+            const response = await api.post(`/leads/${leadId}/add-promoter-comment`, commentData)
+            return response
+        } catch (error) {
+            console.error('Error adding promoter comment:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Get leads requiring follow-up for current promoter
+     * @param {Object} params - Query parameters
+     * @returns {Promise} Follow-up leads data
+     */
+    async getMyFollowUpLeads(params = {}) {
+        try {
+            const response = await api.get('/leads/my-follow-ups', { params })
+            return response
+        } catch (error) {
+            console.error('Error fetching follow-up leads:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Get all leads requiring follow-up (for managers)
+     * @param {Object} params - Query parameters
+     * @returns {Promise} Follow-up leads data
+     */
+    async getFollowUpRequiredLeads(params = {}) {
+        try {
+            const response = await api.get('/leads/follow-up-required', { params })
+            return response
+        } catch (error) {
+            console.error('Error fetching follow-up required leads:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Get leads with high purchase intent
+     * @param {number} minIntentLevel - Minimum intent level (default: 4)
+     * @param {Object} params - Additional query parameters
+     * @returns {Promise} High intent leads data
+     */
+    async getHighPurchaseIntentLeads(minIntentLevel = 4, params = {}) {
+        try {
+            const response = await api.get('/leads/high-purchase-intent', {
+                params: { minIntentLevel, ...params }
+            })
+            return response
+        } catch (error) {
+            console.error('Error fetching high purchase intent leads:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Get leads with low brand awareness
+     * @param {number} maxAwarenessLevel - Maximum awareness level (default: 2)
+     * @param {Object} params - Additional query parameters
+     * @returns {Promise} Low awareness leads data
+     */
+    async getLowBrandAwarenessLeads(maxAwarenessLevel = 2, params = {}) {
+        try {
+            const response = await api.get('/leads/low-brand-awareness', {
+                params: { maxAwarenessLevel, ...params }
+            })
+            return response
+        } catch (error) {
+            console.error('Error fetching low brand awareness leads:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Get leads mentioning competitors
+     * @param {Object} params - Query parameters
+     * @returns {Promise} Competitor mentions leads data
+     */
+    async getCompetitorMentionLeads(params = {}) {
+        try {
+            const response = await api.get('/leads/competitor-mentions', { params })
+            return response
+        } catch (error) {
+            console.error('Error fetching competitor mention leads:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Get leads with high engagement quality
+     * @param {number} minEngagementQuality - Minimum engagement quality (default: 4)
+     * @param {Object} params - Additional query parameters
+     * @returns {Promise} High engagement leads data
+     */
+    async getHighEngagementLeads(minEngagementQuality = 4, params = {}) {
+        try {
+            const response = await api.get('/leads/high-engagement', {
+                params: { minEngagementQuality, ...params }
+            })
+            return response
+        } catch (error) {
+            console.error('Error fetching high engagement leads:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Get label for brand awareness level
+     * @param {number} level - Brand awareness level (1-5)
+     * @returns {string} Display label
+     */
+    getBrandAwarenessLevelLabel(level) {
+        const labels = {
+            1: 'Never heard of brand',
+            2: 'Heard of brand',
+            3: 'Familiar with brand',
+            4: 'Very familiar with brand',
+            5: 'Brand enthusiast'
+        }
+        return labels[level] || `Level ${level}`
+    }
+
+    /**
+     * Get label for purchase intent level
+     * @param {number} level - Purchase intent level (1-5)
+     * @returns {string} Display label
+     */
+    getPurchaseIntentLevelLabel(level) {
+        const labels = {
+            1: 'No purchase intent',
+            2: 'Low purchase intent',
+            3: 'Moderate purchase intent',
+            4: 'High purchase intent',
+            5: 'Will definitely purchase'
+        }
+        return labels[level] || `Level ${level}`
+    }
+
+    /**
+     * Get label for engagement quality level
+     * @param {number} level - Engagement quality level (1-5)
+     * @returns {string} Display label
+     */
+    getEngagementQualityLabel(level) {
+        const labels = {
+            1: 'Poor interaction',
+            2: 'Below average interaction',
+            3: 'Average interaction',
+            4: 'Good interaction',
+            5: 'Excellent interaction'
+        }
+        return labels[level] || `Level ${level}`
+    }
+
+    /**
+     * Validate promoter comment data
+     * @param {Object} commentData - Comment data to validate
+     * @returns {Object} Validation result
+     */
+    validatePromoterComment(commentData) {
+        const errors = {}
+
+        // Brand awareness validation
+        if (commentData.brandAwarenessLevel !== undefined) {
+            if (commentData.brandAwarenessLevel < 1 || commentData.brandAwarenessLevel > 5) {
+                errors.brandAwarenessLevel = 'Brand awareness level must be between 1 and 5'
+            }
+        }
+
+        // Purchase intent validation
+        if (commentData.purchaseIntentLevel !== undefined) {
+            if (commentData.purchaseIntentLevel < 1 || commentData.purchaseIntentLevel > 5) {
+                errors.purchaseIntentLevel = 'Purchase intent level must be between 1 and 5'
+            }
+        }
+
+        // Engagement quality validation
+        if (commentData.engagementQuality !== undefined) {
+            if (commentData.engagementQuality < 1 || commentData.engagementQuality > 5) {
+                errors.engagementQuality = 'Engagement quality must be between 1 and 5'
+            }
+        }
+
+        // Text field length validations
+        if (commentData.brandAwarenessComments && commentData.brandAwarenessComments.length > 1000) {
+            errors.brandAwarenessComments = 'Brand awareness comments must be 1000 characters or less'
+        }
+
+        if (commentData.purchaseIntentComments && commentData.purchaseIntentComments.length > 1000) {
+            errors.purchaseIntentComments = 'Purchase intent comments must be 1000 characters or less'
+        }
+
+        if (commentData.priceSensitivity && commentData.priceSensitivity.length > 1000) {
+            errors.priceSensitivity = 'Price sensitivity notes must be 1000 characters or less'
+        }
+
+        if (commentData.competitorMentions && commentData.competitorMentions.length > 1000) {
+            errors.competitorMentions = 'Competitor mentions must be 1000 characters or less'
+        }
+
+        if (commentData.usageContext && commentData.usageContext.length > 1000) {
+            errors.usageContext = 'Usage context must be 1000 characters or less'
+        }
+
+        if (commentData.decisionMakerStatus && commentData.decisionMakerStatus.length > 500) {
+            errors.decisionMakerStatus = 'Decision maker status must be 500 characters or less'
+        }
+
+        if (commentData.followUpNotes && commentData.followUpNotes.length > 1000) {
+            errors.followUpNotes = 'Follow-up notes must be 1000 characters or less'
+        }
+
+        if (commentData.promoterObservations && commentData.promoterObservations.length > 2000) {
+            errors.promoterObservations = 'Promoter observations must be 2000 characters or less'
+        }
+
+        return {
+            isValid: Object.keys(errors).length === 0,
+            errors
+        }
     }
 }
 

@@ -352,9 +352,14 @@ const filters = ref({
   activationId: props.activationId
 })
 
-const movements = computed(() => stockMovementStore.movementsByDate)
-const summary = computed(() => stockMovementStore.summary)
-const totalRecords = computed(() => stockMovementStore.pagination.total)
+const movements = computed(() => stockMovementStore.movementsByDate || [])
+const summary = computed(() => stockMovementStore.summary || {
+  totalIn: 0,
+  totalSales: 0,
+  totalSamples: 0,
+  netChange: 0
+})
+const totalRecords = computed(() => stockMovementStore.pagination?.total || 0)
 
 const movementTypeOptions = computed(() => {
   return Object.keys(STOCK_MOVEMENT_TYPE).map(key => ({

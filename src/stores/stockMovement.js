@@ -1,118 +1,152 @@
 import { defineStore } from 'pinia'
 import stockMovementService from '@/services/stockMovementService'
-import { STOCK_MOVEMENT_TYPE } from '@/utils/constants'
 
 export const useStockMovementStore = defineStore('stockMovement', {
     state: () => ({
-        movements: [],
-        currentMovement: null,
-        movementsByStock: {},
-        movementsByActivation: {},
+        stockMovements: [],
+        currentStockMovement: null,
+        movementTypes: ['IN', 'OUT', 'ALLOCATION', 'REPLENISHMENT', 'ADJUSTMENT', 'DISTRIBUTION', 'RETURN', 'SAMPLE', 'SALE'],
         loading: false,
         error: null,
         pagination: {
-            page: 1,
+            page: 0,
             size: 20,
-            total: 0,
+            totalElements: 0,
             totalPages: 0
-        },
-        filters: {
-            movementType: null,
-            startDate: null,
-            endDate: null,
-            activationId: null
-        },
-        summary: {
-            totalIn: 0,
-            totalOut: 0,
-            totalSales: 0,
-            totalSamples: 0,
-            totalAdjustments: 0,
-            netChange: 0
         }
     }),
 
     getters: {
-        salesMovements: (state) => {
-            return state.movements.filter(m => m.movementType === STOCK_MOVEMENT_TYPE.SALE)
+        getMovementsByStock: (state) => (stockId) => {
+            return state.stockMovements.filter(movement => movement.stock?.id === stockId)
         },
 
-        adjustmentMovements: (state) => {
-            return state.movements.filter(m => m.movementType === STOCK_MOVEMENT_TYPE.ADJUSTMENT)
+        getMovementsByActivation: (state) => (activationId) => {
+            return state.stockMovements.filter(movement => movement.activation?.id === activationId)
         },
 
-        sampleMovements: (state) => {
-            return state.movements.filter(m => m.movementType === STOCK_MOVEMENT_TYPE.SAMPLE)
+        getMovementsByType: (state) => (movementType) => {
+            return state.stockMovements.filter(movement => movement.movementType === movementType)
         },
 
-        movementsByDate: (state) => {
-            return [...state.movements].sort((a, b) => 
-                new Date(b.dateCreated) - new Date(a.dateCreated)
-            )
+        getStockBalance: (state) => (stockId) => {
+            const movements = state.stockMovements
+                .filter(movement => movement.stock?.id === stockId)
+                .sort((a, b) => new Date(b.dateCreated) - new Date(a.dateCreated))
+            
+            return movements.length > 0 ? movements[0].closingStock : 0
         },
 
-        totalQuantityMoved: (state) => {
-            return state.movements.reduce((total, movement) => {
-                if (movement.movementType === STOCK_MOVEMENT_TYPE.IN) {
-                    return total + movement.quantity
-                } else {
-                    return total - movement.quantity
-                }
-            }, 0)
-        },
-
-        movementStats: (state) => {
-            const stats = {}
-            Object.values(STOCK_MOVEMENT_TYPE).forEach(type => {
-                stats[type] = {
-                    count: 0,
-                    quantity: 0
-                }
-            })
-
-            state.movements.forEach(movement => {
-                if (stats[movement.movementType]) {
-                    stats[movement.movementType].count++
-                    stats[movement.movementType].quantity += movement.quantity
-                }
-            })
-
-            return stats
-        },
-
-        hasMorePages: (state) => {
-            return state.pagination.page < state.pagination.totalPages
+        getMovementTypeOptions: (state) => {
+            return state.movementTypes.map(type => ({
+                label: type.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase()),
+                value: type
+            }))
         }
     },
 
     actions: {
-        async fetchMovements(stockId, params = {}) {
+        async fetchAllStockMovements(params = {}) {
             this.loading = true
             this.error = null
-            
             try {
-                const response = await stockMovementService.getStockMovements(stockId, {
-                    ...this.filters,
-                    ...params,
-                    page: this.pagination.page - 1,
-                    size: this.pagination.size
-                })
-
-                this.movements = response.content || []
-                this.movementsByStock[stockId] = response.content || []
-                
-                this.pagination = {
-                    page: response.pageable?.pageNumber + 1 || 1,
-                    size: response.pageable?.pageSize || 20,
-                    total: response.totalElements || 0,
-                    totalPages: response.totalPages || 0
+                const response = await stockMovementService.getAllStockMovements(params)
+                this.stockMovements = response.content || response
+                if (response.totalElements !== undefined) {
+                    this.pagination = {
+                        page: response.number,
+                        size: response.size,
+                        totalElements: response.totalElements,
+                        totalPages: response.totalPages
+                    }
                 }
-
-                this.calculateSummary()
-                
                 return response
             } catch (error) {
-                this.error = error.response?.data?.message || 'Failed to fetch stock movements'
+                this.error = error.message || 'Failed to fetch stock movements'
+                throw error
+            } finally {
+                this.loading = false
+            }
+        },
+
+        async fetchStockMovementById(id) {
+            this.loading = true
+            this.error = null
+            try {
+                const movement = await stockMovementService.getStockMovementById(id)
+                this.currentStockMovement = movement
+                return movement
+            } catch (error) {
+                this.error = error.message || 'Failed to fetch stock movement'
+                throw error
+            } finally {
+                this.loading = false
+            }
+        },
+
+        async fetchStockMovements(stockId, params = {}) {
+            this.loading = true
+            this.error = null
+            try {
+                // Service now returns the actual data directly
+                const data = await stockMovementService.getStockMovements(stockId, params)
+                
+                // Handle different response formats
+                let movements = []
+                if (data) {
+                    if (Array.isArray(data)) {
+                        // API returns plain array
+                        movements = data
+                        console.log(`Store: Processing plain array with ${movements.length} movements`)
+                    } else if (data.content && Array.isArray(data.content)) {
+                        // Paginated response
+                        movements = data.content
+                        console.log(`Store: Processing paginated response with ${movements.length} movements`)
+                    } else {
+                        console.warn('Store: Unexpected response format:', typeof data, data)
+                        movements = []
+                    }
+                }
+                
+                if (params.append) {
+                    this.stockMovements.push(...movements)
+                } else {
+                    this.stockMovements = movements
+                }
+                
+
+                // Handle pagination if present
+                if (data && typeof data === 'object' && !Array.isArray(data)) {
+                    if (data.totalElements !== undefined) {
+                        this.pagination = {
+                            page: data.number || 0,
+                            size: data.size || 20,
+                            totalElements: data.totalElements,
+                            totalPages: data.totalPages || 0
+                        }
+                    }
+                }
+                
+                return { content: movements, ...data }
+            } catch (error) {
+                this.error = error.message || 'Failed to fetch stock movements'
+                console.error('Error in fetchStockMovements:', error)
+                return { content: [] } // Return empty array instead of throwing
+            } finally {
+                this.loading = false
+            }
+        },
+
+        async createStockMovement(stockId, movementData) {
+            this.loading = true
+            this.error = null
+            try {
+                const newMovement = await stockMovementService.createStockMovement(stockId, movementData)
+                this.stockMovements.unshift(newMovement)
+                this.currentStockMovement = newMovement
+                return newMovement
+            } catch (error) {
+                this.error = error.message || 'Failed to create stock movement'
                 throw error
             } finally {
                 this.loading = false
@@ -122,14 +156,17 @@ export const useStockMovementStore = defineStore('stockMovement', {
         async recordSale(stockId, saleData) {
             this.loading = true
             this.error = null
-            
             try {
-                const response = await stockMovementService.recordSale(stockId, saleData)
-                this.movements.unshift(response)
-                this.calculateSummary()
-                return response
+                // Ensure activation ID is included if provided
+                const saleDataWithActivation = {
+                    ...saleData,
+                    activationId: saleData.activationId || saleData.activation?.id || null
+                }
+                const movement = await stockMovementService.recordSale(stockId, saleDataWithActivation)
+                this.stockMovements.unshift(movement)
+                return movement
             } catch (error) {
-                this.error = error.response?.data?.message || 'Failed to record sale'
+                this.error = error.message || 'Failed to record sale'
                 throw error
             } finally {
                 this.loading = false
@@ -139,14 +176,17 @@ export const useStockMovementStore = defineStore('stockMovement', {
         async recordSample(stockId, sampleData) {
             this.loading = true
             this.error = null
-            
             try {
-                const response = await stockMovementService.recordSample(stockId, sampleData)
-                this.movements.unshift(response)
-                this.calculateSummary()
-                return response
+                // Ensure activation ID is included if provided
+                const sampleDataWithActivation = {
+                    ...sampleData,
+                    activationId: sampleData.activationId || sampleData.activation?.id || null
+                }
+                const movement = await stockMovementService.recordSample(stockId, sampleDataWithActivation)
+                this.stockMovements.unshift(movement)
+                return movement
             } catch (error) {
-                this.error = error.response?.data?.message || 'Failed to record sample'
+                this.error = error.message || 'Failed to record sample'
                 throw error
             } finally {
                 this.loading = false
@@ -156,14 +196,12 @@ export const useStockMovementStore = defineStore('stockMovement', {
         async recordAdjustment(stockId, adjustmentData) {
             this.loading = true
             this.error = null
-            
             try {
-                const response = await stockMovementService.recordAdjustment(stockId, adjustmentData)
-                this.movements.unshift(response)
-                this.calculateSummary()
-                return response
+                const movement = await stockMovementService.recordAdjustment(stockId, adjustmentData)
+                this.stockMovements.unshift(movement)
+                return movement
             } catch (error) {
-                this.error = error.response?.data?.message || 'Failed to record adjustment'
+                this.error = error.message || 'Failed to record adjustment'
                 throw error
             } finally {
                 this.loading = false
@@ -173,14 +211,32 @@ export const useStockMovementStore = defineStore('stockMovement', {
         async recordStockIn(stockId, stockInData) {
             this.loading = true
             this.error = null
-            
             try {
-                const response = await stockMovementService.recordStockIn(stockId, stockInData)
-                this.movements.unshift(response)
-                this.calculateSummary()
-                return response
+                const movement = await stockMovementService.recordStockIn(stockId, stockInData)
+                this.stockMovements.unshift(movement)
+                return movement
             } catch (error) {
-                this.error = error.response?.data?.message || 'Failed to record stock in'
+                this.error = error.message || 'Failed to record stock in'
+                throw error
+            } finally {
+                this.loading = false
+            }
+        },
+
+        async recordAllocation(stockId, allocationData) {
+            this.loading = true
+            this.error = null
+            try {
+                // Ensure activation ID is included if provided
+                const allocationDataWithActivation = {
+                    ...allocationData,
+                    activationId: allocationData.activationId || allocationData.activation?.id || null
+                }
+                const movement = await stockMovementService.recordAllocation(stockId, allocationDataWithActivation)
+                this.stockMovements.unshift(movement)
+                return movement
+            } catch (error) {
+                this.error = error.message || 'Failed to record allocation'
                 throw error
             } finally {
                 this.loading = false
@@ -190,146 +246,128 @@ export const useStockMovementStore = defineStore('stockMovement', {
         async fetchMovementsByActivation(activationId, params = {}) {
             this.loading = true
             this.error = null
-            
             try {
                 const response = await stockMovementService.getMovementsByActivation(activationId, params)
-                this.movementsByActivation[activationId] = response.content || []
+                this.stockMovements = response.content || response
                 return response
             } catch (error) {
-                this.error = error.response?.data?.message || 'Failed to fetch activation movements'
+                this.error = error.message || 'Failed to fetch movements by activation'
                 throw error
             } finally {
                 this.loading = false
             }
         },
 
-        async bulkRecordSales(sales) {
+        async updateStockMovement(id, movementData) {
             this.loading = true
             this.error = null
-            
             try {
-                const response = await stockMovementService.bulkRecordSales(sales)
-                // Refresh movements after bulk operation
-                if (sales.length > 0 && sales[0].stockId) {
-                    await this.fetchMovements(sales[0].stockId)
+                const updatedMovement = await stockMovementService.updateStockMovement(id, movementData)
+                const index = this.stockMovements.findIndex(movement => movement.id === id)
+                if (index !== -1) {
+                    this.stockMovements[index] = updatedMovement
                 }
-                return response
+                this.currentStockMovement = updatedMovement
+                return updatedMovement
             } catch (error) {
-                this.error = error.response?.data?.message || 'Failed to bulk record sales'
+                this.error = error.message || 'Failed to update stock movement'
                 throw error
             } finally {
                 this.loading = false
             }
         },
 
-        async exportMovements(stockId, format = 'xlsx') {
+        async deleteStockMovement(id) {
             this.loading = true
             this.error = null
-            
             try {
-                const blob = await stockMovementService.exportMovements(stockId, {
-                    ...this.filters,
-                    format
-                })
+                await stockMovementService.deleteStockMovement(id)
+                this.stockMovements = this.stockMovements.filter(movement => movement.id !== id)
+                if (this.currentStockMovement?.id === id) {
+                    this.currentStockMovement = null
+                }
+            } catch (error) {
+                this.error = error.message || 'Failed to delete stock movement'
+                throw error
+            } finally {
+                this.loading = false
+            }
+        },
+
+        async exportStockMovements(params = {}) {
+            this.loading = true
+            this.error = null
+            try {
+                const blob = await stockMovementService.exportMovements(params.stockId, params)
                 
-                // Create download link
                 const url = window.URL.createObjectURL(blob)
                 const link = document.createElement('a')
                 link.href = url
-                link.download = `stock-movements-${stockId}-${new Date().toISOString().split('T')[0]}.${format}`
+                link.download = `stock-movements-${params.stockId || 'all'}-${new Date().toISOString().split('T')[0]}.xlsx`
+                document.body.appendChild(link)
                 link.click()
+                link.remove()
                 window.URL.revokeObjectURL(url)
                 
                 return true
             } catch (error) {
-                this.error = error.response?.data?.message || 'Failed to export movements'
+                this.error = error.message || 'Failed to export stock movements'
                 throw error
             } finally {
                 this.loading = false
             }
         },
 
-        setFilters(filters) {
-            this.filters = {
-                ...this.filters,
-                ...filters
-            }
-            this.pagination.page = 1
-        },
-
-        clearFilters() {
-            this.filters = {
-                movementType: null,
-                startDate: null,
-                endDate: null,
-                activationId: null
-            }
-            this.pagination.page = 1
-        },
-
-        setPage(page) {
-            this.pagination.page = page
-        },
-
-        calculateSummary() {
-            const summary = {
-                totalIn: 0,
-                totalOut: 0,
-                totalSales: 0,
-                totalSamples: 0,
-                totalAdjustments: 0,
-                netChange: 0
-            }
-
-            this.movements.forEach(movement => {
-                const quantity = movement.quantity || 0
+        async exportWarehouseMovements(params = {}) {
+            this.loading = true
+            this.error = null
+            try {
+                const blob = await stockMovementService.exportWarehouseMovements(params)
                 
-                switch(movement.movementType) {
-                    case STOCK_MOVEMENT_TYPE.IN:
-                        summary.totalIn += quantity
-                        summary.netChange += quantity
-                        break
-                    case STOCK_MOVEMENT_TYPE.OUT:
-                        summary.totalOut += quantity
-                        summary.netChange -= quantity
-                        break
-                    case STOCK_MOVEMENT_TYPE.SALE:
-                        summary.totalSales += quantity
-                        summary.netChange -= quantity
-                        break
-                    case STOCK_MOVEMENT_TYPE.SAMPLE:
-                        summary.totalSamples += quantity
-                        summary.netChange -= quantity
-                        break
-                    case STOCK_MOVEMENT_TYPE.ADJUSTMENT:
-                        summary.totalAdjustments += quantity
-                        summary.netChange += quantity // Adjustments can be positive or negative
-                        break
-                }
-            })
+                const url = window.URL.createObjectURL(blob)
+                const link = document.createElement('a')
+                link.href = url
+                link.download = `warehouse-movements-${params.warehouseId || 'all'}-${new Date().toISOString().split('T')[0]}.xlsx`
+                document.body.appendChild(link)
+                link.click()
+                link.remove()
+                window.URL.revokeObjectURL(url)
+                
+                return true
+            } catch (error) {
+                this.error = error.message || 'Failed to export warehouse movements'
+                throw error
+            } finally {
+                this.loading = false
+            }
+        },
 
-            this.summary = summary
+        async fetchMovementTypes() {
+            try {
+                const types = await stockMovementService.getMovementTypes()
+                this.movementTypes = types
+                return types
+            } catch (error) {
+                console.warn('Failed to fetch movement types, using defaults')
+                return this.movementTypes
+            }
+        },
+
+        clearError() {
+            this.error = null
+        },
+
+        clearCurrentMovement() {
+            this.currentStockMovement = null
         },
 
         clearMovements() {
-            this.movements = []
-            this.currentMovement = null
-            this.movementsByStock = {}
-            this.movementsByActivation = {}
-            this.error = null
+            this.stockMovements = []
             this.pagination = {
-                page: 1,
+                page: 0,
                 size: 20,
-                total: 0,
+                totalElements: 0,
                 totalPages: 0
-            }
-            this.summary = {
-                totalIn: 0,
-                totalOut: 0,
-                totalSales: 0,
-                totalSamples: 0,
-                totalAdjustments: 0,
-                netChange: 0
             }
         }
     }

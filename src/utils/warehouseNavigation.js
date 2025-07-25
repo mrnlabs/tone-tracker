@@ -154,7 +154,7 @@ export const validateWarehouseRoute = (route, userRole) => {
 
     // Check if user has access to warehouse routes
     if (warehouseRoutes.some(r => route.path.startsWith(r))) {
-        const allowedRoles = ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
+        const allowedRoles = ['ADMIN', 'WAREHOUSE_MANAGER']
         if (!allowedRoles.includes(userRole)) {
             return false
         }

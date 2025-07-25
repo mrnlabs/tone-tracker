@@ -64,7 +64,7 @@ const routes = [
         meta: {
             requiresAuth: true,
             title: 'Clients - Activation Tracker',
-            roles: ['ADMIN', 'ACTIVATION_MANAGER']
+            roles: ['ADMIN']
         }
     },
     {
@@ -74,7 +74,7 @@ const routes = [
         meta: {
             requiresAuth: true,
             title: 'Add New Client - Activation Tracker',
-            roles: ['ADMIN', 'ACTIVATION_MANAGER']
+            roles: ['ADMIN']
         }
     },
     {
@@ -84,7 +84,7 @@ const routes = [
         meta: {
             requiresAuth: true,
             title: 'Client Details - Activation Tracker',
-            roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT']
+            roles: ['ADMIN', 'CLIENT']
         }
     },
     {
@@ -94,7 +94,7 @@ const routes = [
         meta: {
             requiresAuth: true,
             title: 'Edit Client - Activation Tracker',
-            roles: ['ADMIN', 'ACTIVATION_MANAGER']
+            roles: ['ADMIN']
         }
     },
 
@@ -116,7 +116,7 @@ const routes = [
         meta: {
             requiresAuth: true,
             title: 'Create Activation - Activation Tracker',
-            roles: ['ADMIN', 'ACTIVATION_MANAGER']
+            roles: ['ADMIN']
         }
     },
     {
@@ -136,7 +136,7 @@ const routes = [
         meta: {
             requiresAuth: true,
             title: 'Edit Activation - Activation Tracker',
-            roles: ['ADMIN', 'ACTIVATION_MANAGER']
+            roles: ['ADMIN']
         }
     },
     {
@@ -147,6 +147,16 @@ const routes = [
             requiresAuth: true,
             title: 'Manage Team - Activation Tracker',
             roles: ['ADMIN', 'ACTIVATION_MANAGER']
+        }
+    },
+    {
+        path: '/activations/briefs',
+        name: 'activation-briefs',
+        component: () => import('@/views/activations/ActivationBriefs.vue'),
+        meta: {
+            requiresAuth: true,
+            title: 'Activation Briefs - Activation Tracker',
+            roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT', 'PROMOTER']
         }
     },
 
@@ -214,6 +224,48 @@ const routes = [
             requiresAuth: true,
             title: 'Stock Movement Report - Activation Tracker',
             roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
+        }
+    },
+    
+    // Stock Movement Routes
+    {
+        path: '/stock-movements',
+        name: 'stock-movements',
+        component: () => import('@/views/stock-movements/StockMovements.vue'),
+        meta: {
+            requiresAuth: true,
+            title: 'Stock Movements - Activation Tracker',
+            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
+        }
+    },
+    {
+        path: '/stock-movements/create',
+        name: 'create-stock-movement',
+        component: () => import('@/views/stock-movements/CreateStockMovement.vue'),
+        meta: {
+            requiresAuth: true,
+            title: 'Record Stock Movement - Activation Tracker',
+            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
+        }
+    },
+    {
+        path: '/stock-movements/:id',
+        name: 'stock-movement-details',
+        component: () => import('@/views/stock-movements/StockMovementDetails.vue'),
+        meta: {
+            requiresAuth: true,
+            title: 'Stock Movement Details - Activation Tracker',
+            roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
+        }
+    },
+    {
+        path: '/stock-movements/:id/edit',
+        name: 'edit-stock-movement',
+        component: () => import('@/views/stock-movements/EditStockMovement.vue'),
+        meta: {
+            requiresAuth: true,
+            title: 'Edit Stock Movement - Activation Tracker',
+            roles: ['ADMIN', 'WAREHOUSE_MANAGER']
         }
     },
     // User Management Routes

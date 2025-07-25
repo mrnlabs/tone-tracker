@@ -59,6 +59,8 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
 import { activationService } from '@/services/api'
+import { useActivationStore } from '@/stores/activation'
+import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import L from 'leaflet'
 
@@ -96,6 +98,8 @@ const props = defineProps({
 const emit = defineEmits(['activation-selected', 'map-ready'])
 
 const router = useRouter()
+const activationStore = useActivationStore()
+const authStore = useAuthStore()
 
 // Reactive data
 const mapContainer = ref(null)
@@ -227,12 +231,28 @@ const loadActivations = async () => {
   try {
     refreshing.value = true
     
-    // Get active activations with location data
-    const response = await activationService.getActivations({
-      status: 'ACTIVE,PLANNED,IN_PROGRESS',
-      includeLocation: true,
-      size: 100
-    })
+    // Use role-based activation fetching from the store
+    const userRole = authStore.userRole
+    
+    let response
+    if (userRole === 'PROMOTER') {
+      // For promoters, use the store's role-aware fetching
+      console.log('Loading activations for promoter via store')
+      await activationStore.fetchActivations({
+        status: 'ACTIVE,PLANNED,IN_PROGRESS',
+        includeLocation: true,
+        size: 100
+      })
+      // Get activations from store
+      response = { data: activationStore.activations }
+    } else {
+      // For other roles, use direct API access
+      response = await activationService.getActivations({
+        status: 'ACTIVE,PLANNED,IN_PROGRESS',
+        includeLocation: true,
+        size: 100
+      })
+    }
     
     let activationData = response.data || []
     

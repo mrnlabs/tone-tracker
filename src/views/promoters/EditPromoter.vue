@@ -114,6 +114,88 @@
                 </div>
               </div>
 
+              <!-- Profile Picture -->
+              <div class="form-section">
+                <h3 class="section-title">Profile Picture</h3>
+                <p class="section-description">Upload a profile picture for the promoter</p>
+                
+                <div class="form-grid">
+                  <!-- Current Profile Picture Display -->
+                  <div v-if="currentProfilePictureUrl" class="field full-width">
+                    <label>Current Profile Picture</label>
+                    <div class="current-profile-picture">
+                      <div class="profile-picture-display">
+                        <img 
+                          :src="currentProfilePictureUrl" 
+                          :alt="`${formData.firstName} ${formData.lastName} Profile Picture`"
+                          class="profile-picture-preview"
+                          @click="viewCurrentProfilePicture"
+                          @error="handleProfilePictureError"
+                        />
+                        <div class="profile-picture-overlay" @click="viewCurrentProfilePicture">
+                          <Button
+                            icon="pi pi-eye"
+                            class="p-button-rounded p-button-outlined"
+                            v-tooltip="'View Current Picture'"
+                          />
+                        </div>
+                      </div>
+                      <Button
+                        @click="removeCurrentProfilePicture"
+                        label="Remove Current Picture"
+                        icon="pi pi-trash"
+                        class="p-button-outlined p-button-danger p-button-sm"
+                        style="margin-top: 1rem;"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Profile Picture Upload -->
+                  <div class="field full-width">
+                    <FileUpload
+                      ref="profilePictureUpload"
+                      mode="basic"
+                      :auto="false"
+                      accept="image/*"
+                      :maxFileSize="5000000"
+                      chooseLabel="Choose Profile Picture"
+                      class="profile-picture-upload"
+                      @select="handleProfilePictureSelect"
+                    />
+                    <small class="field-help">Recommended: Square image, minimum 200x200px, maximum 5MB</small>
+                  </div>
+
+                  <!-- New Profile Picture Preview -->
+                  <div v-if="newProfilePicturePreview" class="field full-width">
+                    <label>New Profile Picture Preview</label>
+                    <div class="new-profile-picture-preview">
+                      <div class="profile-picture-display">
+                        <img 
+                          :src="newProfilePicturePreview" 
+                          alt="New Profile Picture Preview"
+                          class="profile-picture-preview"
+                          @click="viewNewProfilePicture"
+                        />
+                        <div class="profile-picture-overlay" @click="viewNewProfilePicture">
+                          <Button
+                            icon="pi pi-eye"
+                            class="p-button-rounded p-button-outlined"
+                            v-tooltip="'View New Picture'"
+                          />
+                        </div>
+                      </div>
+                      <Button
+                        @click="clearNewProfilePicture"
+                        label="Clear New Picture"
+                        icon="pi pi-times"
+                        class="p-button-outlined p-button-secondary p-button-sm"
+                        style="margin-top: 1rem;"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- Contact & Location -->
               <div class="form-section">
                 <h3 class="section-title">Contact & Location</h3>
@@ -273,6 +355,24 @@
         </Card>
       </div>
     </div>
+
+    <!-- Profile Picture Viewer Dialog -->
+    <Dialog 
+      v-model:visible="showProfilePictureViewer" 
+      modal 
+      :header="viewingProfilePicture?.title || 'Profile Picture'"
+      :style="{ width: '80vw', maxWidth: '800px' }"
+      :maximizable="true"
+      class="profile-picture-dialog"
+    >
+      <div v-if="viewingProfilePicture" class="profile-picture-viewer">
+        <img 
+          :src="viewingProfilePicture.url" 
+          alt="Profile Picture"
+          class="profile-viewer-image"
+        />
+      </div>
+    </Dialog>
   </DashboardLayout>
 </template>
 
@@ -281,7 +381,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useValidation } from '@/composables/useValidation'
-import { promoterService } from '@/services/api'
+import { promoterService, fileService } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
@@ -290,12 +391,19 @@ const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const { validators } = useValidation()
+const authStore = useAuthStore()
 
 // State
 const loading = ref(true)
 const saving = ref(false)
 const error = ref(null)
 const promoter = ref(null)
+const currentProfilePictureUrl = ref(null)
+const newProfilePictureFile = ref(null)
+const newProfilePicturePreview = ref(null)
+const showProfilePictureViewer = ref(false)
+const viewingProfilePicture = ref(null)
+const profilePictureUpload = ref(null)
 const formData = ref({
   firstName: '',
   lastName: '',
@@ -394,9 +502,14 @@ const loadPromoter = async () => {
     console.log('Loading promoter with ID:', promoterId)
 
     // Load promoter from API
-    promoter.value = await promoterService.getPromoter(promoterId)
+    promoter.value = await promoterService.getPromoter(promoterId, authStore.userId)
     
     console.log('Promoter loaded successfully:', promoter.value)
+
+    // Set current profile picture URL
+    if (promoter.value.profileImagePath) {
+      currentProfilePictureUrl.value = getProfilePictureUrl(promoter.value.profileImagePath)
+    }
 
     // Populate form with existing data
     formData.value = {
@@ -530,13 +643,30 @@ const handleSubmit = async () => {
       availableForAssignment: formData.value.availableForAssignment
     }
 
+    // Handle profile picture upload/removal
+    let profilePictureMessage = ''
+    if (newProfilePictureFile.value) {
+      try {
+        const profilePicturePath = await uploadProfilePicture(route.params.id)
+        promoterData.profileImagePath = profilePicturePath
+        profilePictureMessage = ' and profile picture updated'
+      } catch (error) {
+        console.error('Profile picture upload failed:', error)
+        profilePictureMessage = ' (note: profile picture upload failed)'
+      }
+    } else if (!currentProfilePictureUrl.value && promoter.value?.profileImagePath) {
+      // Profile picture was removed
+      promoterData.profileImagePath = null
+      profilePictureMessage = ' and profile picture removed'
+    }
+
     await promoterService.updatePromoter(route.params.id, promoterData)
     
     // Show success message
     toast.add({
       severity: 'success',
       summary: 'Promoter Updated Successfully',
-      detail: `${promoterData.firstName} ${promoterData.lastName} has been updated successfully`,
+      detail: `${promoterData.firstName} ${promoterData.lastName} has been updated successfully${profilePictureMessage}`,
       life: 4000
     })
     
@@ -569,6 +699,129 @@ const handleSubmit = async () => {
 
 const handleCancel = () => {
   router.push('/promoters')
+}
+
+// Profile picture handling
+const getProfilePictureUrl = (profilePath) => {
+  if (!profilePath) return null
+  
+  // If it's a full URL, return as is
+  if (profilePath.startsWith('http')) return profilePath
+  
+  // Otherwise, construct the API URL
+  return `${import.meta.env.VITE_API_BASE_URL}/files${profilePath}`
+}
+
+const handleProfilePictureSelect = (event) => {
+  const file = event.files[0]
+  if (!file) return
+  
+  // Validate file type
+  if (!file.type.startsWith('image/')) {
+    toast.add({
+      severity: 'error',
+      summary: 'Invalid File',
+      detail: 'Please select an image file',
+      life: 3000
+    })
+    return
+  }
+  
+  // Store the file and create preview
+  newProfilePictureFile.value = file
+  newProfilePicturePreview.value = URL.createObjectURL(file)
+  
+  toast.add({
+    severity: 'success',
+    summary: 'Profile Picture Selected',
+    detail: 'Profile picture ready for upload',
+    life: 3000
+  })
+}
+
+const clearNewProfilePicture = () => {
+  newProfilePictureFile.value = null
+  if (newProfilePicturePreview.value) {
+    URL.revokeObjectURL(newProfilePicturePreview.value)
+    newProfilePicturePreview.value = null
+  }
+  
+  // Clear the file upload component
+  if (profilePictureUpload.value) {
+    profilePictureUpload.value.clear()
+  }
+}
+
+const removeCurrentProfilePicture = async () => {
+  try {
+    // If there's a profile picture, try to delete it from server
+    if (promoter.value?.profileImagePath) {
+      // Note: We'll handle deletion on form submit
+      currentProfilePictureUrl.value = null
+      
+      toast.add({
+        severity: 'success',
+        summary: 'Profile Picture Removed',
+        detail: 'Profile picture will be removed when you save changes',
+        life: 3000
+      })
+    }
+  } catch (error) {
+    console.error('Error removing profile picture:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Remove Failed',
+      detail: 'Failed to remove profile picture',
+      life: 3000
+    })
+  }
+}
+
+const viewCurrentProfilePicture = () => {
+  if (currentProfilePictureUrl.value) {
+    viewingProfilePicture.value = {
+      url: currentProfilePictureUrl.value,
+      title: 'Current Profile Picture'
+    }
+    showProfilePictureViewer.value = true
+  }
+}
+
+const viewNewProfilePicture = () => {
+  if (newProfilePicturePreview.value) {
+    viewingProfilePicture.value = {
+      url: newProfilePicturePreview.value,
+      title: 'New Profile Picture Preview'
+    }
+    showProfilePictureViewer.value = true
+  }
+}
+
+const handleProfilePictureError = (event) => {
+  event.target.style.display = 'none'
+  currentProfilePictureUrl.value = null
+}
+
+const uploadProfilePicture = async (promoterId) => {
+  if (!newProfilePictureFile.value) return null
+  
+  try {
+    const result = await fileService.uploadFile(
+      newProfilePictureFile.value,
+      null, // No progress callback for now
+      {
+        entityId: promoterId,
+        entityType: 'PROMOTER',
+        category: 'profile-picture'
+      }
+    )
+    
+    console.log('Profile picture uploaded successfully:', result)
+    return result.filePath || result.path || result.url
+  } catch (error) {
+    console.error('Error uploading profile picture:', error)
+    throw error
+  }
 }
 
 const handleEmptyStateAction = (action) => {
@@ -622,6 +875,12 @@ onMounted(() => {
   font-weight: 600;
   border-bottom: 2px solid #e5e7eb;
   padding-bottom: 0.5rem;
+}
+
+.section-description {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0 0;
 }
 
 .form-grid {
@@ -701,6 +960,84 @@ onMounted(() => {
   
   .form-actions .p-button {
     width: 100%;
+  }
+}
+
+/* Profile Picture Styles */
+.current-profile-picture,
+.new-profile-picture-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.profile-picture-display {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.profile-picture-display:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+.profile-picture-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.profile-picture-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 50%;
+}
+
+.profile-picture-display:hover .profile-picture-overlay {
+  opacity: 1;
+}
+
+.profile-picture-upload {
+  width: 100%;
+}
+
+.profile-picture-upload :deep(.p-fileupload-choose) {
+  width: 100%;
+  justify-content: center;
+}
+
+.profile-picture-viewer {
+  text-align: center;
+}
+
+.profile-viewer-image {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+  .profile-picture-display {
+    width: 120px;
+    height: 120px;
   }
 }
 </style>

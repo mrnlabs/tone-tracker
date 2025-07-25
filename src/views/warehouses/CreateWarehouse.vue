@@ -54,8 +54,27 @@
                   </div>
 
                   <div class="form-group">
+                    <label for="clientId" class="form-label">Client *</label>
+                    <Dropdown
+                        id="clientId"
+                        v-model="form.clientId"
+                        :options="clientOptions"
+                        option-label="label"
+                        option-value="value"
+                        :placeholder="clientOptions.length === 0 ? 'No clients available - please create clients first' : 'Select client'"
+                        :class="{ 'p-invalid': errors.clientId }"
+                        :disabled="clientOptions.length === 0"
+                        class="form-input"
+                    />
+                    <small v-if="errors.clientId" class="p-error">{{ errors.clientId }}</small>
+                    <small v-if="clientOptions.length === 0" class="p-error">
+                      No clients available. Please create clients first before creating warehouses.
+                    </small>
+                  </div>
+
+                  <div class="form-group">
                     <label for="warehouseManagerId" class="form-label">Warehouse Manager</label>
-                    <Select
+                    <Dropdown
                         id="warehouseManagerId"
                         v-model="form.warehouseManagerId"
                         :options="managerOptions"
@@ -101,6 +120,7 @@ import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
 import { useWarehouseStore } from '@/stores/warehouse'
 import { useUsersStore } from '@/stores/user'
+import { useClientsStore } from '@/stores/client'
 import { useValidation } from '@/composables/useValidation'
 import { useLoading } from '@/composables/useLoading'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
@@ -112,6 +132,7 @@ const toast = useToast()
 const authStore = useAuthStore()
 const warehouseStore = useWarehouseStore()
 const userStore = useUsersStore()
+const clientsStore = useClientsStore()
 const { validators } = useValidation()
 const { withLoading, isLoading } = useLoading()
 
@@ -121,11 +142,19 @@ const form = ref({
   name: '',
   streetAddress: '',
   city: '',
-  warehouseManagerId: ''
+  warehouseManagerId: '',
+  clientId: ''
 })
 
 const errors = ref({})
 const managerOptions = ref([])
+const clientOptions = computed(() => {
+  console.log('Computing clientOptions...', clientsStore.clients)
+  return clientsStore.clients.map(client => ({
+    label: client.companyName || client.company || client.name || `Client ${client.id}`,
+    value: client.id
+  }))
+})
 
 // No additional options needed for simplified form
 
@@ -149,7 +178,8 @@ const headerActions = computed(() => [
 
 const isFormValid = computed(() => {
   return form.value.name &&
-      form.value.streetAddress
+      form.value.streetAddress &&
+      form.value.clientId
 })
 
 // Methods
@@ -158,6 +188,7 @@ const validateForm = () => {
 
   if (!form.value.name) errors.value.name = 'Warehouse name is required'
   if (!form.value.streetAddress) errors.value.streetAddress = 'Street address is required'
+  if (!form.value.clientId) errors.value.clientId = 'Client selection is required'
 
   return Object.keys(errors.value).length === 0
 }
@@ -171,7 +202,8 @@ const submitForm = async () => {
       name: form.value.name,
       streetAddress: form.value.streetAddress,
       city: form.value.city || null,
-      warehouseManager: form.value.warehouseManagerId ? { id: form.value.warehouseManagerId } : null
+      warehouseManagerId: form.value.warehouseManagerId || null,
+      clientId: form.value.clientId
     }
 
     // Use warehouse store to create warehouse
@@ -203,7 +235,7 @@ const cancelForm = () => {
 const loadManagers = async () => {
   try {
     // Load staff members who can be warehouse managers
-    await userStore.getPaginated({ role: 'WAREHOUSE_MANAGER' })
+    await userStore.fetchUsers({ role: 'WAREHOUSE_MANAGER' })
     
     managerOptions.value = userStore.users
       .filter(user => user.role === 'WAREHOUSE_MANAGER')
@@ -218,8 +250,26 @@ const loadManagers = async () => {
   }
 }
 
+const loadClients = async () => {
+  try {
+    console.log('Loading clients...')
+    await clientsStore.fetchClients()
+    console.log('Clients loaded:', clientsStore.clients)
+    console.log('Client options:', clientOptions.value)
+    
+    // If no clients loaded, add some test data temporarily
+    if (clientsStore.clients.length === 0) {
+      console.warn('No clients found, you may need to create some clients first')
+    }
+  } catch (error) {
+    console.error('Failed to load clients:', error)
+    console.error('Make sure the backend server is running on localhost:8080')
+  }
+}
+
 onMounted(() => {
   loadManagers()
+  loadClients()
 })
 </script>
 

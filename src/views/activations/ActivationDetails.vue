@@ -350,57 +350,6 @@
                     </template>
                   </Card>
 
-                  <!-- Budget Overview -->
-                  <Card class="info-card">
-                    <template #header>
-                      <h3>Budget Overview</h3>
-                    </template>
-                    <template #content>
-                      <div class="budget-overview">
-                        <div class="budget-summary">
-                          <div class="budget-total">
-                            <span class="budget-label">Total Budget</span>
-                            <span class="budget-amount">${{ (activation?.budget || 0).toLocaleString() }}</span>
-                          </div>
-                          <div class="budget-spent">
-                            <span class="budget-label">Spent</span>
-                            <span class="budget-amount">${{ (activation?.budgetSpent || 0).toLocaleString() }}</span>
-                          </div>
-                          <div class="budget-remaining">
-                            <span class="budget-label">Remaining</span>
-                            <span class="budget-amount">${{ ((activation?.budget || 0) - (activation?.budgetSpent || 0)).toLocaleString() }}</span>
-                          </div>
-                        </div>
-
-                        <div class="budget-progress">
-                          <div class="progress-header">
-                            <span>Budget Utilization</span>
-                            <span>{{ Math.round(((activation?.budgetSpent || 0) / (activation?.budget || 1)) * 100) }}%</span>
-                          </div>
-                          <ProgressBar
-                              :value="((activation?.budgetSpent || 0) / (activation?.budget || 1)) * 100"
-                              :class="{ 'over-budget': (activation?.budgetSpent || 0) > (activation?.budget || 0) }"
-                          />
-                        </div>
-
-                        <div class="budget-breakdown">
-                          <h5>Budget Breakdown</h5>
-                          <div class="breakdown-items">
-                            <div class="breakdown-item" v-for="item in activation?.budgetBreakdown || []" :key="item.category">
-                              <div class="item-info">
-                                <span class="item-label">{{ item.category }}</span>
-                                <span class="item-amount">${{ item.allocated.toLocaleString() }}</span>
-                              </div>
-                              <div class="item-progress">
-                                <ProgressBar :value="(item.spent / item.allocated) * 100" class="mini-progress" />
-                                <span class="spent-amount">${{ item.spent.toLocaleString() }} spent</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </template>
-                  </Card>
 
                   <!-- Activation Brief -->
                   <Card class="info-card brief-card" v-if="activation.briefDescription || activation.briefDocumentPath">
@@ -498,7 +447,7 @@
                         class="p-button-success"
                     />
                     <Button
-                        v-if="canManageTeam"
+                        v-if="canAssignManager"
                         @click="showManagerAssignmentDialog = true"
                         icon="pi pi-user-plus"
                         label="Assign Manager"
@@ -606,7 +555,7 @@
                         </template>
                       </Column>
 
-                      <Column field="performance" header="Performance" sortable>
+                      <Column field="performance" header="Performance" sortable v-if="authStore.userRole !== 'PROMOTER'">
                         <template #body="{ data }">
                           <div class="performance-cell">
                             <div class="rating">
@@ -655,34 +604,6 @@
               </div>
             </TabPanel>
 
-            <!-- Sales & Inventory Tab -->
-            <TabPanel header="Sales & Inventory">
-              <div class="sales-inventory-content">
-                <!-- Sales Section -->
-                <div class="section-header">
-                  <h3>Sales & Product Movements</h3>
-                  <div class="section-actions">
-                    <Button
-                      v-if="canRecordSales"
-                      @click="showRecordSaleDialog = true"
-                      icon="pi pi-plus"
-                      label="Record Sale"
-                      class="p-button-success"
-                    />
-                  </div>
-                </div>
-                
-                <StockMovementList
-                  :activation-id="activation.id"
-                  :show-summary="true"
-                  :hide-activation-column="true"
-                  :show-activation-filter="false"
-                  :can-export="true"
-                  :can-refresh="true"
-                  @movement-selected="handleMovementSelected"
-                />
-              </div>
-            </TabPanel>
 
             <!-- Lead Management Tab -->
             <TabPanel header="Lead Management" v-if="canCaptureLeads">
@@ -843,6 +764,51 @@
                         </template>
                       </Column>
                       
+                      <Column v-if="authStore.userRole !== 'PROMOTER'" field="brandAwareness" header="Brand Awareness">
+                        <template #body="{ data }">
+                          <div v-if="data.promoterComments?.brandAwarenessLevel" class="insight-cell">
+                            <Rating 
+                              :modelValue="data.promoterComments.brandAwarenessLevel" 
+                              :readonly="true" 
+                              :stars="5" 
+                              :cancel="false"
+                              class="mini-rating"
+                            />
+                            <small>{{ leadService.getBrandAwarenessLevelLabel(data.promoterComments.brandAwarenessLevel) }}</small>
+                          </div>
+                          <span v-else class="no-data">-</span>
+                        </template>
+                      </Column>
+                      
+                      <Column v-if="authStore.userRole !== 'PROMOTER'" field="purchaseIntent" header="Purchase Intent">
+                        <template #body="{ data }">
+                          <div v-if="data.promoterComments?.purchaseIntentLevel" class="insight-cell">
+                            <Rating 
+                              :modelValue="data.promoterComments.purchaseIntentLevel" 
+                              :readonly="true" 
+                              :stars="5" 
+                              :cancel="false"
+                              class="mini-rating"
+                            />
+                            <small>{{ leadService.getPurchaseIntentLevelLabel(data.promoterComments.purchaseIntentLevel) }}</small>
+                          </div>
+                          <span v-else class="no-data">-</span>
+                        </template>
+                      </Column>
+                      
+                      <Column v-if="authStore.userRole !== 'PROMOTER'" field="engagement" header="Engagement">
+                        <template #body="{ data }">
+                          <div v-if="data.promoterComments?.engagementQuality" class="insight-cell">
+                            <Tag 
+                              :value="leadService.getEngagementQualityLabel(data.promoterComments.engagementQuality)"
+                              :severity="getEngagementSeverity(data.promoterComments.engagementQuality)"
+                              class="engagement-tag"
+                            />
+                          </div>
+                          <span v-else class="no-data">-</span>
+                        </template>
+                      </Column>
+                      
                       <Column header="Actions">
                         <template #body="{ data }">
                           <div class="action-buttons">
@@ -859,6 +825,13 @@
                               @click="editLead(data)"
                               v-tooltip.top="'Edit Lead'"
                             />
+                            <Button
+                              v-if="userRole === 'PROMOTER'"
+                              icon="pi pi-comment"
+                              class="p-button-text p-button-sm"
+                              @click="openLeadCommentDialog(data)"
+                              v-tooltip.top="'Add Comments'"
+                            />
                           </div>
                         </template>
                       </Column>
@@ -868,97 +841,9 @@
               </div>
             </TabPanel>
 
-            <!-- Performance Tab -->
-            <TabPanel header="Performance">
-              <div class="performance-content">
-                <div class="performance-grid">
-                  <!-- KPI Cards -->
-                  <Card class="kpi-card">
-                    <template #header>
-                      <h3>Key Performance Indicators</h3>
-                    </template>
-                    <template #content>
-                      <div class="kpi-list">
-                        <div class="kpi-item" v-for="kpi in activation.kpis" :key="kpi.name">
-                          <div class="kpi-header">
-                            <span class="kpi-name">{{ kpi.name }}</span>
-                            <span class="kpi-value">{{ formatKpiValue(kpi.current, kpi.unit) }}</span>
-                          </div>
-                          <div class="kpi-progress">
-                            <ProgressBar
-                                :value="(kpi.current / kpi.target) * 100"
-                                :class="getKpiProgressClass(kpi.current, kpi.target)"
-                            />
-                            <span class="kpi-target">Target: {{ formatKpiValue(kpi.target, kpi.unit) }}</span>
-                          </div>
-                          <div class="kpi-status">
-                            <Tag
-                                :value="getKpiStatus(kpi.current, kpi.target)"
-                                :severity="getKpiStatusSeverity(kpi.current, kpi.target)"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </template>
-                  </Card>
-
-                  <!-- Daily Performance Chart -->
-                  <Card class="chart-card">
-                    <template #header>
-                      <h3>Daily Performance Trend</h3>
-                    </template>
-                    <template #content>
-                      <div class="chart-placeholder">
-                        <i class="pi pi-chart-line chart-icon"></i>
-                        <p>Performance chart will be displayed here</p>
-                        <small>Shows daily customer interactions, sales, and engagement metrics</small>
-                      </div>
-                    </template>
-                  </Card>
-
-                  <!-- Customer Feedback -->
-                  <Card class="feedback-card">
-                    <template #header>
-                      <h3>Customer Feedback</h3>
-                    </template>
-                    <template #content>
-                      <div class="feedback-summary">
-                        <div class="feedback-stats">
-                          <div class="feedback-stat">
-                            <span class="stat-number">{{ activation.customerFeedback.totalResponses }}</span>
-                            <span class="stat-label">Total Responses</span>
-                          </div>
-                          <div class="feedback-stat">
-                            <span class="stat-number">{{ activation.customerFeedback.averageRating }}</span>
-                            <span class="stat-label">Average Rating</span>
-                          </div>
-                          <div class="feedback-stat">
-                            <span class="stat-number">{{ activation.customerFeedback.npsScore }}</span>
-                            <span class="stat-label">NPS Score</span>
-                          </div>
-                        </div>
-
-                        <div class="feedback-breakdown">
-                          <h5>Rating Distribution</h5>
-                          <div class="rating-bars">
-                            <div v-for="(count, rating) in activation.customerFeedback.ratingDistribution" :key="rating" class="rating-bar">
-                              <span class="rating-label">{{ rating }} stars</span>
-                              <div class="bar-container">
-                                <div class="bar" :style="{ width: (count / activation.customerFeedback.totalResponses) * 100 + '%' }"></div>
-                              </div>
-                              <span class="rating-count">{{ count }}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </template>
-                  </Card>
-                </div>
-              </div>
-            </TabPanel>
 
             <!-- Reports Tab -->
-            <TabPanel header="Reports">
+            <TabPanel header="Reports" v-if="authStore.userRole !== 'PROMOTER'">
               <div class="reports-content">
                 <div class="reports-header">
                   <h3>Activation Reports</h3>
@@ -1101,6 +986,19 @@
                 </Card>
               </div>
             </TabPanel>
+
+            <!-- Check-in/out Tab - Only for Promoters -->
+            <TabPanel header="Check-in/out" v-if="authStore.userRole === 'PROMOTER'">
+              <PromoterCheckInOut
+                v-if="activationId"
+                :activation-id="activationId"
+                :activation="activation"
+                @checkin-success="handleCheckinSuccess"
+                @checkout-success="handleCheckoutSuccess"
+                @images-updated="handleImagesUpdated"
+              />
+            </TabPanel>
+
           </TabView>
         </div>
       </div>
@@ -1122,8 +1020,9 @@
 
       <!-- Record Sale Dialog -->
       <RecordSale
+        v-if="activationId"
         v-model:visible="showRecordSaleDialog"
-        :activation-id="activation?.id"
+        :activation-id="activationId"
         @sale-recorded="handleSaleRecorded"
       />
 
@@ -1269,6 +1168,23 @@
             @click="exportActivationLeads"
           />
         </template>
+      </Dialog>
+
+      <!-- Lead Comment Dialog -->
+      <Dialog
+        v-model:visible="showLeadCommentDialog"
+        :modal="true"
+        :closable="true"
+        :style="{ width: '90vw', maxWidth: '900px' }"
+        class="lead-comment-dialog"
+      >
+        <LeadCommentForm 
+          v-if="selectedLead && showLeadCommentDialog"
+          :leadData="selectedLead"
+          :visible="showLeadCommentDialog"
+          @close="closeLeadCommentDialog"
+          @success="onLeadCommentSuccess"
+        />
       </Dialog>
 
       <!-- Team Assignment Dialog -->
@@ -1492,21 +1408,33 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
+import { useActivationStore } from '@/stores/activation'
 import { activationService, fileService } from '@/services/api'
 import leadService from '@/services/leadService'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
-import { StockMovementList, RecordSale } from '@/components'
+import { StockMovementList, RecordSale, LeadCommentForm } from '@/components'
 import LeadCaptureForm from '@/components/leads/LeadCaptureForm.vue'
+import PromoterCheckInOut from '@/components/activations/PromoterCheckInOut.vue'
 
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const authStore = useAuthStore()
+const activationStore = useActivationStore()
 
 // State
 const loading = ref(true)
 const refreshing = ref(false)
 const activation = ref(null)
+const activationId = computed(() => {
+  const id = route.params.id
+  const numId = Number(id)
+  if (isNaN(numId) || !id) {
+    console.warn('Invalid activation ID from route:', id)
+    return null
+  }
+  return numId
+})
 const recentReports = ref([])
 const showActionsMenu = ref(false)
 const lastRefresh = ref(null)
@@ -1528,13 +1456,12 @@ const promoterSearchTerm = ref('')
 const managerSearchTerm = ref('')
 const selectedManagerId = ref(null)
 
-// Sales & Inventory State
-const showRecordSaleDialog = ref(false)
 
 // Lead Management State
 const showLeadCaptureDialog = ref(false)
 const showLeadDetailsDialog = ref(false)
 const showLeadExportDialog = ref(false)
+const showLeadCommentDialog = ref(false)
 const selectedLead = ref(null)
 const activationLeads = ref([])
 const leadStats = ref(null)
@@ -1554,12 +1481,16 @@ const teamRoles = ref([
 const userRole = computed(() => authStore.user?.role)
 
 const canEditActivation = computed(() => {
-  return ['ADMIN', 'ACTIVATION_MANAGER'].includes(userRole.value) ||
+  return userRole.value === 'ADMIN' ||
       (userRole.value === 'CLIENT' && activation.value?.clientEmail === authStore.user?.email)
 })
 
 const canManageTeam = computed(() => {
   return ['ADMIN', 'ACTIVATION_MANAGER'].includes(userRole.value)
+})
+
+const canAssignManager = computed(() => {
+  return userRole.value === 'ADMIN'
 })
 
 // Team Assignment Computed Properties
@@ -1601,18 +1532,16 @@ const allTeamMembers = computed(() => {
   return teamMembers
 })
 
-// Sales & Inventory permissions
-const canRecordSales = computed(() => {
-  return authStore.isPromoter || authStore.isActivationManager || authStore.isAdmin
-})
 
 // Lead Management permissions
 const canCaptureLeads = computed(() => {
-  return ['ADMIN', 'ACTIVATION_MANAGER', 'PROMOTER'].includes(userRole.value)
+  const hasPermission = ['ADMIN', 'ACTIVATION_MANAGER', 'PROMOTER'].includes(userRole.value)
+  console.log('canCaptureLeads check:', { userRole: userRole.value, hasPermission })
+  return hasPermission
 })
 
 const canEditLeads = computed(() => {
-  return ['ADMIN', 'ACTIVATION_MANAGER'].includes(userRole.value)
+  return userRole.value === 'ADMIN'
 })
 
 // Methods
@@ -1626,13 +1555,12 @@ const loadActivationData = async (isRefresh = false) => {
   error.value = null
   
   try {
-    const activationId = route.params.id
-    if (!activationId) {
+    if (!activationId.value) {
       throw new Error('Activation ID is required')
     }
 
-    // Fetch activation data from API
-    const activationData = await activationService.getActivation(activationId)
+    // Fetch activation data from API using role-aware store method
+    const activationData = await activationStore.getActivation(activationId.value)
     
     // Reset retry count on successful load
     retryCount.value = 0
@@ -1640,7 +1568,7 @@ const loadActivationData = async (isRefresh = false) => {
     // Use real backend data and supplement with calculated/mock fields for UI
     activation.value = {
       // Core backend DTO fields
-      id: activationData.id || activationId,
+      id: activationData.id || activationId.value,
       name: activationData.name || 'Unnamed Activation',
       clientId: activationData.clientId,
       clientCompanyName: activationData.clientCompanyName || 'Unknown Company',
@@ -1974,43 +1902,6 @@ const calculateAverageRating = () => {
   return (totalRating / allTeamMembers.value.length).toFixed(1)
 }
 
-const formatKpiValue = (value, unit) => {
-  const safeValue = value || 0
-  switch (unit) {
-    case 'currency':
-      return `${safeValue.toLocaleString()}`
-    case 'rating':
-      return `${safeValue}/5`
-    case 'percentage':
-      return `${safeValue}%`
-    default:
-      return safeValue.toLocaleString()
-  }
-}
-
-const getKpiProgressClass = (current, target) => {
-  const percentage = (current / target) * 100
-  if (percentage >= 100) return 'progress-excellent'
-  if (percentage >= 80) return 'progress-good'
-  if (percentage >= 60) return 'progress-warning'
-  return 'progress-danger'
-}
-
-const getKpiStatus = (current, target) => {
-  const percentage = (current / target) * 100
-  if (percentage >= 100) return 'Achieved'
-  if (percentage >= 80) return 'On Track'
-  if (percentage >= 60) return 'Behind'
-  return 'Critical'
-}
-
-const getKpiStatusSeverity = (current, target) => {
-  const percentage = (current / target) * 100
-  if (percentage >= 100) return 'success'
-  if (percentage >= 80) return 'info'
-  if (percentage >= 60) return 'warning'
-  return 'danger'
-}
 
 const editActivation = () => {
   router.push(`/activations/${route.params.id}/edit`)
@@ -2551,13 +2442,6 @@ const formatFullAddress = () => {
   return parts.join(', ')
 }
 
-const getPerformanceClass = (percentage) => {
-  if (!percentage) return ''
-  if (percentage >= 90) return 'progress-excellent'
-  if (percentage >= 70) return 'progress-good'
-  if (percentage >= 50) return 'progress-warning'
-  return 'progress-danger'
-}
 
 
 // Watch for dialog opens to load data
@@ -2579,16 +2463,6 @@ watch(showManagerAssignmentDialog, (newValue) => {
   }
 })
 
-// Sales & Inventory Methods
-const handleMovementSelected = (movement) => {
-  console.log('Movement selected:', movement)
-}
-
-const handleSaleRecorded = (saleData) => {
-  console.log('Sale recorded:', saleData)
-  // You could refresh activation data here if needed
-  // loadActivationData(true)
-}
 
 // Lead Management Methods
 const loadActivationLeads = async (page = 0) => {
@@ -2598,6 +2472,8 @@ const loadActivationLeads = async (page = 0) => {
   }
   
   console.log('Loading leads for activation ID:', activation.value.id)
+  console.log('Current user role:', userRole.value)
+  console.log('Can capture leads:', canCaptureLeads.value)
   leadsLoading.value = true
   try {
     const params = {
@@ -2607,7 +2483,12 @@ const loadActivationLeads = async (page = 0) => {
     }
     
     console.log('Fetching leads with params:', params)
-    const response = await leadService.getLeadsByActivation(activation.value.id, params)
+    const response = await leadService.getLeadsByActivation(
+      activation.value.id, 
+      params, 
+      userRole.value, 
+      authStore.userId
+    )
     console.log('Lead response:', response)
     
     // Handle different response structures
@@ -2704,6 +2585,31 @@ const editLead = (lead) => {
   })
 }
 
+const openLeadCommentDialog = (lead) => {
+  selectedLead.value = lead
+  showLeadCommentDialog.value = true
+}
+
+const closeLeadCommentDialog = () => {
+  showLeadCommentDialog.value = false
+  selectedLead.value = null
+}
+
+const onLeadCommentSuccess = async (result) => {
+  toast.add({
+    severity: 'success',
+    summary: 'Comments Saved',
+    detail: 'Lead insights have been successfully recorded',
+    life: 3000
+  })
+  
+  // Close the dialog
+  closeLeadCommentDialog()
+  
+  // Refresh the leads list to show updated data
+  await loadActivationLeads()
+}
+
 const onLeadPageChange = (event) => {
   loadActivationLeads(event.page)
 }
@@ -2770,12 +2676,53 @@ const getAgeGroupLabel = (ageGroup) => {
   return leadService.getAgeGroupLabel(ageGroup)
 }
 
+// Check-in/out event handlers
+const handleCheckinSuccess = (result) => {
+  toast.add({
+    severity: 'success',
+    summary: 'Check-in Successful',
+    detail: 'You have successfully checked in to this activation',
+    life: 3000
+  })
+  // Reload activation data to refresh status
+  loadActivationData()
+}
+
+const handleCheckoutSuccess = (result) => {
+  toast.add({
+    severity: 'success',
+    summary: 'Check-out Successful',
+    detail: 'You have successfully checked out of this activation',
+    life: 3000
+  })
+  // Don't reload the entire page data - the PromoterCheckInOut component handles its own data refresh
+  // loadActivationData()
+}
+
+const handleImagesUpdated = (images) => {
+  toast.add({
+    severity: 'success',
+    summary: 'Images Updated',
+    detail: `Successfully updated activation images`,
+    life: 3000
+  })
+  // Optionally refresh activation data to show updated images
+  // loadActivationData()
+}
+
 const getCustomerTypeLabel = (customerType) => {
   return leadService.getCustomerTypeLabel(customerType)
 }
 
 const getRepeatPurchaseLabel = (intent) => {
   return leadService.getRepeatPurchaseLabel(intent)
+}
+
+const getEngagementSeverity = (level) => {
+  if (!level) return 'secondary'
+  if (level >= 4) return 'success'
+  if (level >= 3) return 'warning'
+  return 'danger'
 }
 
 // Update the onMounted to also load leads if user can capture leads
@@ -3185,103 +3132,6 @@ onMounted(() => {
   gap: 0.5rem;
 }
 
-.budget-overview {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.budget-summary {
-  display: flex;
-  justify-content: space-between;
-  background: #f9fafb;
-  padding: 1rem;
-  border-radius: 0.5rem;
-}
-
-.budget-total,
-.budget-spent,
-.budget-remaining {
-  display: flex;
-  flex-direction: column;
-  text-align: center;
-  gap: 0.25rem;
-}
-
-.budget-label {
-  font-size: 0.875rem;
-  color: #6b7280;
-  font-weight: 500;
-}
-
-.budget-amount {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #111827;
-}
-
-.budget-progress {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.progress-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.875rem;
-  color: #6b7280;
-}
-
-.budget-breakdown h5 {
-  color: #111827;
-  margin: 0 0 1rem 0;
-}
-
-.breakdown-items {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.breakdown-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.item-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.item-label {
-  color: #6b7280;
-  font-size: 0.875rem;
-}
-
-.item-amount {
-  color: #111827;
-  font-weight: 600;
-}
-
-.item-progress {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.mini-progress {
-  flex: 1;
-  height: 0.25rem;
-}
-
-.spent-amount {
-  font-size: 0.75rem;
-  color: #6b7280;
-}
 
 .team-content {
   max-width: 1200px;
@@ -3433,155 +3283,8 @@ onMounted(() => {
   gap: 0.25rem;
 }
 
-.performance-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 1.5rem;
-}
 
-.kpi-card h3 {
-  color: #111827;
-  margin: 0;
-}
 
-.kpi-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.kpi-item {
-  padding: 1rem;
-  background: #f9fafb;
-  border-radius: 0.5rem;
-}
-
-.kpi-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
-}
-
-.kpi-name {
-  font-weight: 600;
-  color: #111827;
-}
-
-.kpi-value {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #111827;
-}
-
-.kpi-progress {
-  margin-bottom: 0.5rem;
-}
-
-.kpi-target {
-  font-size: 0.8rem;
-  color: #6b7280;
-  margin-top: 0.25rem;
-}
-
-.kpi-status {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.chart-card h3 {
-  color: #111827;
-  margin: 0;
-}
-
-.chart-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 250px;
-  background: #f9fafb;
-  border: 2px dashed #d1d5db;
-  border-radius: 0.5rem;
-  color: #6b7280;
-  text-align: center;
-}
-
-.chart-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-}
-
-.feedback-card h3 {
-  color: #111827;
-  margin: 0;
-}
-
-.feedback-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.feedback-stats {
-  display: flex;
-  justify-content: space-around;
-  background: #f9fafb;
-  padding: 1rem;
-  border-radius: 0.5rem;
-}
-
-.feedback-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.feedback-breakdown h5 {
-  color: #111827;
-  margin: 0 0 1rem 0;
-}
-
-.rating-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.rating-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.rating-label {
-  font-size: 0.875rem;
-  color: #6b7280;
-  min-width: 60px;
-}
-
-.bar-container {
-  flex: 1;
-  height: 1rem;
-  background: #e5e7eb;
-  border-radius: 0.25rem;
-  overflow: hidden;
-}
-
-.bar {
-  height: 100%;
-  background: #3b82f6;
-  transition: width 0.3s ease;
-}
-
-.rating-count {
-  font-size: 0.875rem;
-  color: #111827;
-  font-weight: 600;
-  min-width: 30px;
-  text-align: right;
-}
 
 .reports-content {
   max-width: 1200px;
@@ -3647,22 +3350,6 @@ onMounted(() => {
   gap: 0.25rem;
 }
 
-/* Progress bar variants */
-:deep(.progress-excellent .p-progressbar-value) {
-  background: #10b981;
-}
-
-:deep(.progress-good .p-progressbar-value) {
-  background: #3b82f6;
-}
-
-:deep(.progress-warning .p-progressbar-value) {
-  background: #f59e0b;
-}
-
-:deep(.progress-danger .p-progressbar-value) {
-  background: #ef4444;
-}
 
 :deep(.over-budget .p-progressbar-value) {
   background: #ef4444;
@@ -4236,10 +3923,6 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 
-  .budget-summary {
-    flex-direction: column;
-    gap: 1rem;
-  }
 
   .team-stats {
     grid-template-columns: repeat(2, 1fr);
@@ -4266,10 +3949,6 @@ onMounted(() => {
   }
 }
 
-/* Sales & Inventory Tab Styles */
-.sales-inventory-content {
-  padding: 1rem 0;
-}
 
 .section-header {
   display: flex;
@@ -4411,6 +4090,41 @@ onMounted(() => {
   }
 }
 
+/* Lead Comment Dialog Styles */
+.lead-comment-dialog {
+  .p-dialog-content {
+    padding: 0;
+  }
+}
+
+/* Lead Insights Table Styles */
+.insight-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  text-align: center;
+}
+
+.mini-rating {
+  scale: 0.8;
+}
+
+:deep(.mini-rating .p-rating-icon) {
+  font-size: 1rem;
+}
+
+.engagement-tag {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.no-data {
+  color: #6c757d;
+  font-style: italic;
+  font-size: 0.875rem;
+}
+
 @media (max-width: 768px) {
   .section-header {
     flex-direction: column;
@@ -4436,6 +4150,10 @@ onMounted(() => {
         background-color: #f9fafb;
       }
     }
+  }
+  
+  .insight-cell {
+    scale: 0.9;
   }
 }
 </style>

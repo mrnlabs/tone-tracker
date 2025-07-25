@@ -36,6 +36,7 @@ export const useWarehouseStore = defineStore('warehouse', () => {
         category: null,
         supplier: null,
         location: null,
+        client: null,
         search: '',
         lowStock: false,
         outOfStock: false

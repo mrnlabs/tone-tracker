@@ -23,6 +23,28 @@ export { default as ActivationMap } from './maps/ActivationMap.vue'
 // === SALES COMPONENTS ===
 export { default as RecordSale } from './sales/RecordSale.vue'
 
+// === PROMOTER COMPONENTS ===
+export { default as PromoterCheckInOut } from './promoters/CheckInOut.vue'
+export { default as ActivityLogger } from './promoters/ActivityLogger.vue'
+export { default as PromoterSales } from './promoters/PromoterSales.vue'
+export { default as CustomerInteraction } from './promoters/CustomerInteraction.vue'
+export { default as ExpenseReporting } from './promoters/ExpenseReporting.vue'
+export { default as PromoterImageGallery } from './promoters/PromoterImageGallery.vue'
+
+// === ACTIVATION COMPONENTS ===
+export { default as CheckInOut } from './activations/CheckInOut.vue'
+export { default as ActivationImageGallery } from './activations/ActivationImageGallery.vue'
+
+// === LEAD COMPONENTS ===
+export { default as LeadCommentForm } from './leads/LeadCommentForm.vue'
+export { default as FollowUpLeads } from './leads/FollowUpLeads.vue'
+export { default as LeadAnalytics } from './leads/LeadAnalytics.vue'
+
+// === REPORT COMPONENTS ===
+export { default as DailyReportForm } from './reports/DailyReportForm.vue'
+export { default as ConsumerBehaviorSection } from './reports/ConsumerBehaviorSection.vue'
+export { default as ConsumerBehaviorDisplay } from './reports/ConsumerBehaviorDisplay.vue'
+
 // === SAMPLE COMPONENTS ===
 export { default as RecordSample } from './samples/RecordSample.vue'
 

@@ -85,6 +85,20 @@
               </template>
             </Column>
 
+            <Column field="clientName" header="Client" sortable>
+              <template #body="{ data }">
+                <div class="client-cell">
+                  <Tag
+                    v-if="data.clientName"
+                    :value="data.clientName"
+                    severity="info"
+                    class="client-tag"
+                  />
+                  <span v-else class="no-client">No Client</span>
+                </div>
+              </template>
+            </Column>
+
             <Column field="streetAddress" header="Street Address" sortable>
               <template #body="{ data }">
                 <span class="address">{{ data.streetAddress }}</span>
@@ -97,10 +111,10 @@
               </template>
             </Column>
 
-            <Column field="warehouseManager" header="Manager" sortable>
+            <Column field="warehouseManagerName" header="Manager" sortable>
               <template #body="{ data }">
                 <span class="manager">
-                  {{ data.warehouseManager ? `${data.warehouseManager.firstName} ${data.warehouseManager.lastName}` : 'Not assigned' }}
+                  {{ data.warehouseManagerName || 'Not assigned' }}
                 </span>
               </template>
             </Column>
@@ -196,9 +210,44 @@ const selectAll = ref(false)
 const filterValues = ref({})
 const recentActivity = ref([])
 
-// Use warehouse store data
-const warehouses = computed(() => warehouseStore.warehouses || [])
-const pagination = computed(() => warehouseStore.pagination)
+// Use warehouse store data with client-side filtering
+const warehouses = computed(() => {
+  let result = warehouseStore.warehouses || []
+  
+  // Apply client filter
+  if (filterValues.value.client) {
+    result = result.filter(warehouse => 
+      warehouse.clientId === filterValues.value.client
+    )
+  }
+  
+  // Apply city filter
+  if (filterValues.value.city) {
+    result = result.filter(warehouse => 
+      warehouse.city === filterValues.value.city
+    )
+  }
+  
+  // Apply search filter
+  if (searchQuery.value) {
+    const searchTerm = searchQuery.value.toLowerCase()
+    result = result.filter(warehouse =>
+      warehouse.name?.toLowerCase().includes(searchTerm) ||
+      warehouse.streetAddress?.toLowerCase().includes(searchTerm) ||
+      warehouse.city?.toLowerCase().includes(searchTerm) ||
+      warehouse.clientName?.toLowerCase().includes(searchTerm) ||
+      warehouse.warehouseManagerName?.toLowerCase().includes(searchTerm)
+    )
+  }
+  
+  return result
+})
+
+// Pagination for filtered results
+const pagination = computed(() => ({
+  ...warehouseStore.pagination,
+  total: warehouses.value.length
+}))
 const loading = computed(() => warehouseStore.isLoading)
 const warehouseStats = ref({
   total: 0,
@@ -245,13 +294,45 @@ const headerActions = computed(() => {
   return actions
 })
 
+// Helper function to count unique clients (from all warehouses, not filtered)
+const getUniqueClientsCount = () => {
+  const clientIds = new Set()
+  warehouseStore.warehouses.forEach(warehouse => {
+    if (warehouse.clientId) {
+      clientIds.add(warehouse.clientId)
+    }
+  })
+  return clientIds.size
+}
+
+// Helper function to get client filter options (from all warehouses, not filtered)
+const getClientFilterOptions = () => {
+  const clientsMap = new Map()
+  warehouseStore.warehouses.forEach(warehouse => {
+    if (warehouse.clientId && warehouse.clientName) {
+      clientsMap.set(warehouse.clientId, {
+        label: warehouse.clientName,
+        value: warehouse.clientId
+      })
+    }
+  })
+  return Array.from(clientsMap.values()).sort((a, b) => a.label.localeCompare(b.label))
+}
+
 // Stats Configuration
 const statsData = computed(() => [
   {
     title: 'Total Warehouses',
-    value: warehouseStats.value.total,
+    value: warehouses.value.length,
     icon: 'pi pi-building',
     color: 'blue',
+    trend: null
+  },
+  {
+    title: 'Active Clients',
+    value: getUniqueClientsCount(),
+    icon: 'pi pi-users',
+    color: 'cyan',
     trend: null
   },
   {
@@ -268,18 +349,18 @@ const statsData = computed(() => [
     color: 'green',
     format: 'currency',
     trend: null
-  },
-  {
-    title: 'Low Stock Alerts',
-    value: warehouseStats.value.lowStockAlerts,
-    icon: 'pi pi-exclamation-triangle',
-    color: 'red',
-    trend: null
   }
 ])
 
 // Filter Configuration
 const filterConfig = computed(() => [
+  {
+    type: 'dropdown',
+    key: 'client',
+    label: 'Client',
+    placeholder: 'All Clients',
+    options: getClientFilterOptions()
+  },
   {
     type: 'dropdown',
     key: 'city',
@@ -408,6 +489,15 @@ const handleFilter = (filters) => {
   filterValues.value = filters
   // Implement filter logic
 }
+
+// Computed property for active filters count
+const activeFiltersCount = computed(() => {
+  let count = 0
+  if (filterValues.value.client) count++
+  if (filterValues.value.city) count++
+  if (searchQuery.value) count++
+  return count
+})
 
 const resetFilters = () => {
   filterValues.value = {}
@@ -994,5 +1084,24 @@ onMounted(() => {
   .utilization-bar {
     flex: 1;
   }
+}
+
+/* Client column styles */
+.client-cell {
+  display: flex;
+  align-items: center;
+}
+
+.client-tag {
+  font-size: 0.85rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-weight: 500;
+}
+
+.no-client {
+  color: #6b7280;
+  font-style: italic;
+  font-size: 0.9rem;
 }
 </style>

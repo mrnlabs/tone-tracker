@@ -466,11 +466,14 @@ const apiService = new ApiService()
 
     async uploadProfilePicture(userId, formData) {
         const userIdPath = userId === 'current' ? 'current' : userId
-        return await apiService.post(`/users/${userIdPath}/profile-picture`, formData, {
+        console.log('API: Uploading profile picture to:', `/users/${userIdPath}/profile-picture`)
+        const response = await apiService.post(`/users/${userIdPath}/profile-picture`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }
         })
+        console.log('API: Raw upload response:', response)
+        return response
     },
 
     async deleteProfilePicture(userId) {
@@ -487,8 +490,12 @@ const apiService = new ApiService()
         return await apiService.getPaginated('/promoters', params)
     },
 
-    async getPromoter(id) {
-        return await apiService.get(`/promoters/${id}`)
+    async getPromoter(id, userId = null) {
+        const params = {}
+        if (userId) {
+            params.userId = userId
+        }
+        return await apiService.get(`/promoters/${id}`, { params })
     },
 
     async createPromoter(promoterData) {
@@ -582,6 +589,17 @@ const apiService = new ApiService()
     async getUsersByRole(role, params = {}) {
         const queryParams = { role, ...params }
         return await apiService.get('/users/by-role', { params: queryParams })
+    },
+
+    async getUserImages(userId) {
+        try {
+            const response = await apiService.get(`/users/${userId}/images`)
+            return response.data || response || []
+        } catch (error) {
+            console.warn(`Failed to get images for user ${userId}:`, error)
+            // Fallback to files by entity
+            return await fileService.getFilesByEntity('PROMOTER', userId)
+        }
     }
 }
 
@@ -686,9 +704,59 @@ const apiService = new ApiService()
         return await apiService.getPaginated(API_ENDPOINTS.ACTIVATIONS, params)
     },
 
+    async getMyActivations(params = {}) {
+        // Endpoint for current user's activations (for promoters)
+        return await apiService.getPaginated('/activations/my', params)
+    },
+
+    async getCurrentUserActivations(params = {}) {
+        // Alternative endpoint using user profile endpoint that might have better permissions
+        return await apiService.getPaginated('/users/current/activations', params)
+    },
+
     async getActivation(id) {
         const url = API_ENDPOINTS.ACTIVATION_DETAILS.replace(':id', id)
         return await apiService.get(url)
+    },
+
+    async getActivationForPromoter(id, userId = null) {
+        // Try to get activation details through promoter-specific endpoints
+        try {
+            // First try getting through user's activations (if they have access)
+            const userActivationsResponse = await this.getCurrentUserActivations()
+            const userActivation = userActivationsResponse.content?.find(activation => activation.id == id) ||
+                                  userActivationsResponse.data?.find(activation => activation.id == id)
+            
+            if (userActivation) {
+                return userActivation
+            }
+        } catch (error) {
+            console.log('Failed to get activation through user activations:', error)
+        }
+
+        try {
+            // Try getting through promoter assignments
+            if (userId) {
+                const assignmentsResponse = await promoterService.getPromoterAssignments(userId)
+                const assignment = assignmentsResponse.content?.find(assignment => 
+                    assignment.activation?.id == id || assignment.activationId == id
+                ) || assignmentsResponse.data?.find(assignment => 
+                    assignment.activation?.id == id || assignment.activationId == id
+                )
+                
+                if (assignment?.activation) {
+                    return assignment.activation
+                } else if (assignment?.activationId) {
+                    // If we only have the ID, try the direct endpoint as a fallback
+                    return await this.getActivation(id)
+                }
+            }
+        } catch (error) {
+            console.log('Failed to get activation through promoter assignments:', error)
+        }
+
+        // Final fallback to direct endpoint
+        throw new Error('Unable to access activation details. You may not have permission to view this activation.')
     },
 
     async createActivation(activationData) {
@@ -745,17 +813,37 @@ const apiService = new ApiService()
         return await apiService.patch(`${API_ENDPOINTS.ACTIVATIONS}/${id}/status`, { status })
     },
 
-    async checkinPromoter(activationId, promoterId, location) {
-        return await apiService.post(`${API_ENDPOINTS.ACTIVATIONS}/${activationId}/checkin`, {
-            promoter_id: promoterId,
-            location
+    async checkinPromoter(activationId, userId, location, notes = null) {
+        return await apiService.post(`/attendance/check-in`, {
+            userId: userId,
+            activationId: activationId,
+            latitude: location.latitude,
+            longitude: location.longitude,
+            address: location.address,
+            notes: notes
         })
     },
 
-    async checkoutPromoter(activationId, promoterId) {
-        return await apiService.post(`${API_ENDPOINTS.ACTIVATIONS}/${activationId}/checkout`, {
-            promoter_id: promoterId
+    async checkoutPromoter(activationId, userId, attendanceRecordId, location) {
+        return await apiService.post(`/attendance/check-out`, {
+            attendanceRecordId: attendanceRecordId,
+            latitude: location.latitude,
+            longitude: location.longitude,
+            address: location.address
         })
+    },
+
+
+    async getCheckInHistory(activationId) {
+        return await apiService.get(`/attendance/activation/${activationId}`)
+    },
+
+    async getPromoterCheckInHistory(activationId, promoterId) {
+        return await apiService.get(`/attendance/promoter/${promoterId}/activation/${activationId}`)
+    },
+
+    async getCurrentUserCheckInHistory(activationId) {
+        return await apiService.get(`/attendance/my-checkins/activation/${activationId}`)
     },
 
     async recordSales(activationId, salesData) {
@@ -764,6 +852,10 @@ const apiService = new ApiService()
 
     async recordCustomerData(activationId, customerData) {
         return await apiService.post(`${API_ENDPOINTS.ACTIVATIONS}/${activationId}/customers`, customerData)
+    },
+
+    async getActivationImages(activationId) {
+        return await apiService.get(`/files/entity/activation/${activationId}`)
     }
 }
 
@@ -1059,6 +1151,26 @@ const warehouseService = {
             : `${s3BucketUrl}/${cleanPath}`;
             
         return s3Url;
+    },
+
+    async getFilesByEntity(entityType, entityId) {
+        try {
+            const response = await apiService.get(`/files/by-entity?entityType=${entityType}&entityId=${entityId}`)
+            return response.data || response || []
+        } catch (error) {
+            console.warn(`Failed to get files for ${entityType} ${entityId}:`, error)
+            return []
+        }
+    },
+
+    async updateFileMetadata(fileId, metadata) {
+        try {
+            const response = await apiService.put(`/files/${fileId}/metadata`, metadata)
+            return response.data || response
+        } catch (error) {
+            console.error(`Failed to update file metadata for ${fileId}:`, error)
+            throw error
+        }
     }
 }
 

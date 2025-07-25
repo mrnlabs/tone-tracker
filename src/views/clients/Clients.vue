@@ -129,7 +129,7 @@
                 <h3>Client Directory</h3>
                 <div class="table-actions">
                   <Button
-                      v-if="selectedClients.length > 0"
+                      v-if="selectedClients.length > 0 && userRole === 'ADMIN'"
                       @click="bulkDelete"
                       icon="pi pi-trash"
                       :label="`Delete Selected (${selectedClients.length})`"
@@ -293,6 +293,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useClientsStore } from '@/stores/client'
+import { useAuthStore } from '@/stores/auth'
 import { useLoading } from '@/composables/useLoading'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -304,7 +305,11 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 const router = useRouter()
 const toast = useToast()
 const clientsStore = useClientsStore()
+const authStore = useAuthStore()
 const { withLoading, isLoading } = useLoading()
+
+// Get current user role
+const userRole = computed(() => authStore.userRole)
 
 // State
 const selectedClients = ref([])
@@ -415,13 +420,13 @@ const headerActions = computed(() => [
     tooltip: 'Refresh client list',
     handler: refreshClients
   },
-  {
+  ...(userRole.value === 'ADMIN' ? [{
     key: 'create',
     icon: 'pi pi-plus',
     label: 'Add Client',
     class: 'p-button-success',
     handler: () => router.push('/clients/create')
-  }
+  }] : [])
 ])
 
 // Stats data configuration
@@ -510,9 +515,9 @@ const tableActions = [
 // User permissions for action visibility
 const userPermissions = computed(() => ({
   canView: true,
-  canEdit: true,
-  canCreate: true,
-  canDelete: true
+  canEdit: userRole.value === 'ADMIN',
+  canCreate: userRole.value === 'ADMIN',
+  canDelete: userRole.value === 'ADMIN'
 }))
 
 // Empty state configurations

@@ -81,6 +81,38 @@
                     />
                   </div>
 
+                  <div class="form-group">
+                    <label for="clientId" class="form-label">Client *</label>
+                    <Dropdown
+                        id="clientId"
+                        v-model="form.clientId"
+                        :options="clientOptions"
+                        option-label="label"
+                        option-value="value"
+                        :placeholder="clientOptions.length === 0 ? 'No clients available - please create clients first' : 'Select client'"
+                        :class="{ 'p-invalid': errors.clientId }"
+                        :disabled="clientOptions.length === 0"
+                        class="form-input"
+                    />
+                    <small v-if="errors.clientId" class="p-error">{{ errors.clientId }}</small>
+                    <small v-if="clientOptions.length === 0" class="p-error">
+                      No clients available. Please create clients first before updating warehouse.
+                    </small>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="warehouseManagerId" class="form-label">Warehouse Manager</label>
+                    <Dropdown
+                        id="warehouseManagerId"
+                        v-model="form.warehouseManagerId"
+                        :options="managerOptions"
+                        option-label="name"
+                        option-value="id"
+                        placeholder="Select warehouse manager"
+                        class="form-input"
+                    />
+                  </div>
+
                 </div>
               </div>
 
@@ -116,6 +148,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
 import { useWarehouseStore } from '@/stores/warehouse'
+import { useUsersStore } from '@/stores/user'
+import { useClientsStore } from '@/stores/client'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
@@ -126,6 +160,8 @@ const router = useRouter()
 const toast = useToast()
 const authStore = useAuthStore()
 const warehouseStore = useWarehouseStore()
+const userStore = useUsersStore()
+const clientsStore = useClientsStore()
 
 // State
 const loading = ref(true)
@@ -135,13 +171,22 @@ const warehouse = ref(null)
 const form = ref({
   name: '',
   streetAddress: '',
-  city: ''
+  city: '',
+  clientId: '',
+  warehouseManagerId: ''
 })
 const errors = ref({})
+const managerOptions = ref([])
+const clientOptions = computed(() => {
+  return clientsStore.clients.map(client => ({
+    label: client.companyName || client.company || client.name || `Client ${client.id}`,
+    value: client.id
+  }))
+})
 
 // Computed
 const isFormValid = computed(() => {
-  return form.value.name && form.value.streetAddress
+  return form.value.name && form.value.streetAddress && form.value.clientId
 })
 
 const headerActions = computed(() => [
@@ -180,7 +225,9 @@ const loadWarehouseData = async () => {
       form.value = {
         name: warehouse.value.name || '',
         streetAddress: warehouse.value.streetAddress || '',
-        city: warehouse.value.city || ''
+        city: warehouse.value.city || '',
+        clientId: warehouse.value.clientId || '',
+        warehouseManagerId: warehouse.value.warehouseManagerId || ''
       }
       console.log('EditWarehouse: Form populated:', form.value)
     }
@@ -204,6 +251,7 @@ const validateForm = () => {
 
   if (!form.value.name) errors.value.name = 'Warehouse name is required'
   if (!form.value.streetAddress) errors.value.streetAddress = 'Street address is required'
+  if (!form.value.clientId) errors.value.clientId = 'Client selection is required'
 
   return Object.keys(errors.value).length === 0
 }
@@ -218,7 +266,9 @@ const submitForm = async () => {
     const warehouseData = {
       name: form.value.name,
       streetAddress: form.value.streetAddress,
-      city: form.value.city || null
+      city: form.value.city || null,
+      clientId: form.value.clientId,
+      warehouseManagerId: form.value.warehouseManagerId || null
     }
 
     // Use warehouse store to update warehouse
@@ -253,6 +303,32 @@ const cancelForm = () => {
   }
 }
 
+const loadManagers = async () => {
+  try {
+    // Load staff members who can be warehouse managers
+    await userStore.fetchUsers({ role: 'WAREHOUSE_MANAGER' })
+    
+    managerOptions.value = userStore.users
+      .filter(user => user.role === 'WAREHOUSE_MANAGER')
+      .map(manager => ({
+        id: manager.id,
+        name: `${manager.firstName} ${manager.lastName}`,
+        email: manager.email
+      }))
+  } catch (error) {
+    console.error('Failed to load managers:', error)
+    managerOptions.value = []
+  }
+}
+
+const loadClients = async () => {
+  try {
+    await clientsStore.fetchClients()
+  } catch (error) {
+    console.error('Failed to load clients:', error)
+  }
+}
+
 const handleEmptyStateAction = (action) => {
   if (action === 'back') {
     router.push('/warehouses')
@@ -260,7 +336,11 @@ const handleEmptyStateAction = (action) => {
 }
 
 onMounted(async () => {
-  await loadWarehouseData()
+  await Promise.all([
+    loadWarehouseData(),
+    loadManagers(),
+    loadClients()
+  ])
 })
 </script>
 

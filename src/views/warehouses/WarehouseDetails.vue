@@ -123,139 +123,18 @@
                   </div>
                 </div>
 
-                <!-- Stock Inventory Section -->
-                <div class="warehouse-section">
-                  <div class="section-header">
-                    <h3 class="section-title">
-                      <i class="pi pi-box"></i>
-                      {{ warehouse.name }} - Stock Inventory
-                    </h3>
-                    <div class="section-actions">
-                      <div class="stock-stats">
-                        <span class="stat-badge">
-                          <i class="pi pi-box"></i>
-                          {{ stockCount }} Items
-                        </span>
-                      </div>
-                      <Button
-                        label="Add Stock"
-                        icon="pi pi-plus"
-                        class="p-button-success"
-                        @click="showAddStockDialog"
-                        :disabled="!canManageWarehouse"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Stock Inventory Table -->
-                  <Card class="inventory-card">
-                    <template #content>
-                      <DataTable
-                        :value="warehouseStocks"
-                        :loading="loadingInventory"
-                        responsiveLayout="scroll"
-                        :paginator="true"
-                        :rows="10"
-                        :totalRecords="warehouseStocks.length"
-                        class="warehouse-stock-table"
-                      >
-                        <template #header>
-                          <div class="table-header-content">
-                            <div class="table-title">
-                              <h4>Stock Items in {{ warehouse.name }}</h4>
-                              <p class="table-subtitle">Manage inventory for this warehouse location</p>
-                            </div>
-                            <div class="table-actions">
-                              <Button
-                                label="Refresh"
-                                icon="pi pi-refresh"
-                                class="p-button-outlined p-button-sm"
-                                @click="loadInventory"
-                                :loading="loadingInventory"
-                              />
-                            </div>
-                          </div>
-                        </template>
-
-                        <template #empty>
-                          <div class="empty-stock-state">
-                            <i class="pi pi-box empty-icon"></i>
-                            <h4>No Stock Items</h4>
-                            <p>{{ warehouse.name }} doesn't have any stock items yet.</p>
-                            <Button
-                              v-if="canManageWarehouse"
-                              label="Add First Stock Item"
-                              icon="pi pi-plus"
-                              class="p-button-primary"
-                              @click="showAddStockDialog"
-                            />
-                          </div>
-                        </template>
-
-                        <Column field="id" header="Stock ID" sortable style="width: 100px;"></Column>
-                        
-                        <Column field="productName" header="Product" sortable>
-                          <template #body="{ data }">
-                            <div class="product-cell">
-                              <span class="product-name">{{ data.productName || 'Unknown Product' }}</span>
-                              <span class="product-sku">SKU: {{ data.sku || data.id }}</span>
-                            </div>
-                          </template>
-                        </Column>
-
-                        <Column field="type" header="Type" sortable>
-                          <template #body="{ data }">
-                            <Tag :value="data.type" class="type-tag" />
-                          </template>
-                        </Column>
-
-                        <Column field="quantityInWarehouse" header="Quantity" sortable>
-                          <template #body="{ data }">
-                            <div class="quantity-cell">
-                              <span class="quantity-number">{{ data.quantityInWarehouse || 0 }}</span>
-                              <span class="quantity-label">units</span>
-                            </div>
-                          </template>
-                        </Column>
-
-                        <Column field="unitPriceUSD" header="Unit Price" sortable>
-                          <template #body="{ data }">
-                            <div class="price-cell">
-                              <span class="price-usd">${{ data.unitPriceUSD ? Number(data.unitPriceUSD).toFixed(2) : '0.00' }}</span>
-                              <span class="price-zwl">ZWL ${{ data.unitPriceZWL ? Number(data.unitPriceZWL).toFixed(2) : '0.00' }}</span>
-                            </div>
-                          </template>
-                        </Column>
-
-                        <Column field="dateCreated" header="Added" sortable>
-                          <template #body="{ data }">
-                            <span class="date-added">{{ formatDate(data.dateCreated) }}</span>
-                          </template>
-                        </Column>
-
-                        <Column header="Actions" :exportable="false" style="width: 120px;">
-                          <template #body="{ data }">
-                            <div class="stock-actions-compact">
-                              <Button
-                                icon="pi pi-pencil"
-                                class="p-button-text p-button-sm p-button-rounded"
-                                v-tooltip.top="'Edit Stock'"
-                                @click="editStock(data)"
-                              />
-                              <Button
-                                icon="pi pi-times"
-                                class="p-button-text p-button-sm p-button-rounded p-button-warning"
-                                v-tooltip.top="'Deactivate Stock'"
-                                @click="deactivateStock(data)"
-                              />
-                            </div>
-                          </template>
-                        </Column>
-                      </DataTable>
-                    </template>
-                  </Card>
-                </div>
               </div>
+            </TabPanel>
+
+            <!-- Dashboard Tab -->
+            <TabPanel header="Dashboard">
+              <WarehouseDashboard
+                :warehouse="warehouse"
+                :stocks="warehouseStocks"
+                :movements="warehouseMovements"
+                :activations="filteredActivations"
+                @refresh="refreshDashboardData"
+              />
             </TabPanel>
 
             <!-- Manager Management Tab -->
@@ -386,19 +265,6 @@
                         :disabled="!canManageWarehouse"
                       />
                       <Button
-                        label="Stock Adjustment"
-                        icon="pi pi-pencil"
-                        class="p-button-outlined"
-                        @click="showStockAdjustment"
-                        :disabled="!canManageWarehouse"
-                      />
-                      <Button
-                        label="Generate Report"
-                        icon="pi pi-file-pdf"
-                        class="p-button-outlined"
-                        @click="generateInventoryReport"
-                      />
-                      <Button
                         label="Export Data"
                         icon="pi pi-download"
                         class="p-button-outlined"
@@ -434,6 +300,12 @@
                           @change="filterInventory"
                         />
                       </div>
+                      <div class="filter-field">
+                        <label class="flex items-center gap-2">
+                          <InputSwitch v-model="showOnlyAvailable" />
+                          <span class="text-sm">Available Only</span>
+                        </label>
+                      </div>
 
                       <div class="filter-field">
                         <Dropdown
@@ -461,7 +333,7 @@
                 <Card class="enhanced-inventory-card">
                   <template #content>
                     <DataTable
-                      :value="filteredWarehouseStocks"
+                      :value="filteredEnhancedStocks"
                       :loading="loadingInventory"
                       responsiveLayout="scroll"
                       :paginator="true"
@@ -615,232 +487,58 @@
               </div>
             </TabPanel>
 
-            <!-- Warehouse Reports Tab -->
-            <TabPanel header="Warehouse Reports">
-              <div class="warehouse-reports-content">
-                <!-- Report Dashboard Stats -->
-                <div class="report-stats-section">
+
+            <!-- Stock Movements Tab -->
+            <TabPanel header="Stock Movements">
+              <div class="stock-movements-content">
+                <!-- Movement Stats Section -->
+                <div class="movement-stats-section">
                   <h3 class="section-title">
-                    <i class="pi pi-chart-bar"></i>
-                    {{ warehouse.name }} - Performance Dashboard
+                    <i class="pi pi-arrow-right-arrow-left"></i>
+                    Recent Stock Activity
                   </h3>
                   
-                  <div class="report-stats-grid">
-                    <!-- Inventory Overview -->
-                    <Card class="report-stat-card">
+                  <div class="movement-stats-grid">
+                    <!-- Total Movements Today -->
+                    <Card class="movement-stat-card">
                       <template #content>
-                        <div class="report-stat-content">
-                          <div class="stat-icon inventory-stat">
-                            <i class="pi pi-box"></i>
-                          </div>
-                          <div class="stat-details">
-                            <h4>Inventory Overview</h4>
-                            <div class="stat-metrics">
-                              <div class="metric-item">
-                                <span class="metric-label">Total SKUs:</span>
-                                <span class="metric-value">{{ stockCount }}</span>
-                              </div>
-                              <div class="metric-item">
-                                <span class="metric-label">Total Units:</span>
-                                <span class="metric-value">{{ warehouse.numberOfItems?.toLocaleString() || 0 }}</span>
-                              </div>
-                              <div class="metric-item">
-                                <span class="metric-label">Total Value:</span>
-                                <span class="metric-value">${{ totalStockValue.toLocaleString() }}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </template>
-                    </Card>
-
-                    <!-- Stock Health -->
-                    <Card class="report-stat-card">
-                      <template #content>
-                        <div class="report-stat-content">
-                          <div class="stat-icon health-stat">
-                            <i class="pi pi-heart"></i>
-                          </div>
-                          <div class="stat-details">
-                            <h4>Stock Health</h4>
-                            <div class="stat-metrics">
-                              <div class="metric-item">
-                                <span class="metric-label">In Stock:</span>
-                                <span class="metric-value success">{{ inStockItemsCount }}</span>
-                              </div>
-                              <div class="metric-item">
-                                <span class="metric-label">Low Stock:</span>
-                                <span class="metric-value warning">{{ lowStockCount }}</span>
-                              </div>
-                              <div class="metric-item">
-                                <span class="metric-label">Out of Stock:</span>
-                                <span class="metric-value danger">{{ outOfStockCount }}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </template>
-                    </Card>
-
-                    <!-- Warehouse Utilization -->
-                    <Card class="report-stat-card">
-                      <template #content>
-                        <div class="report-stat-content">
-                          <div class="stat-icon utilization-stat">
-                            <i class="pi pi-percentage"></i>
-                          </div>
-                          <div class="stat-details">
-                            <h4>Warehouse Utilization</h4>
-                            <div class="stat-metrics">
-                              <div class="metric-item">
-                                <span class="metric-label">Stock Health:</span>
-                                <span class="metric-value">{{ stockHealthPercentage }}%</span>
-                              </div>
-                              <div class="metric-item">
-                                <span class="metric-label">Active Products:</span>
-                                <span class="metric-value">{{ activeProductsPercentage }}%</span>
-                              </div>
-                              <div class="metric-item">
-                                <span class="metric-label">Efficiency Score:</span>
-                                <span class="metric-value">{{ warehouseEfficiencyScore }}%</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </template>
-                    </Card>
-                  </div>
-                </div>
-
-                <!-- Report Generation Section -->
-                <div class="report-generation-section">
-                  <h3 class="section-title">
-                    <i class="pi pi-file-pdf"></i>
-                    Generate Reports
-                  </h3>
-                  
-                  <div class="report-types-grid">
-                    <!-- Inventory Report -->
-                    <Card class="report-type-card">
-                      <template #content>
-                        <div class="report-type-content">
-                          <div class="report-icon inventory-report">
-                            <i class="pi pi-list"></i>
-                          </div>
-                          <div class="report-info">
-                            <h4>Inventory Report</h4>
-                            <p>Complete list of all stock items with current levels and values</p>
-                            <Button
-                              label="Generate"
-                              icon="pi pi-download"
-                              class="p-button-primary"
-                              @click="generateInventoryReport"
-                            />
-                          </div>
-                        </div>
-                      </template>
-                    </Card>
-
-                    <!-- Stock Movement Report -->
-                    <Card class="report-type-card">
-                      <template #content>
-                        <div class="report-type-content">
-                          <div class="report-icon movement-report">
-                            <i class="pi pi-arrow-right-arrow-left"></i>
-                          </div>
-                          <div class="report-info">
-                            <h4>Stock Movement Report</h4>
-                            <p>Track all stock movements, transfers, and adjustments</p>
-                            <Button
-                              label="Generate"
-                              icon="pi pi-download"
-                              class="p-button-primary"
-                              @click="generateMovementReport"
-                            />
-                          </div>
-                        </div>
-                      </template>
-                    </Card>
-
-                    <!-- Low Stock Alert Report -->
-                    <Card class="report-type-card">
-                      <template #content>
-                        <div class="report-type-content">
-                          <div class="report-icon alert-report">
-                            <i class="pi pi-exclamation-triangle"></i>
-                          </div>
-                          <div class="report-info">
-                            <h4>Low Stock Alert Report</h4>
-                            <p>Items requiring immediate attention and reordering</p>
-                            <Button
-                              label="Generate"
-                              icon="pi pi-download"
-                              class="p-button-warning"
-                              @click="generateLowStockReport"
-                            />
-                          </div>
-                        </div>
-                      </template>
-                    </Card>
-
-                    <!-- Performance Report -->
-                    <Card class="report-type-card">
-                      <template #content>
-                        <div class="report-type-content">
-                          <div class="report-icon performance-report">
-                            <i class="pi pi-chart-line"></i>
-                          </div>
-                          <div class="report-info">
-                            <h4>Performance Report</h4>
-                            <p>Warehouse efficiency, turnover rates, and key metrics</p>
-                            <Button
-                              label="Generate"
-                              icon="pi pi-download"
-                              class="p-button-primary"
-                              @click="generatePerformanceReport"
-                            />
-                          </div>
-                        </div>
-                      </template>
-                    </Card>
-
-                    <!-- Custom Report -->
-                    <Card class="report-type-card">
-                      <template #content>
-                        <div class="report-type-content">
-                          <div class="report-icon custom-report">
-                            <i class="pi pi-cog"></i>
-                          </div>
-                          <div class="report-info">
-                            <h4>Custom Report</h4>
-                            <p>Create customized reports with specific filters and metrics</p>
-                            <Button
-                              label="Configure"
-                              icon="pi pi-cog"
-                              class="p-button-outlined"
-                              @click="showCustomReportDialog"
-                            />
-                          </div>
-                        </div>
-                      </template>
-                    </Card>
-
-                    <!-- Historical Analysis -->
-                    <Card class="report-type-card">
-                      <template #content>
-                        <div class="report-type-content">
-                          <div class="report-icon historical-report">
+                        <div class="movement-stat-content">
+                          <div class="stat-icon movements-today">
                             <i class="pi pi-calendar"></i>
                           </div>
-                          <div class="report-info">
-                            <h4>Historical Analysis</h4>
-                            <p>Trends, patterns, and historical data analysis</p>
-                            <Button
-                              label="Generate"
-                              icon="pi pi-download"
-                              class="p-button-primary"
-                              @click="generateHistoricalReport"
-                            />
+                          <div class="stat-details">
+                            <h4>Today's Movements</h4>
+                            <div class="stat-value">{{ todayMovementsCount }}</div>
+                          </div>
+                        </div>
+                      </template>
+                    </Card>
+
+                    <!-- Total Sales -->
+                    <Card class="movement-stat-card">
+                      <template #content>
+                        <div class="movement-stat-content">
+                          <div class="stat-icon sales-stat">
+                            <i class="pi pi-shopping-cart"></i>
+                          </div>
+                          <div class="stat-details">
+                            <h4>Total Sales</h4>
+                            <div class="stat-value">{{ totalSalesCount }}</div>
+                          </div>
+                        </div>
+                      </template>
+                    </Card>
+
+                    <!-- Stock Adjustments -->
+                    <Card class="movement-stat-card">
+                      <template #content>
+                        <div class="movement-stat-content">
+                          <div class="stat-icon adjustments-stat">
+                            <i class="pi pi-sync"></i>
+                          </div>
+                          <div class="stat-details">
+                            <h4>Adjustments</h4>
+                            <div class="stat-value">{{ totalAdjustmentsCount }}</div>
                           </div>
                         </div>
                       </template>
@@ -848,46 +546,151 @@
                   </div>
                 </div>
 
-                <!-- Quick Actions -->
-                <div class="report-actions-section">
-                  <h3 class="section-title">
-                    <i class="pi pi-bolt"></i>
-                    Quick Actions
-                  </h3>
-                  
-                  <Card class="quick-actions-card">
-                    <template #content>
-                      <div class="quick-actions-content">
-                        <Button
-                          label="Export All Data"
-                          icon="pi pi-database"
-                          class="p-button-success"
-                          @click="exportAllData"
+                <!-- Stock Movements List -->
+                <div class="movements-list-section">
+                  <div class="section-header">
+                    <h3 class="section-title">
+                      <i class="pi pi-list"></i>
+                      Movement History
+                    </h3>
+                    <div class="section-actions">
+                      <Button
+                        label="Export Movements"
+                        icon="pi pi-download"
+                        class="p-button-outlined"
+                        @click="exportWarehouseMovements"
+                        :disabled="loadingMovements"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Movement Filters -->
+                  <div class="movement-filters">
+                    <div class="filter-group">
+                      <label>Movement Type:</label>
+                      <Dropdown
+                        v-model="movementFilters.movementType"
+                        :options="movementTypeOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All Types"
+                        showClear
+                        @change="filterMovements"
+                      />
+                    </div>
+                    <div class="filter-group">
+                      <label>Date Range:</label>
+                      <Calendar
+                        v-model="movementFilters.dateRange"
+                        selectionMode="range"
+                        placeholder="Select date range"
+                        showIcon
+                        @date-select="filterMovements"
+                      />
+                    </div>
+                    <div class="filter-group">
+                      <Button
+                        label="Clear Filters"
+                        icon="pi pi-filter-slash"
+                        class="p-button-text"
+                        @click="clearMovementFilters"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Movements Data Table -->
+                  <DataTable
+                    :value="warehouseMovements"
+                    :loading="loadingMovements"
+                    paginator
+                    :rows="20"
+                    :rowsPerPageOptions="[10, 20, 50]"
+                    sortMode="multiple"
+                    removableSort
+                    class="movements-table"
+                  >
+                    <Column field="dateCreated" header="Date" sortable>
+                      <template #body="{ data }">
+                        {{ formatDateTime(data.dateCreated) }}
+                      </template>
+                    </Column>
+
+                    <Column field="stockProductName" header="Stock Item" sortable>
+                      <template #body="{ data }">
+                        <div class="stock-info">
+                          <div class="stock-name">{{ data.stockProductName || data.stock?.name || 'Unknown Product' }}</div>
+                          <div class="stock-sku">{{ data.stockSku || data.stock?.sku || 'No SKU' }}</div>
+                        </div>
+                      </template>
+                    </Column>
+
+                    <Column field="movementType" header="Type" sortable>
+                      <template #body="{ data }">
+                        <Tag 
+                          :value="formatMovementType(data.movementType)"
+                          :severity="getMovementTypeSeverity(data.movementType)"
                         />
-                        <Button
-                          label="Schedule Reports"
-                          icon="pi pi-clock"
-                          class="p-button-outlined"
-                          @click="scheduleReports"
-                        />
-                        <Button
-                          label="Email Reports"
-                          icon="pi pi-send"
-                          class="p-button-outlined"
-                          @click="emailReports"
-                        />
-                        <Button
-                          label="Print Summary"
-                          icon="pi pi-print"
-                          class="p-button-outlined"
-                          @click="printSummary"
-                        />
+                      </template>
+                    </Column>
+
+                    <Column field="quantity" header="Quantity" sortable>
+                      <template #body="{ data }">
+                        <span :class="getQuantityClass(data.movementType)">
+                          {{ getQuantityDisplay(data.quantity, data.movementType) }}
+                        </span>
+                      </template>
+                    </Column>
+
+                    <Column field="openingStock" header="Opening" sortable>
+                      <template #body="{ data }">
+                        {{ data.openingStock }}
+                      </template>
+                    </Column>
+
+                    <Column field="closingStock" header="Closing" sortable>
+                      <template #body="{ data }">
+                        {{ data.closingStock }}
+                      </template>
+                    </Column>
+
+                    <Column field="recordedByName" header="Recorded By">
+                      <template #body="{ data }">
+                        {{ data.recordedByName || data.recordedBy?.name || 'Unknown' }}
+                      </template>
+                    </Column>
+
+                    <Column field="reason" header="Reason">
+                      <template #body="{ data }">
+                        <span :title="data.reason">
+                          {{ truncateText(data.reason, 30) }}
+                        </span>
+                      </template>
+                    </Column>
+
+                    <Column header="Actions">
+                      <template #body="{ data }">
+                        <div class="action-buttons">
+                          <Button
+                            icon="pi pi-eye"
+                            class="p-button-text p-button-sm"
+                            @click="viewMovementDetails(data)"
+                            title="View Details"
+                          />
+                        </div>
+                      </template>
+                    </Column>
+
+                    <template #empty>
+                      <div class="empty-movements">
+                        <i class="pi pi-box"></i>
+                        <p>No stock movements found for this warehouse</p>
                       </div>
                     </template>
-                  </Card>
+                  </DataTable>
                 </div>
               </div>
             </TabPanel>
+
           </TabView>
         </div>
       </div>
@@ -1357,6 +1160,30 @@
           <small v-if="stockAdjustmentErrors.reason" class="p-error">{{ stockAdjustmentErrors.reason }}</small>
         </div>
 
+        <!-- Activation Selection (for stock removal) -->
+        <div class="field" v-if="stockAdjustmentForm.type === 'remove'">
+          <label for="adjustmentActivation" class="form-label">Activation *</label>
+          <Dropdown
+            id="adjustmentActivation"
+            v-model="stockAdjustmentForm.activationId"
+            :options="filteredActivations"
+            optionLabel="name"
+            optionValue="id"
+            placeholder="Select activation"
+            filter
+            showClear
+            :class="{ 'p-invalid': stockAdjustmentErrors.activationId }"
+          >
+            <template #option="slotProps">
+              <div class="activation-option">
+                <div>{{ slotProps.option.name }}</div>
+                <small class="text-gray-500">{{ slotProps.option.clientName }}</small>
+              </div>
+            </template>
+          </Dropdown>
+          <small v-if="stockAdjustmentErrors.activationId" class="p-error">{{ stockAdjustmentErrors.activationId }}</small>
+        </div>
+
         <div class="field">
           <label for="adjustmentNotes" class="form-label">Notes</label>
           <Textarea
@@ -1396,10 +1223,12 @@ import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
 import { useWarehouseStore } from '@/stores/warehouse'
 import { useUsersStore } from '@/stores/user'
-import { warehouseService } from '@/services/api'
+import { useStockMovementStore } from '@/stores/stockMovement'
+import { warehouseService, activationService, clientService } from '@/services/api'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
+import WarehouseDashboard from '@/components/warehouses/WarehouseDashboard.vue'
 
 // PrimeVue Components
 import TabView from 'primevue/tabview'
@@ -1409,12 +1238,14 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
+import InputSwitch from 'primevue/inputswitch'
 import Dropdown from 'primevue/dropdown'
 import InputNumber from 'primevue/inputnumber'
 import Textarea from 'primevue/textarea'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
 import ProgressSpinner from 'primevue/progressspinner'
+import Calendar from 'primevue/calendar'
 
 const route = useRoute()
 const router = useRouter()
@@ -1422,6 +1253,7 @@ const toast = useToast()
 const authStore = useAuthStore()
 const warehouseStore = useWarehouseStore()
 const userStore = useUsersStore()
+const stockMovementStore = useStockMovementStore()
 
 // State
 const loading = ref(true)
@@ -1429,12 +1261,49 @@ const loadingInventory = ref(false)
 const error = ref(null)
 const warehouse = ref(null)
 const warehouseStocks = ref([])
+const activations = ref([])
+const warehouseClient = ref(null)
+
+// Stock Movement State
+const loadingMovements = ref(false)
+const warehouseMovements = ref([])
+const showRecordMovementDialog = ref(false)
+const movementFilters = ref({
+  movementType: null,
+  dateRange: null
+})
 
 // Computed
 const userRole = computed(() => authStore.user?.role)
 
 const canManageWarehouse = computed(() => {
   return ['ADMIN', 'WAREHOUSE_MANAGER'].includes(userRole.value)
+})
+
+// Stock Movement Computed Properties
+const canRecordMovements = computed(() => {
+  return ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER'].includes(userRole.value)
+})
+
+const movementTypeOptions = computed(() => stockMovementStore.getMovementTypeOptions)
+
+const todayMovementsCount = computed(() => {
+  const today = new Date().toISOString().split('T')[0]
+  return warehouseMovements.value.filter(movement => 
+    movement.dateCreated?.startsWith(today)
+  ).length
+})
+
+const totalSalesCount = computed(() => {
+  return warehouseMovements.value.filter(movement => 
+    movement.movementType === 'SALE'
+  ).length
+})
+
+const totalAdjustmentsCount = computed(() => {
+  return warehouseMovements.value.filter(movement => 
+    movement.movementType === 'ADJUSTMENT'
+  ).length
 })
 
 const stockCount = computed(() => {
@@ -1472,41 +1341,6 @@ const stockStatusOptions = computed(() => [
   { label: 'Out of Stock', value: 'out_of_stock' }
 ])
 
-// Report computed properties
-const inStockItemsCount = computed(() => {
-  if (!warehouseStocks.value) return 0
-  return warehouseStocks.value.filter(stock => {
-    const quantity = stock.quantityInWarehouse || 0
-    const reorderLevel = stock.reorderLevel || 0
-    return quantity > reorderLevel
-  }).length
-})
-
-const outOfStockCount = computed(() => {
-  if (!warehouseStocks.value) return 0
-  return warehouseStocks.value.filter(stock => {
-    const quantity = stock.quantityInWarehouse || 0
-    return quantity === 0
-  }).length
-})
-
-const stockHealthPercentage = computed(() => {
-  if (!warehouseStocks.value || warehouseStocks.value.length === 0) return 0
-  return Math.round((inStockItemsCount.value / warehouseStocks.value.length) * 100)
-})
-
-const activeProductsPercentage = computed(() => {
-  if (!warehouseStocks.value || warehouseStocks.value.length === 0) return 0
-  const activeProducts = warehouseStocks.value.filter(stock => (stock.quantityInWarehouse || 0) > 0).length
-  return Math.round((activeProducts / warehouseStocks.value.length) * 100)
-})
-
-const warehouseEfficiencyScore = computed(() => {
-  // Simple efficiency calculation based on stock health and utilization
-  const healthScore = stockHealthPercentage.value
-  const utilizationScore = activeProductsPercentage.value
-  return Math.round((healthScore + utilizationScore) / 2)
-})
 
 const headerActions = computed(() => {
   const actions = [
@@ -1551,6 +1385,67 @@ const loadWarehouseData = async () => {
     warehouse.value = await warehouseStore.getWarehouse(warehouseId)
     
     console.log('Warehouse loaded successfully:', warehouse.value)
+    console.log('Warehouse client info:', {
+      clientId: warehouse.value?.clientId,
+      client: warehouse.value?.client,  
+      ownerId: warehouse.value?.ownerId,
+      owner: warehouse.value?.owner
+    })
+    
+    // Load client information if available
+    const warehouseClientId = warehouse.value?.clientId || warehouse.value?.client?.id || warehouse.value?.ownerId
+    if (warehouseClientId) {
+      try {
+        warehouseClient.value = await clientService.getClient(warehouseClientId)
+        console.log('Warehouse client loaded:', warehouseClient.value)
+      } catch (err) {
+        console.error('Failed to load warehouse client:', err)
+        warehouseClient.value = null
+      }
+    }
+    
+    // Load activations for stock adjustment
+    try {
+      // Try to get activations with client information
+      const activationsResponse = await activationService.getActivations({ 
+        includeClient: true,
+        size: 100 // Get more results to ensure we have options
+      })
+      // Handle different response formats - the API returns {data: [...], meta: {...}}
+      let activationsData = []
+      if (activationsResponse?.data && Array.isArray(activationsResponse.data)) {
+        activationsData = activationsResponse.data
+      } else if (activationsResponse?.content && Array.isArray(activationsResponse.content)) {
+        activationsData = activationsResponse.content
+      } else if (Array.isArray(activationsResponse)) {
+        activationsData = activationsResponse
+      } else {
+        console.warn('Unexpected activations response format:', activationsResponse)
+        activationsData = []
+      }
+      
+      activations.value = activationsData
+      
+      console.log('Activations loaded:', activations.value.length)
+      console.log('Activations type check:', typeof activations.value, Array.isArray(activations.value))
+      console.log('Sample activation with fields:', activations.value[0])
+      
+      // Log available fields in first activation for debugging
+      if (activations.value.length > 0) {
+        const sample = activations.value[0]
+        console.log('Available activation fields:', Object.keys(sample))
+        console.log('Client fields:', {
+          clientCompanyName: sample.clientCompanyName,
+          clientBrandName: sample.clientBrandName,
+          clientName: sample.clientName,
+          client: sample.client
+        })
+      }
+    } catch (err) {
+      console.error('Failed to load activations:', err)
+      // Continue without activations - they're optional
+      activations.value = []
+    }
     console.log('=== WAREHOUSE MANAGER DATA CHECK ===')
     console.log('Warehouse ID:', warehouse.value?.id)
     console.log('Warehouse Name:', warehouse.value?.name)
@@ -1604,6 +1499,23 @@ const loadInventory = async () => {
     warehouseStocks.value = []
   } finally {
     loadingInventory.value = false
+  }
+}
+
+const refreshDashboardData = async () => {
+  try {
+    // Reload all dashboard-related data
+    await Promise.all([
+      loadInventory(),
+      loadWarehouseMovements()
+    ])
+  } catch (error) {
+    console.error('Error refreshing dashboard data:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Refresh Failed',
+      detail: 'Failed to refresh dashboard data'
+    })
   }
 }
 
@@ -1724,6 +1636,7 @@ const stockAdjustmentForm = ref({
   type: null,
   quantity: null,
   reason: null,
+  activationId: null,
   notes: ''
 })
 const stockAdjustmentErrors = ref({})
@@ -1733,6 +1646,7 @@ const isAdjustingStock = ref(false)
 const inventorySearchQuery = ref('')
 const selectedStockType = ref(null)
 const selectedStockStatus = ref(null)
+const showOnlyAvailable = ref(false)
 const selectedInventoryItems = ref([])
 const filteredWarehouseStocks = ref([])
 
@@ -1749,6 +1663,62 @@ const selectedStockForAdjustment = computed(() => {
   return warehouseStocks.value.find(stock => 
     (stock.stockId || stock.id) === stockAdjustmentForm.value.stockId
   )
+})
+
+// Filter activations to show only active ones with client data
+const filteredActivations = computed(() => {
+  console.log('All activations:', activations.value)
+  console.log('Activations type:', typeof activations.value)
+  console.log('Is array:', Array.isArray(activations.value))
+  
+  // Ensure activations.value is an array
+  if (!Array.isArray(activations.value)) {
+    console.warn('Activations is not an array:', activations.value)
+    return []
+  }
+  
+  const filtered = activations.value.filter(activation => {
+    // Check if activation exists and has required properties
+    if (!activation || !activation.name || typeof activation !== 'object') {
+      console.warn('Invalid activation object:', activation)
+      return false
+    }
+    
+    // Check if activation belongs to the warehouse owner's client
+    const warehouseClientId = warehouse.value?.clientId || warehouse.value?.client?.id || warehouse.value?.ownerId
+    const activationClientId = activation.clientId
+    
+    const belongsToClient = warehouseClientId && activationClientId === warehouseClientId
+    
+    // Check if activation has proper status (be more lenient with status)
+    const hasValidStatus = !activation.status || // Allow items without status
+                          activation.status === 'ACTIVE' || 
+                          activation.status === 'ONGOING' || 
+                          activation.status === 'PLANNING' ||
+                          activation.status === 'PLANNED' || // Add PLANNED status
+                          activation.status === 'IN_PROGRESS' ||
+                          activation.status === 'CREATED' ||
+                          activation.status === 'SCHEDULED'
+    
+    console.log(`Activation ${activation.name}: status=${activation.status || 'no status'}, hasValidStatus=${hasValidStatus}, clientId=${activation.clientId}, warehouseClientId=${warehouseClientId}, belongsToClient=${belongsToClient}`)
+    
+    return hasValidStatus && belongsToClient
+  }).map(activation => ({
+    ...activation,
+    // Use warehouse client name or fallback to clientId
+    clientName: warehouseClient.value?.name || 
+               warehouseClient.value?.companyName ||
+               activation.clientCompanyName || 
+               activation.clientBrandName || 
+               activation.clientName || 
+               activation.client?.name || 
+               activation.client?.companyName ||
+               `Client ${activation.clientId}` ||
+               'Unknown Client'
+  }))
+  
+  console.log('Filtered activations:', filtered)
+  return filtered
 })
 
 const calculateNewQuantity = () => {
@@ -2299,6 +2269,7 @@ const resetInventoryFilters = () => {
   inventorySearchQuery.value = ''
   selectedStockType.value = null
   selectedStockStatus.value = null
+  showOnlyAvailable.value = false
   filteredWarehouseStocks.value = [...warehouseStocks.value]
 }
 
@@ -2333,6 +2304,7 @@ const adjustStock = (stock) => {
     type: null,
     quantity: null,
     reason: null,
+    activationId: null,
     notes: ''
   }
   stockAdjustmentErrors.value = {}
@@ -2346,6 +2318,7 @@ const showStockAdjustment = () => {
     type: null,
     quantity: null,
     reason: null,
+    activationId: null,
     notes: ''
   }
   stockAdjustmentErrors.value = {}
@@ -2377,6 +2350,11 @@ const validateStockAdjustment = () => {
     if (stockAdjustmentForm.value.quantity > currentQty) {
       errors.quantity = `Cannot remove more than current quantity (${currentQty})`
     }
+    
+    // Activation is required when removing stock
+    if (!stockAdjustmentForm.value.activationId) {
+      errors.activationId = 'Please select an activation'
+    }
   }
   
   stockAdjustmentErrors.value = errors
@@ -2405,16 +2383,38 @@ const confirmStockAdjustment = async () => {
       adjustmentQty = adjustmentQty - (stock.quantityInWarehouse || 0)
     }
     
-    // Prepare notes with reason
-    const notes = `Adjustment Type: ${stockAdjustmentForm.value.type}, Reason: ${stockAdjustmentForm.value.reason}${stockAdjustmentForm.value.notes ? ', Notes: ' + stockAdjustmentForm.value.notes : ''}`
+    // Prepare notes with reason and activation if applicable
+    let notes = `Adjustment Type: ${stockAdjustmentForm.value.type}, Reason: ${stockAdjustmentForm.value.reason}`
+    if (stockAdjustmentForm.value.activationId && stockAdjustmentForm.value.type === 'remove') {
+      const activation = activations.value.find(a => a.id === stockAdjustmentForm.value.activationId)
+      if (activation) {
+        notes += `, Activation: ${activation.name}`
+      }
+    }
+    if (stockAdjustmentForm.value.notes) {
+      notes += `, Notes: ${stockAdjustmentForm.value.notes}`
+    }
     
-    // Call the updateStock method from warehouse store
-    await warehouseStore.updateStock(
-      stock.stockId || stock.id,
-      adjustmentQty,
-      'adjustment',
-      notes
-    )
+    // Prepare the movement data
+    const movementData = {
+      stockId: stock.stockId || stock.id,
+      quantity: Math.abs(adjustmentQty),
+      movementType: stockAdjustmentForm.value.type === 'remove' ? 'OUT' : 
+                    stockAdjustmentForm.value.type === 'add' ? 'IN' : 'ADJUSTMENT',
+      reason: notes,
+      activationId: stockAdjustmentForm.value.type === 'remove' ? stockAdjustmentForm.value.activationId : null
+    }
+    
+    // Create a stock movement record with activation ID
+    await stockMovementStore.createStockMovement(stock.stockId || stock.id, {
+      movementType: movementData.movementType,
+      quantity: movementData.quantity,
+      openingStock: stock.quantityInWarehouse || 0,
+      closingStock: stock.quantityInWarehouse + adjustmentQty,
+      recordedBy: { id: authStore.user?.id },
+      activation: movementData.activationId ? { id: movementData.activationId } : null,
+      reason: movementData.reason
+    })
     
     toast.add({
       severity: 'success',
@@ -2447,18 +2447,10 @@ const cancelStockAdjustment = () => {
     type: null,
     quantity: null,
     reason: null,
+    activationId: null,
     notes: ''
   }
   stockAdjustmentErrors.value = {}
-}
-
-const generateInventoryReport = () => {
-  toast.add({
-    severity: 'info',
-    summary: 'Report Generation',
-    detail: `Generating inventory report for ${warehouse.value.name}`,
-    life: 3000
-  })
 }
 
 const exportInventoryData = () => {
@@ -2473,52 +2465,6 @@ const exportInventoryData = () => {
 const bulkInventoryAction = () => {
   console.log('Bulk inventory action for:', selectedInventoryItems.value)
   // TODO: Implement bulk actions
-}
-
-// Report generation methods
-const generateMovementReport = () => {
-  toast.add({
-    severity: 'info',
-    summary: 'Report Generation',
-    detail: `Generating stock movement report for ${warehouse.value.name}`,
-    life: 3000
-  })
-}
-
-const generateLowStockReport = () => {
-  toast.add({
-    severity: 'info',
-    summary: 'Report Generation',
-    detail: `Generating low stock alert report for ${warehouse.value.name}`,
-    life: 3000
-  })
-}
-
-const generatePerformanceReport = () => {
-  toast.add({
-    severity: 'info',
-    summary: 'Report Generation',
-    detail: `Generating performance report for ${warehouse.value.name}`,
-    life: 3000
-  })
-}
-
-const generateHistoricalReport = () => {
-  toast.add({
-    severity: 'info',
-    summary: 'Report Generation',
-    detail: `Generating historical analysis for ${warehouse.value.name}`,
-    life: 3000
-  })
-}
-
-const showCustomReportDialog = () => {
-  toast.add({
-    severity: 'info',
-    summary: 'Custom Report',
-    detail: 'Opening custom report configuration dialog',
-    life: 3000
-  })
 }
 
 const exportAllData = () => {
@@ -2557,9 +2503,408 @@ const printSummary = () => {
   })
 }
 
+// Stock Movement Methods
+const loadWarehouseMovements = async () => {
+  if (!warehouse.value?.id) return
+  
+  loadingMovements.value = true
+  try {
+    // Load stock movements for each stock in this warehouse
+    const movements = []
+    
+    for (const stock of warehouseStocks.value) {
+      try {
+        const stockMovements = await stockMovementStore.fetchStockMovements(stock.id, {
+          ...movementFilters.value
+        })
+        
+        // Handle different response formats safely
+        if (Array.isArray(stockMovements)) {
+          // Plain array response (most common)
+          movements.push(...stockMovements)
+          console.log(`WarehouseDetails: Added ${stockMovements.length} movements for stock ${stock.id}`)
+        } else if (stockMovements && stockMovements.content && Array.isArray(stockMovements.content)) {
+          // Paginated response
+          movements.push(...stockMovements.content)
+          console.log(`WarehouseDetails: Added ${stockMovements.content.length} movements from paginated response for stock ${stock.id}`)
+        } else {
+          console.warn(`WarehouseDetails: Unexpected response format for stock ${stock.id}:`, typeof stockMovements, stockMovements)
+        }
+      } catch (error) {
+        console.warn(`Failed to load movements for stock ${stock.id}:`, error)
+        // Continue with other stocks even if one fails
+      }
+    }
+    
+    // Sort movements by date (newest first), fallback to ID if no dates
+    warehouseMovements.value = movements.sort((a, b) => {
+      const dateA = a.dateCreated ? new Date(a.dateCreated) : new Date(0)
+      const dateB = b.dateCreated ? new Date(b.dateCreated) : new Date(0)
+      
+      // If both have no dates, sort by ID (newer = higher ID)
+      if (dateA.getTime() === 0 && dateB.getTime() === 0) {
+        return b.id - a.id
+      }
+      
+      return dateB - dateA
+    })
+  } catch (error) {
+    console.error('Error loading warehouse movements:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to load stock movements'
+    })
+  } finally {
+    loadingMovements.value = false
+  }
+}
+
+const filterMovements = () => {
+  loadWarehouseMovements() // Reload with filters
+}
+
+const clearMovementFilters = () => {
+  movementFilters.value = {
+    movementType: null,
+    dateRange: null
+  }
+  loadWarehouseMovements()
+}
+
+const exportWarehouseMovements = async () => {
+  try {
+    await stockMovementStore.exportWarehouseMovements({
+      warehouseId: warehouse.value.id,
+      ...movementFilters.value
+    })
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Warehouse stock movements exported successfully'
+    })
+  } catch (error) {
+    console.error('Error exporting movements:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to export warehouse stock movements'
+    })
+  }
+}
+
+const viewMovementDetails = (movement) => {
+  router.push(`/stock-movements/${movement.id}`)
+}
+
+// Helper methods for movement display
+const formatMovementType = (type) => {
+  return type.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
+}
+
+const getMovementTypeSeverity = (type) => {
+  const severityMap = {
+    'IN': 'success',
+    'OUT': 'danger',
+    'SALE': 'info',
+    'SAMPLE': 'warning',
+    'ADJUSTMENT': 'secondary',
+    'ALLOCATION': 'info',
+    'REPLENISHMENT': 'success',
+    'DISTRIBUTION': 'info',
+    'RETURN': 'warning'
+  }
+  return severityMap[type] || 'secondary'
+}
+
+const getQuantityClass = (type) => {
+  if (['IN', 'REPLENISHMENT', 'RETURN'].includes(type)) {
+    return 'text-green-600 font-semibold'
+  } else if (['OUT', 'SALE', 'SAMPLE', 'DISTRIBUTION', 'ALLOCATION'].includes(type)) {
+    return 'text-red-600 font-semibold'
+  }
+  return 'text-gray-600'
+}
+
+const getQuantityDisplay = (quantity, type) => {
+  if (['IN', 'REPLENISHMENT', 'RETURN'].includes(type)) {
+    return `+${quantity}`
+  } else if (['OUT', 'SALE', 'SAMPLE', 'DISTRIBUTION', 'ALLOCATION'].includes(type)) {
+    return `-${quantity}`
+  }
+  return quantity
+}
+
+const formatDateTime = (date) => {
+  if (!date) return 'No Date'
+  try {
+    return new Date(date).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch (error) {
+    return 'Invalid Date'
+  }
+}
+
+const truncateText = (text, length) => {
+  if (!text) return '-'
+  return text.length > length ? text.substring(0, length) + '...' : text
+}
+
+const testStockMovementAPI = async () => {
+  if (warehouseStocks.value.length === 0) {
+    toast.add({
+      severity: 'warn',
+      summary: 'No Stocks',
+      detail: 'No stocks available to test'
+    })
+    return
+  }
+
+  const stock = warehouseStocks.value[0]
+  console.log('Testing stock movement API for stock:', stock.id)
+  
+  // Get the auth token
+  const token = localStorage.getItem('activation_auth_token')
+  console.log('Auth token available:', !!token)
+  console.log('Token preview:', token ? token.substring(0, 20) + '...' : 'NO TOKEN')
+  
+  try {
+    // Test with proper authentication headers
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    }
+    
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+    
+    console.log('Request headers:', headers)
+    
+    const response = await fetch(`http://localhost:8080/api/stocks/${stock.id}/movements`, {
+      method: 'GET',
+      headers: headers
+    })
+    
+    console.log('Raw fetch response status:', response.status)
+    console.log('Raw fetch response headers:', Object.fromEntries(response.headers.entries()))
+    
+    const data = await response.text()
+    console.log('Raw fetch response body:', data)
+    
+    if (response.ok) {
+      // Also test with our service to compare
+      console.log('=== COMPARING RAW FETCH VS SERVICE ===')
+      console.log('Raw fetch data:', data)
+      
+      try {
+        const serviceResponse = await stockMovementStore.fetchStockMovements(stock.id, {})
+        console.log('Service response:', serviceResponse)
+      } catch (serviceError) {
+        console.error('Service error:', serviceError)
+      }
+      
+      toast.add({
+        severity: 'success',
+        summary: 'API Test Success',
+        detail: `Stock movements endpoint is reachable. Status: ${response.status}. Response: ${data || 'Empty response'}`
+      })
+    } else {
+      toast.add({
+        severity: 'error',
+        summary: 'API Test Failed',
+        detail: `HTTP ${response.status}: ${data}`
+      })
+    }
+  } catch (error) {
+    console.error('API test error:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'API Test Error',
+      detail: `Network error: ${error.message}`
+    })
+  }
+}
+
+const createTestMovement = async () => {
+  if (warehouseStocks.value.length === 0) {
+    toast.add({
+      severity: 'warn',
+      summary: 'No Stocks',
+      detail: 'No stocks available in this warehouse to create movements'
+    })
+    return
+  }
+
+  try {
+    const stock = warehouseStocks.value[0] // Use first stock for testing
+    const testMovementData = {
+      movementType: 'SALE',
+      quantity: 5,
+      openingStock: 100,
+      closingStock: 95,
+      recordedBy: { id: authStore.user?.id },
+      reason: 'Test movement for debugging',
+      dateCreated: new Date().toISOString() // Add current timestamp
+    }
+
+    console.log('Creating test movement for stock:', stock.id, 'with data:', testMovementData)
+    
+    const result = await stockMovementStore.createStockMovement(stock.id, testMovementData)
+    console.log('Test movement created:', result)
+    
+    toast.add({
+      severity: 'success',
+      summary: 'Test Movement Created',
+      detail: `Created test movement for ${stock.productName}`
+    })
+    
+    // Reload movements AND inventory to reflect updated stock quantities
+    await loadWarehouseMovements()
+    await loadInventory()
+  } catch (error) {
+    console.error('Error creating test movement:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: `Failed to create test movement: ${error.message}`
+    })
+  }
+}
+
+// Calculate current stock quantity from movements
+const calculateCurrentStockFromMovements = (stockId, movements) => {
+  if (!movements || movements.length === 0) return 0
+  
+  // Filter movements for this specific stock
+  const stockMovements = movements.filter(m => m.stockId === stockId)
+  
+  if (stockMovements.length === 0) return 0
+  
+  // Sort movements by date first, then by ID if dates are missing
+  stockMovements.sort((a, b) => {
+    const dateA = a.dateCreated ? new Date(a.dateCreated) : null
+    const dateB = b.dateCreated ? new Date(b.dateCreated) : null
+    
+    // If both have dates, sort by date
+    if (dateA && dateB) {
+      return dateA - dateB
+    }
+    
+    // If only one has a date, prioritize the one with date
+    if (dateA && !dateB) return -1
+    if (!dateA && dateB) return 1
+    
+    // If both have no dates, sort by ID (older = lower ID)
+    return a.id - b.id
+  })
+  
+  let currentQuantity = 0
+  
+  for (const movement of stockMovements) {
+    const { movementType, quantity, openingStock } = movement
+    
+    if (movement.id === stockMovements[0].id) {
+      // First movement - use opening stock as starting point
+      currentQuantity = openingStock || 0
+      console.log(`Stock ${stockId}: Starting with opening stock: ${currentQuantity}`)
+    }
+    
+    const previousQuantity = currentQuantity
+    
+    // Apply the movement
+    if (['IN', 'REPLENISHMENT', 'RETURN'].includes(movementType)) {
+      currentQuantity += Math.abs(quantity)
+    } else if (['OUT', 'SALE', 'SAMPLE', 'DISTRIBUTION', 'ALLOCATION'].includes(movementType)) {
+      currentQuantity -= Math.abs(quantity)
+    } else if (movementType === 'ADJUSTMENT') {
+      currentQuantity += quantity // Quantity can be positive or negative for adjustments
+    }
+    
+    console.log(`Stock ${stockId}: ${movementType} ${quantity} - ${previousQuantity} → ${currentQuantity}`)
+    
+    // Ensure we don't go below 0
+    currentQuantity = Math.max(0, currentQuantity)
+  }
+  
+  return currentQuantity
+}
+
+// Enhanced warehouse stocks with calculated quantities
+const enhancedWarehouseStocks = computed(() => {
+  return warehouseStocks.value.map(stock => {
+    const calculatedQuantity = calculateCurrentStockFromMovements(stock.id, warehouseMovements.value)
+    return {
+      ...stock,
+      calculatedQuantity,
+      quantityInWarehouse: calculatedQuantity // Override the backend quantity
+    }
+  })
+})
+
+// Filter for available stocks only
+const availableStocks = computed(() => {
+  return enhancedWarehouseStocks.value.filter(stock => stock.calculatedQuantity > 0)
+})
+
+// Filtered enhanced stocks (replaces filteredWarehouseStocks)
+const filteredEnhancedStocks = computed(() => {
+  let filtered = [...enhancedWarehouseStocks.value]
+  
+  // Apply search filter
+  if (inventorySearchQuery.value) {
+    const query = inventorySearchQuery.value.toLowerCase()
+    filtered = filtered.filter(stock => 
+      stock.productName?.toLowerCase().includes(query) ||
+      stock.sku?.toLowerCase().includes(query) ||
+      stock.type?.toLowerCase().includes(query)
+    )
+  }
+  
+  // Apply stock type filter
+  if (selectedStockType.value) {
+    filtered = filtered.filter(stock => stock.type === selectedStockType.value)
+  }
+  
+  // Apply stock status filter
+  if (selectedStockStatus.value) {
+    filtered = filtered.filter(stock => {
+      const quantity = stock.calculatedQuantity || 0
+      const reorderLevel = stock.reorderLevel || 0
+      
+      switch (selectedStockStatus.value) {
+        case 'in_stock':
+          return quantity > 0
+        case 'low_stock':
+          return quantity > 0 && quantity <= reorderLevel
+        case 'out_of_stock':
+          return quantity === 0
+        default:
+          return true
+      }
+    })
+  }
+  
+  // Apply available-only filter
+  if (showOnlyAvailable.value) {
+    filtered = filtered.filter(stock => (stock.calculatedQuantity || 0) > 0)
+  }
+  
+  return filtered
+})
+
 // Watch for changes in warehouse stocks and update filtered list
 watch(warehouseStocks, () => {
   filterInventory()
+  // Also reload movements when warehouse stocks change
+  if (warehouseStocks.value.length > 0) {
+    loadWarehouseMovements()
+  }
 }, { immediate: true })
 
 onMounted(() => {
@@ -3144,6 +3489,16 @@ onMounted(() => {
   margin-top: 0.25rem;
   color: #6b7280;
   font-size: 0.875rem;
+}
+
+.activation-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.activation-option small {
+  font-size: 0.75rem;
 }
 
 .type {
@@ -3736,223 +4091,172 @@ onMounted(() => {
   }
 }
 
-/* Warehouse Reports Styles */
-.warehouse-reports-content {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  padding: 1rem 0;
-}
 
-.report-stats-section,
-.report-generation-section,
-.report-actions-section {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.report-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-}
-
-.report-stat-card {
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.report-stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.report-stat-content {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  padding: 1.5rem;
-}
-
-.stat-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  color: white;
-  flex-shrink: 0;
-}
-
-.stat-icon.inventory-stat {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-}
-
-.stat-icon.health-stat {
-  background: linear-gradient(135deg, #10b981, #047857);
-}
-
-.stat-icon.utilization-stat {
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-}
-
-.stat-details h4 {
-  margin: 0 0 1rem 0;
-  color: #111827;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.stat-metrics {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.metric-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.metric-label {
-  color: #6b7280;
-  font-size: 0.875rem;
-}
-
-.metric-value {
-  font-weight: 600;
-  color: #111827;
-  font-size: 0.9rem;
-}
-
-.metric-value.success {
-  color: #059669;
-}
-
-.metric-value.warning {
-  color: #d97706;
-}
-
-.metric-value.danger {
-  color: #dc2626;
-}
-
-.report-types-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-}
-
-.report-type-card {
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.report-type-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.report-type-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1.5rem;
-  text-align: center;
-}
-
-.report-icon {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  color: white;
-  margin: 0 auto;
-  flex-shrink: 0;
-}
-
-.report-icon.inventory-report {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-}
-
-.report-icon.movement-report {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-}
-
-.report-icon.alert-report {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-}
-
-.report-icon.performance-report {
-  background: linear-gradient(135deg, #10b981, #047857);
-}
-
-.report-icon.custom-report {
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-}
-
-.report-icon.historical-report {
-  background: linear-gradient(135deg, #6b7280, #4b5563);
-}
-
-.report-info h4 {
-  margin: 0 0 0.5rem 0;
-  color: #111827;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.report-info p {
-  margin: 0 0 1rem 0;
-  color: #6b7280;
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
-.quick-actions-card {
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.quick-actions-content {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  justify-content: center;
-  padding: 1.5rem;
+/* Stock Movements Tab Styles */
+.stock-movements-content {
+  .movement-stats-section {
+    margin-bottom: 2rem;
+    
+    .movement-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+      
+      .movement-stat-card {
+        .movement-stat-content {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          
+          .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            
+            &.movements-today {
+              background-color: var(--blue-100);
+              color: var(--blue-600);
+            }
+            
+            &.sales-stat {
+              background-color: var(--green-100);
+              color: var(--green-600);
+            }
+            
+            &.adjustments-stat {
+              background-color: var(--orange-100);
+              color: var(--orange-600);
+            }
+          }
+          
+          .stat-details {
+            h4 {
+              margin: 0 0 0.25rem 0;
+              font-size: 0.9rem;
+              font-weight: 500;
+              color: var(--text-color-secondary);
+            }
+            
+            .stat-value {
+              font-size: 1.75rem;
+              font-weight: 600;
+              color: var(--text-color);
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  .movements-list-section {
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      
+      .section-actions {
+        display: flex;
+        gap: 0.75rem;
+      }
+    }
+    
+    .movement-filters {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem;
+      background-color: var(--surface-100);
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      
+      .filter-group {
+        display: flex;
+        flex-direction: column;
+        min-width: 200px;
+        
+        label {
+          font-size: 0.875rem;
+          font-weight: 500;
+          margin-bottom: 0.5rem;
+          color: var(--text-color-secondary);
+        }
+      }
+    }
+    
+    .movements-table {
+      .stock-info {
+        .stock-name {
+          font-weight: 500;
+          color: var(--text-color);
+        }
+        
+        .stock-sku {
+          font-size: 0.875rem;
+          color: var(--text-color-secondary);
+        }
+      }
+      
+      .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+      }
+      
+      .empty-movements {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--text-color-secondary);
+        
+        i {
+          font-size: 3rem;
+          display: block;
+          margin-bottom: 1rem;
+          opacity: 0.5;
+        }
+        
+        p {
+          margin: 0;
+          font-size: 1.1rem;
+        }
+      }
+    }
+  }
 }
 
 @media (max-width: 768px) {
-  .report-stats-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .report-types-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .quick-actions-content {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .report-stat-content {
-    flex-direction: column;
-    text-align: center;
-    align-items: center;
-  }
-  
-  .stat-metrics {
-    width: 100%;
+  .stock-movements-content {
+    .movement-stats-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .movements-list-section {
+      .section-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+        
+        .section-actions {
+          justify-content: stretch;
+          
+          .p-button {
+            flex: 1;
+          }
+        }
+      }
+      
+      .movement-filters {
+        flex-direction: column;
+        
+        .filter-group {
+          min-width: auto;
+        }
+      }
+    }
   }
 }
 </style>

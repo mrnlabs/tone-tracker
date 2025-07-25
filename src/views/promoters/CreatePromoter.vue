@@ -149,6 +149,30 @@
               </div>
             </div>
 
+            <!-- Promoter Images -->
+            <div class="form-section">
+              <h3 class="section-title">Promoter Images</h3>
+              <p class="section-description">Upload photos of the promoter for identification and profile purposes</p>
+              
+              <div class="form-grid">
+                <div class="field full-width">
+                  <ImageUpload
+                    v-model="formData.images"
+                    label="Promoter Photos"
+                    description="Select multiple photos of the promoter (max 5 images, 5MB each) - they will be uploaded after the promoter is created"
+                    :max-files="5"
+                    :max-size="5 * 1024 * 1024"
+                    accept="image/*"
+                    entity-type="PROMOTER"
+                    :entity-id="null"
+                    :store-only="true"
+                    @upload-success="handleImageUploadSuccess"
+                    @image-removed="handleImageRemoved"
+                  />
+                </div>
+              </div>
+            </div>
+
             <!-- Account Security -->
             <div class="form-section">
               <h3 class="section-title">Account Security</h3>
@@ -222,6 +246,7 @@ import { useValidation } from '@/composables/useValidation'
 import { promoterService } from '@/services/api'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
+import ImageUpload from '@/components/form-components/ImageUpload.vue'
 
 const router = useRouter()
 const toast = useToast()
@@ -279,7 +304,8 @@ const formData = ref({
   dressSize: null,
   topSize: null,
   pantsSize: null,
-  profileImagePath: null
+  profileImagePath: null,
+  images: []
 })
 
 const errors = ref({})
@@ -380,6 +406,56 @@ const isFormValid = computed(() => {
   return hasRequiredFields && hasNoErrors
 })
 
+// Image upload handlers
+const handleImageUploadSuccess = (uploadedImages) => {
+  console.log('Images uploaded successfully:', uploadedImages)
+  // Images are already added to formData.images by the v-model
+}
+
+const handleImageRemoved = (removedImage) => {
+  console.log('Image removed:', removedImage)
+  // Image is already removed from formData.images by the v-model
+}
+
+const uploadPromoterImages = async (promoterId) => {
+  const { fileService } = await import('@/services/api')
+  const imagesToUpload = formData.value.images.filter(img => img.isLocal && img.file)
+  
+  if (imagesToUpload.length === 0) return
+  
+  try {
+    const uploadPromises = imagesToUpload.map(async (imageData) => {
+      try {
+        const result = await fileService.uploadFile(
+          imageData.file,
+          null, // No progress callback for now
+          {
+            entityId: promoterId,
+            entityType: 'PROMOTER',
+            category: 'promoter-images'
+          }
+        )
+        return result
+      } catch (error) {
+        console.error(`Failed to upload image ${imageData.fileName}:`, error)
+        return null
+      }
+    })
+    
+    const results = await Promise.all(uploadPromises)
+    const successfulUploads = results.filter(result => result !== null)
+    
+    if (successfulUploads.length > 0) {
+      console.log(`Successfully uploaded ${successfulUploads.length} image(s) for promoter ${promoterId}`)
+    }
+    
+    return successfulUploads
+  } catch (error) {
+    console.error('Error uploading promoter images:', error)
+    throw error
+  }
+}
+
 // Form handlers
 const handleSubmit = async () => {
   if (!validateForm()) {
@@ -410,11 +486,25 @@ const handleSubmit = async () => {
 
     const response = await promoterService.createPromoter(promoterData)
     
+    // Upload images if any were selected
+    let imageUploadMessage = ''
+    if (formData.value.images.length > 0) {
+      try {
+        const uploadResults = await uploadPromoterImages(response.id || response.promoter?.id)
+        if (uploadResults && uploadResults.length > 0) {
+          imageUploadMessage = ` and ${uploadResults.length} image(s) uploaded`
+        }
+      } catch (error) {
+        console.error('Image upload failed:', error)
+        imageUploadMessage = ' (note: image upload failed)'
+      }
+    }
+    
     // Show success message with password information
     toast.add({
       severity: 'success',
       summary: 'Promoter Created Successfully',
-      detail: `${promoterData.firstName} ${promoterData.lastName} has been created with auto-generated password: ${response.generatedPassword || 'Check server response'}`,
+      detail: `${promoterData.firstName} ${promoterData.lastName} has been created${imageUploadMessage} with auto-generated password: ${response.generatedPassword || 'Check server response'}`,
       life: 8000
     })
     

@@ -1,154 +1,163 @@
 import api from './api'
-import { API_ENDPOINTS } from '@/utils/constants'
+import stockService from './stockService'
 
 class StockMovementService {
-    /**
-     * Get stock movement history for a specific stock item
-     * @param {number} stockId - The stock item ID
-     * @param {Object} params - Query parameters (page, size, startDate, endDate, movementType)
-     * @returns {Promise} Stock movement history
-     */
-    async getStockMovements(stockId, params = {}) {
+    async getAllStockMovements(params = {}) {
         try {
-            const endpoint = `/api/stocks/${stockId}/movements`
-            const response = await api.get(endpoint, { params })
-            return response.data
+            const data = await api.get('/stock-movements', { params })
+            return data
         } catch (error) {
             console.error('Error fetching stock movements:', error)
             throw error
         }
     }
 
-    /**
-     * Record a sale transaction
-     * @param {number} stockId - The stock item ID
-     * @param {Object} saleData - Sale information
-     * @returns {Promise} Created sale record
-     */
+    async getStockMovementById(id) {
+        try {
+            const data = await api.get(`/stock-movements/${id}`)
+            return data
+        } catch (error) {
+            console.error('Error fetching stock movement:', error)
+            throw error
+        }
+    }
+
+    async getStockMovements(stockId, params = {}) {
+        try {
+            console.log(`Fetching movements for stock ${stockId} with params:`, params)
+            
+            // Check if token is available
+            const token = localStorage.getItem('activation_auth_token')
+            console.log(`Auth token available for stock ${stockId} request:`, !!token)
+            
+            // API service returns response.data directly, so 'data' is the actual response
+            const data = await api.get(`/stocks/${stockId}/movements`, { params })
+            console.log(`Response data for stock ${stockId}:`, data)
+            console.log(`Type of data:`, typeof data)
+            console.log(`Is data array:`, Array.isArray(data))
+            
+            // Handle undefined or null data
+            if (data === undefined || data === null) {
+                console.warn(`API returned undefined/null data for stock ${stockId}, returning empty array`)
+                return []
+            }
+            
+            // The API returns a plain array
+            if (Array.isArray(data)) {
+                console.log(`API returned array with ${data.length} movements for stock ${stockId}`)
+                return data
+            }
+            
+            // If it's an object with content property (paginated response)
+            if (data.content && Array.isArray(data.content)) {
+                console.log(`API returned paginated response with ${data.content.length} movements for stock ${stockId}`)
+                return data
+            }
+            
+            console.warn(`Unexpected response format for stock ${stockId}:`, typeof data, data)
+            return data
+        } catch (error) {
+            console.error(`Error fetching stock movements for stock ${stockId}:`, error)
+            console.error(`Error response:`, error.response)
+            console.error(`Error status:`, error.response?.status)
+            console.error(`Error data:`, error.response?.data)
+            
+            if (error.response?.status === 404) {
+                // Return empty array for 404 instead of throwing
+                console.warn(`No movements found for stock ${stockId}`)
+                return []
+            }
+            if (error.response?.status === 401) {
+                console.error(`Authentication failed for stock ${stockId} - token may be invalid`)
+            }
+            if (error.response?.status === 403) {
+                console.error(`Authorization failed for stock ${stockId} - insufficient permissions`)
+            }
+            throw error
+        }
+    }
+
+    async createStockMovement(stockId, movementData) {
+        try {
+            const data = await api.post(`/stocks/${stockId}/movements`, movementData)
+            return data
+        } catch (error) {
+            console.error('Error creating stock movement:', error)
+            throw error
+        }
+    }
+
+    async createStockMovementGeneral(movementData) {
+        try {
+            const data = await api.post('/stock-movements', movementData)
+            return data
+        } catch (error) {
+            console.error('Error creating stock movement:', error)
+            throw error
+        }
+    }
+
+    async updateStockMovement(id, movementData) {
+        try {
+            const data = await api.put(`/stock-movements/${id}`, movementData)
+            return data
+        } catch (error) {
+            console.error('Error updating stock movement:', error)
+            throw error
+        }
+    }
+
+    async deleteStockMovement(id) {
+        try {
+            const data = await api.delete(`/stock-movements/${id}`)
+            return data
+        } catch (error) {
+            console.error('Error deleting stock movement:', error)
+            throw error
+        }
+    }
+
     async recordSale(stockId, saleData) {
         try {
-            const endpoint = '/api/sales'
-            const response = await api.post(endpoint, {
-                activationId: saleData.activationId,
-                stockId: stockId,
-                promoterId: saleData.promoterId,
-                unitsSold: saleData.quantity,
-                paymentMethod: saleData.paymentMethod,
-                amount: saleData.totalAmount,
-                usdEquivalent: saleData.usdEquivalent || null,
-                saleDateTime: saleData.saleDateTime || new Date().toISOString(),
-                notes: saleData.notes || null
-            })
-            return response.data
+            return await stockService.recordSale(stockId, saleData)
         } catch (error) {
             console.error('Error recording sale:', error)
             throw error
         }
     }
 
-    /**
-     * Record a sample given out
-     * @param {number} stockId - The stock item ID
-     * @param {Object} sampleData - Sample information
-     * @returns {Promise} Created sample record
-     */
     async recordSample(stockId, sampleData) {
         try {
-            const endpoint = `/api/stocks/${stockId}/movements`
-            const response = await api.post(endpoint, {
-                movementType: 'SAMPLE',
-                quantity: sampleData.quantity,
-                reason: sampleData.reason || 'Product sample',
-                activationId: sampleData.activationId,
-                customerId: sampleData.customerId,
-                notes: sampleData.notes,
-                openingStock: sampleData.openingStock || null,
-                closingStock: sampleData.closingStock || null
-            })
-            return response.data
+            return await stockService.recordSample(stockId, sampleData)
         } catch (error) {
             console.error('Error recording sample:', error)
             throw error
         }
     }
 
-    /**
-     * Record stock adjustment
-     * @param {number} stockId - The stock item ID
-     * @param {Object} adjustmentData - Adjustment information
-     * @returns {Promise} Created adjustment record
-     */
     async recordAdjustment(stockId, adjustmentData) {
         try {
-            const endpoint = `/api/stocks/${stockId}/movements`
-            const response = await api.post(endpoint, {
-                movementType: 'ADJUSTMENT',
-                quantity: adjustmentData.quantity,
-                reason: adjustmentData.reason,
-                notes: adjustmentData.notes,
-                activationId: adjustmentData.activationId || null,
-                recordedById: adjustmentData.recordedById || null,
-                openingStock: adjustmentData.openingStock || null,
-                closingStock: adjustmentData.closingStock || null
-            })
-            return response.data
+            return await stockService.adjustStock(stockId, adjustmentData)
         } catch (error) {
             console.error('Error recording adjustment:', error)
             throw error
         }
     }
 
-    /**
-     * Record stock in (receiving stock)
-     * @param {number} stockId - The stock item ID
-     * @param {Object} stockInData - Stock in information
-     * @returns {Promise} Created stock in record
-     */
     async recordStockIn(stockId, stockInData) {
         try {
-            const endpoint = `/api/stocks/${stockId}/movements`
-            const response = await api.post(endpoint, {
-                movementType: 'REPLENISHMENT',
-                quantity: stockInData.quantity,
-                reason: stockInData.reason || 'Stock received',
-                supplierId: stockInData.supplierId,
-                purchaseOrderNumber: stockInData.purchaseOrderNumber,
-                unitCost: stockInData.unitCost,
-                notes: stockInData.notes,
-                openingStock: stockInData.openingStock || null,
-                closingStock: stockInData.closingStock || null,
-                activationId: stockInData.activationId || null
-            })
-            return response.data
+            return await stockService.replenishStock(stockId, stockInData)
         } catch (error) {
             console.error('Error recording stock in:', error)
             throw error
         }
     }
 
-    /**
-     * Record stock transfer between warehouses
-     * @param {number} stockId - The stock item ID
-     * @param {Object} transferData - Transfer information
-     * @returns {Promise} Created transfer record
-     */
-    async recordTransfer(stockId, transferData) {
+    async recordAllocation(stockId, allocationData) {
         try {
-            const endpoint = `/api/stocks/${stockId}/movements`
-            const response = await api.post(endpoint, {
-                movementType: 'ALLOCATION',
-                quantity: transferData.quantity,
-                reason: transferData.reason || 'Stock transfer',
-                fromWarehouseId: transferData.fromWarehouseId,
-                toWarehouseId: transferData.toWarehouseId,
-                notes: transferData.notes,
-                openingStock: transferData.openingStock || null,
-                closingStock: transferData.closingStock || null,
-                activationId: transferData.activationId || null
-            })
-            return response.data
+            return await stockService.allocateStock(stockId, allocationData)
         } catch (error) {
-            console.error('Error recording transfer:', error)
+            console.error('Error recording allocation:', error)
             throw error
         }
     }
@@ -162,28 +171,31 @@ class StockMovementService {
     async getMovementSummary(stockId, params = {}) {
         try {
             const endpoint = `/stocks/${stockId}/movements/summary`
-            const response = await api.get(endpoint, { params })
-            return response.data
+            const data = await api.get(endpoint, { params })
+            return data
         } catch (error) {
             console.error('Error fetching movement summary:', error)
             throw error
         }
     }
 
-    /**
-     * Get stock movements by activation
-     * @param {number} activationId - The activation ID
-     * @param {Object} params - Query parameters
-     * @returns {Promise} Stock movements for the activation
-     */
     async getMovementsByActivation(activationId, params = {}) {
         try {
-            const endpoint = `/activations/${activationId}/stock-movements`
-            const response = await api.get(endpoint, { params })
-            return response.data
+            const data = await api.get(`/activations/${activationId}/stock-movements`, { params })
+            return data
         } catch (error) {
             console.error('Error fetching movements by activation:', error)
             throw error
+        }
+    }
+
+    async getMovementTypes() {
+        try {
+            const data = await api.get('/stock-movements/movement-types')
+            return data
+        } catch (error) {
+            console.error('Error fetching movement types:', error)
+            return ['IN', 'OUT', 'ALLOCATION', 'REPLENISHMENT', 'ADJUSTMENT', 'DISTRIBUTION', 'RETURN', 'SAMPLE', 'SALE']
         }
     }
 
@@ -194,13 +206,13 @@ class StockMovementService {
      */
     async bulkRecordSales(sales) {
         try {
-            const response = await api.post('/stocks/movements/bulk', {
+            const data = await api.post('/stocks/movements/bulk', {
                 movements: sales.map(sale => ({
                     ...sale,
                     movementType: 'SALE'
                 }))
             })
-            return response.data
+            return data
         } catch (error) {
             console.error('Error bulk recording sales:', error)
             throw error
@@ -215,14 +227,27 @@ class StockMovementService {
      */
     async exportMovements(stockId, params = {}) {
         try {
-            const endpoint = `/stocks/${stockId}/movements/export`
-            const response = await api.get(endpoint, {
+            return await stockService.exportStockMovements(stockId, params)
+        } catch (error) {
+            console.error('Error exporting movements:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Export warehouse stock movements to Excel/CSV
+     * @param {Object} params - Export parameters including warehouseId
+     * @returns {Promise} File blob
+     */
+    async exportWarehouseMovements(params = {}) {
+        try {
+            const response = await api.get('/stock-movements/export', {
                 params,
                 responseType: 'blob'
             })
-            return response.data
+            return response
         } catch (error) {
-            console.error('Error exporting movements:', error)
+            console.error('Error exporting warehouse movements:', error)
             throw error
         }
     }

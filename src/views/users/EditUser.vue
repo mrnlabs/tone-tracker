@@ -500,6 +500,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useUsersStore } from '@/stores/user'
+import { useAuthStore } from '@/stores/auth'
 import { useValidation } from '@/composables/useValidation'
 import { userService, promoterService, fileService } from '@/services/api'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
@@ -510,6 +511,7 @@ const router = useRouter()
 const route = useRoute()
 const toast = useToast()
 const usersStore = useUsersStore()
+const authStore = useAuthStore()
 const { validators } = useValidation()
 
 // State
@@ -747,7 +749,7 @@ const loadUser = async () => {
     let user
     
     if (isPromoter.value) {
-      user = await promoterService.getPromoter(userId.value)
+      user = await promoterService.getPromoter(userId.value, authStore.userId)
       // Load work experience
       if (user.workExperience) {
         workExperience.value = user.workExperience

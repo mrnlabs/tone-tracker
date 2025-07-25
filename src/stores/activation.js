@@ -3,7 +3,7 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { activationService } from '@/services/api'
+import { activationService, promoterService } from '@/services/api'
 import { ACTIVATION_STATUS, ACTIVATION_TYPES, PRIORITY_LEVELS } from '@/utils/constants'
 import { useAuthStore } from './auth'
 
@@ -170,6 +170,10 @@ export const useActivationStore = defineStore('activations', () => {
         try {
             isLoading.value = true
             error.value = null
+            
+            const authStore = useAuthStore()
+            const userRole = authStore.userRole
+            const userId = authStore.userId
 
             const queryParams = {
                 page: pagination.value.page - 1, // Convert to 0-based for Spring Boot
@@ -186,12 +190,86 @@ export const useActivationStore = defineStore('activations', () => {
                 }
             })
 
-            const response = await activationService.getActivations(queryParams)
+            console.log('Fetching activations for role:', userRole, 'with params:', queryParams)
+
+            let response
+            // Use different endpoints based on user role
+            if (userRole === 'PROMOTER') {
+                // Promoters only see their assigned activations
+                console.log('Fetching activations for promoter user:', userId)
+                try {
+                    // Try the user-based activations endpoint first (now working)
+                    response = await activationService.getCurrentUserActivations(queryParams)
+                    console.log('Successfully fetched activations via /users/current/activations endpoint')
+                } catch (currentUserError) {
+                    console.log('Failed to fetch via /users/current/activations, trying promoter assignments:', currentUserError)
+                    try {
+                        // Try using the promoter assignments endpoint with user ID (now working)
+                        response = await promoterService.getPromoterAssignments(userId, queryParams)
+                        console.log('Successfully fetched via promoter assignments endpoint')
+                    } catch (promoterError) {
+                        console.log('Failed to fetch promoter assignments, trying /activations/my:', promoterError)
+                        try {
+                            // Final fallback to the dedicated "my activations" endpoint
+                            response = await activationService.getMyActivations(queryParams)
+                            console.log('Successfully fetched activations via /activations/my endpoint')
+                        } catch (myActivationsError) {
+                            console.log('All activation endpoints failed for promoter:', myActivationsError)
+                            
+                            // Show user-friendly error message
+                            if (typeof window !== 'undefined' && window.toast) {
+                                window.toast.add({
+                                    severity: 'warn',
+                                    summary: 'Limited Access',
+                                    detail: 'Unable to load activations. Please contact your administrator if you should have access to activations.',
+                                    life: 8000
+                                })
+                            }
+                            
+                            response = {
+                                content: [],
+                                page: {
+                                    totalElements: 0,
+                                    number: 0,
+                                    size: queryParams.size || 10,
+                                    totalPages: 0
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Admins, managers, etc. see all activations
+                response = await activationService.getActivations(queryParams)
+            }
+
+            console.log('API response structure:', {
+                hasContent: !!response.content,
+                hasData: !!response.data,
+                isArray: Array.isArray(response),
+                responseKeys: Object.keys(response),
+                sampleItem: response.content?.[0] || response.data?.[0] || response[0]
+            })
 
             // Handle both custom and Spring Boot pagination response structures
             if (response.content) {
                 // Spring Boot pagination response
-                activations.value = response.content
+                let activationsData = response.content
+                
+                // For promoter assignments, extract the activation from each assignment
+                if (userRole === 'PROMOTER' && activationsData.length > 0) {
+                    if (activationsData[0].activation) {
+                        console.log('Extracting activations from assignments')
+                        activationsData = activationsData.map(assignment => assignment.activation)
+                    } else if (activationsData[0].activationId || activationsData[0].assignment) {
+                        console.log('Processing assignment data with activationId references')
+                        // If assignments only have activationId, we might need to fetch the activation details
+                        // For now, just log this case
+                        console.log('Assignment data structure:', activationsData[0])
+                    }
+                }
+                
+                activations.value = activationsData
                 pagination.value = {
                     total: response.page.totalElements,
                     page: response.page.number + 1, // Convert 0-based to 1-based for UI
@@ -200,7 +278,22 @@ export const useActivationStore = defineStore('activations', () => {
                 }
             } else if (response.data) {
                 // Custom pagination response
-                activations.value = response.data
+                let activationsData = response.data
+                
+                // For promoter assignments, extract the activation from each assignment
+                if (userRole === 'PROMOTER' && activationsData.length > 0) {
+                    if (activationsData[0].activation) {
+                        console.log('Extracting activations from assignments')
+                        activationsData = activationsData.map(assignment => assignment.activation)
+                    } else if (activationsData[0].activationId || activationsData[0].assignment) {
+                        console.log('Processing assignment data with activationId references')
+                        // If assignments only have activationId, we might need to fetch the activation details
+                        // For now, just log this case
+                        console.log('Assignment data structure:', activationsData[0])
+                    }
+                }
+                
+                activations.value = activationsData
                 pagination.value = {
                     total: response.meta.total,
                     page: response.meta.page,
@@ -209,9 +302,24 @@ export const useActivationStore = defineStore('activations', () => {
                 }
             } else {
                 // Direct array response
-                activations.value = Array.isArray(response) ? response : [response]
+                let activationsData = Array.isArray(response) ? response : [response]
+                
+                // For promoter assignments, extract the activation from each assignment
+                if (userRole === 'PROMOTER' && activationsData.length > 0) {
+                    if (activationsData[0].activation) {
+                        console.log('Extracting activations from assignments')
+                        activationsData = activationsData.map(assignment => assignment.activation)
+                    } else if (activationsData[0].activationId || activationsData[0].assignment) {
+                        console.log('Processing assignment data with activationId references')
+                        // If assignments only have activationId, we might need to fetch the activation details
+                        // For now, just log this case
+                        console.log('Assignment data structure:', activationsData[0])
+                    }
+                }
+                
+                activations.value = activationsData
                 pagination.value = {
-                    total: activations.value.length,
+                    total: activationsData.length,
                     page: 1,
                     limit: 10,
                     totalPages: 1
@@ -228,7 +336,7 @@ export const useActivationStore = defineStore('activations', () => {
     }
 
     /**
-     * Get activation by ID with caching
+     * Get activation by ID with caching and role-based access
      */
     const getActivation = async (id, forceRefresh = false) => {
         // Check cache first
@@ -242,7 +350,27 @@ export const useActivationStore = defineStore('activations', () => {
             isLoading.value = true
             error.value = null
 
-            const activation = await activationService.getActivation(id)
+            const authStore = useAuthStore()
+            const userRole = authStore.userRole
+            const userId = authStore.userId
+
+            let activation
+
+            // Use role-specific access for promoters
+            if (userRole === 'PROMOTER') {
+                console.log('Fetching activation details for promoter user:', userId)
+                try {
+                    activation = await activationService.getActivationForPromoter(id, userId)
+                    console.log('Successfully fetched activation details via promoter-specific method')
+                } catch (promoterError) {
+                    console.log('Failed to fetch activation via promoter method, trying direct access:', promoterError)
+                    // Try direct access as fallback
+                    activation = await activationService.getActivation(id)
+                }
+            } else {
+                // For non-promoters, use direct access
+                activation = await activationService.getActivation(id)
+            }
 
             // Cache the result
             cacheActivation(id, activation)
@@ -437,12 +565,21 @@ export const useActivationStore = defineStore('activations', () => {
     /**
      * Record promoter check-in
      */
-    const checkinPromoter = async (activationId, promoterId, location) => {
+    const checkinPromoter = async (activationId, userId, location, notes = null) => {
         try {
             error.value = null
-            return await activationService.checkinPromoter(activationId, promoterId, location)
+            return await activationService.checkinPromoter(activationId, userId, location, notes)
         } catch (err) {
-            error.value = err.message || 'Failed to check in promoter'
+            // Extract meaningful error message from response
+            let errorMessage = 'Failed to check in promoter'
+            
+            if (err.response?.data?.message) {
+                errorMessage = err.response.data.message
+            } else if (err.message) {
+                errorMessage = err.message
+            }
+            
+            error.value = errorMessage
             throw err
         }
     }
@@ -450,14 +587,133 @@ export const useActivationStore = defineStore('activations', () => {
     /**
      * Record promoter check-out
      */
-    const checkoutPromoter = async (activationId, promoterId) => {
+    const checkoutPromoter = async (activationId, userId, attendanceRecordId, location) => {
         try {
             error.value = null
-            return await activationService.checkoutPromoter(activationId, promoterId)
+            return await activationService.checkoutPromoter(activationId, userId, attendanceRecordId, location)
         } catch (err) {
-            error.value = err.message || 'Failed to check out promoter'
+            // Extract meaningful error message from response
+            let errorMessage = 'Failed to check out promoter'
+            
+            if (err.response?.data?.message) {
+                errorMessage = err.response.data.message
+            } else if (err.message) {
+                errorMessage = err.message
+            }
+            
+            error.value = errorMessage
             throw err
         }
+    }
+
+    /**
+     * Get check-in history for an activation (all promoters)
+     */
+    const getCheckInHistory = async (activationId) => {
+        try {
+            error.value = null
+            const response = await activationService.getCheckInHistory(activationId)
+            
+            // Transform AttendanceRecordDTO to match frontend format
+            // Handle both direct array response and wrapped response
+            let rawData = null
+            if (Array.isArray(response)) {
+                rawData = response
+            } else if (response && response.data) {
+                rawData = response.data
+            }
+            
+            if (rawData && Array.isArray(rawData)) {
+                const transformedData = rawData.map(record => ({
+                    id: record.id,
+                    date: record.attendanceDate,
+                    promoterName: `${record.promoterFirstName} ${record.promoterLastName}`,
+                    promoterId: record.promoterId,
+                    checkInTime: record.checkInTime,
+                    checkOutTime: record.checkOutTime,
+                    duration: calculateDuration(record.checkInTime, record.checkOutTime),
+                    location: {
+                        latitude: record.checkInLatitude,
+                        longitude: record.checkInLongitude,
+                        address: record.checkInAddress || record.locationName || 'Unknown location'
+                    },
+                    checkOutLocation: record.checkOutLatitude && record.checkOutLongitude ? {
+                        latitude: record.checkOutLatitude,
+                        longitude: record.checkOutLongitude,
+                        address: record.checkOutAddress || 'Unknown location'
+                    } : null,
+                    status: record.isCheckedOut ? 'Complete' : 'In Progress',
+                    isCheckedIn: record.isCheckedIn,
+                    isCheckedOut: record.isCheckedOut
+                }))
+                
+                // Return in consistent format - always return transformed data directly
+                return transformedData
+            }
+            
+            return response
+        } catch (err) {
+            error.value = err.message || 'Failed to fetch check-in history'
+            throw err
+        }
+    }
+
+    /**
+     * Get check-in history for current user only
+     */
+    const getCurrentUserCheckInHistory = async (activationId) => {
+        try {
+            error.value = null
+            const response = await activationService.getCurrentUserCheckInHistory(activationId)
+            
+            // Transform AttendanceRecordDTO to match frontend format
+            if (response && response.data) {
+                const transformedData = response.data.map(record => ({
+                    id: record.id,
+                    date: record.attendanceDate,
+                    promoterName: `${record.promoterFirstName} ${record.promoterLastName}`,
+                    promoterId: record.promoterId,
+                    checkInTime: record.checkInTime,
+                    checkOutTime: record.checkOutTime,
+                    duration: calculateDuration(record.checkInTime, record.checkOutTime),
+                    location: {
+                        latitude: record.checkInLatitude,
+                        longitude: record.checkInLongitude,
+                        address: record.checkInAddress || record.locationName || 'Unknown location'
+                    },
+                    checkOutLocation: record.checkOutLatitude && record.checkOutLongitude ? {
+                        latitude: record.checkOutLatitude,
+                        longitude: record.checkOutLongitude,
+                        address: record.checkOutAddress || 'Unknown location'
+                    } : null,
+                    status: record.isCheckedOut ? 'Complete' : 'In Progress',
+                    isCheckedIn: record.isCheckedIn,
+                    isCheckedOut: record.isCheckedOut
+                }))
+                
+                return { ...response, data: transformedData }
+            }
+            
+            return response
+        } catch (err) {
+            error.value = err.message || 'Failed to fetch current user check-in history'
+            throw err
+        }
+    }
+    
+
+    /**
+     * Calculate duration between check-in and check-out times
+     */
+    const calculateDuration = (checkInTime, checkOutTime) => {
+        if (!checkInTime) return null
+        
+        const startTime = new Date(checkInTime)
+        const endTime = checkOutTime ? new Date(checkOutTime) : new Date()
+        const diffMs = endTime - startTime
+        
+        // Return duration in milliseconds for the component to format
+        return diffMs > 0 ? diffMs : 0
     }
 
     /**
@@ -618,6 +874,8 @@ export const useActivationStore = defineStore('activations', () => {
         uploadBrief,
         checkinPromoter,
         checkoutPromoter,
+        getCheckInHistory,
+        getCurrentUserCheckInHistory,
         recordSales,
         recordCustomerData,
         setFilters,

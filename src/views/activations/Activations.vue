@@ -344,7 +344,7 @@ const activationStats = computed(() => {
 const pagination = computed(() => activationStore.pagination)
 
 const canCreateActivation = computed(() => {
-  return ['ADMIN', 'ACTIVATION_MANAGER'].includes(userRole.value)
+  return userRole.value === 'ADMIN'
 })
 
 const hasActiveFilters = computed(() => {
@@ -675,12 +675,12 @@ const getStatusSeverity = (status) => {
 }
 
 const canEditActivation = (activation) => {
-  return ['ADMIN', 'ACTIVATION_MANAGER'].includes(userRole.value) ||
+  return userRole.value === 'ADMIN' ||
       (userRole.value === 'CLIENT' && activation.clientEmail === authStore.user?.email)
 }
 
 const canDeleteActivation = (activation) => {
-  return ['ADMIN', 'ACTIVATION_MANAGER'].includes(userRole.value) &&
+  return userRole.value === 'ADMIN' &&
       activation.status !== 'Active'
 }
 

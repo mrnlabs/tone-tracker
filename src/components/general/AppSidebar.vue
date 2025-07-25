@@ -153,7 +153,7 @@ const navigationItems = [
     roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT', 'PROMOTER'],
     children: [
       { label: 'All Activations', path: '/activations', icon: 'pi pi-calendar' },
-      { label: 'Create Activation', path: '/activations/create', icon: 'pi pi-plus', roles: ['ADMIN', 'ACTIVATION_MANAGER'] },
+      { label: 'Create Activation', path: '/activations/create', icon: 'pi pi-plus', roles: ['ADMIN'] },
       { label: 'Activation Briefs', path: '/activations/briefs', icon: 'pi pi-file-pdf' },
       { label: 'Performance', path: '/activations/performance', icon: 'pi pi-chart-line' }
     ]
@@ -162,10 +162,10 @@ const navigationItems = [
     id: 'clients',
     label: 'Clients',
     icon: 'pi pi-building',
-    roles: ['ADMIN', 'ACTIVATION_MANAGER'],
+    roles: ['ADMIN'],
     children: [
       { label: 'All Clients', path: '/clients', icon: 'pi pi-building' },
-      { label: 'Add Client', path: '/clients/create', icon: 'pi pi-plus' }
+      { label: 'Add Client', path: '/clients/create', icon: 'pi pi-plus', roles: ['ADMIN'] }
     ]
   },
   {
@@ -183,7 +183,7 @@ const navigationItems = [
     id: 'warehouses',
     label: 'Warehouses',
     icon: 'pi pi-box',
-    roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER'],
+    roles: ['ADMIN', 'WAREHOUSE_MANAGER'],
     children: [
       { label: 'All Warehouses', path: '/warehouses', icon: 'pi pi-box' }
     ]
@@ -192,7 +192,7 @@ const navigationItems = [
     id: 'crm',
     label: 'CRM & Insights',
     icon: 'pi pi-chart-line',
-    roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT'],
+    roles: ['ADMIN', 'CLIENT'],
     children: [
       { label: 'Customer Data', path: '/crm', icon: 'pi pi-users' },
       { label: 'Sales Tracking', path: '/crm/sales', icon: 'pi pi-dollar' },
@@ -206,7 +206,7 @@ const navigationItems = [
     roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT', 'WAREHOUSE_MANAGER'],
     children: [
       { label: 'All Reports', path: '/reports', icon: 'pi pi-chart-bar' },
-      { label: 'Stock Movement', path: '/reports/stock-movements', icon: 'pi pi-box', roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER'] },
+      { label: 'Stock Movement', path: '/reports/stock-movements', icon: 'pi pi-box', roles: ['ADMIN', 'WAREHOUSE_MANAGER'] },
       { label: 'Activation Reports', path: '/reports/activations', icon: 'pi pi-calendar' },
       { label: 'Performance Reports', path: '/reports/performance', icon: 'pi pi-chart-line' },
       { label: 'Inventory Reports', path: '/reports/inventory', icon: 'pi pi-box' }

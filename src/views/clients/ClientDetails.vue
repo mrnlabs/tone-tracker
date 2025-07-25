@@ -41,12 +41,14 @@
 
             <div class="header-actions">
               <Button
+                  v-if="userRole === 'ADMIN'"
                   @click="editClient"
                   icon="pi pi-pencil"
                   label="Edit Client"
                   class="p-button-outlined"
               />
               <Button
+                  v-if="userRole === 'ADMIN'"
                   @click="createActivation"
                   icon="pi pi-plus"
                   label="New Activation"
@@ -353,6 +355,7 @@
                             v-tooltip.top="'View Details'"
                         />
                         <Button
+                            v-if="userRole === 'ADMIN'"
                             @click="editActivation(data.id)"
                             icon="pi pi-pencil"
                             class="p-button-text p-button-sm"
@@ -539,6 +542,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useClientsStore } from '@/stores/client'
+import { useAuthStore } from '@/stores/auth'
 import { useLoading } from '@/composables/useLoading'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
 import ClientContact from './ClientContact.vue'
@@ -547,7 +551,11 @@ const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const clientsStore = useClientsStore()
+const authStore = useAuthStore()
 const { withLoading, isLoading } = useLoading()
+
+// Get current user role
+const userRole = computed(() => authStore.userRole)
 
 // State
 const activityLog = ref([])

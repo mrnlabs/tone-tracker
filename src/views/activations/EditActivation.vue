@@ -146,6 +146,7 @@
                       accept=".pdf"
                       :max-size="10 * 1024 * 1024"
                       :error="errors.briefDocument"
+                      :store-only="true"
                       @upload-success="handleBriefUploadSuccess"
                       @file-removed="handleBriefRemoved"
                   />
@@ -528,6 +529,42 @@ const uploadBriefDocument = async () => {
   }
 }
 
+const uploadBriefDocumentFromComponent = async () => {
+  if (!briefDocument.value?.file) return null
+
+  try {
+    isUploadingBrief.value = true
+    briefUploadProgress.value = 0
+
+    const result = await fileService.uploadFile(
+      briefDocument.value.file,
+      (progress) => {
+        briefUploadProgress.value = progress
+      },
+      {
+        category: 'activation-brief',
+        activationId: route.params.id,
+        entityId: route.params.id,
+        entityType: 'ACTIVATION'
+      }
+    )
+
+    return result.filePath || result.path || result.url
+  } catch (error) {
+    console.error('Brief upload failed:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Upload Failed',
+      detail: error.message || 'Failed to upload brief document',
+      life: 5000
+    })
+    throw error
+  } finally {
+    isUploadingBrief.value = false
+    briefUploadProgress.value = 0
+  }
+}
+
 const downloadBrief = async () => {
   if (!formData.value.briefDocumentPath) return
 
@@ -759,14 +796,8 @@ const handleLocationSelected = (location) => {
 
 // Handle brief document upload
 const handleBriefUploadSuccess = (result) => {
-  formData.value.briefDocumentPath = result.path || result.url
-  
-  toast.add({
-    severity: 'success',
-    summary: 'Upload Successful',
-    detail: 'Brief document uploaded successfully',
-    life: 3000
-  })
+  // With store-only mode, file is stored locally, no immediate upload
+  console.log('Brief document selected:', result.file?.name)
 }
 
 const handleBriefRemoved = () => {
@@ -820,9 +851,9 @@ const handleSubmit = async () => {
 
     // Upload brief document if a new file is selected
     let briefDocumentPath = formData.value.briefDocumentPath
-    if (briefFile.value) {
-      briefDocumentPath = await uploadBriefDocument()
-      clearSelectedFile()
+    if (briefDocument.value?.file) {
+      // Upload new file using the file from FileUpload component
+      briefDocumentPath = await uploadBriefDocumentFromComponent()
     }
 
     // Prepare update data to match backend DTO

@@ -21,6 +21,7 @@
         label="Test File Upload"
         accept=".pdf"
         :max-size="5 * 1024 * 1024"
+        :store-only="true"
         @upload-success="handleUploadSuccess"
         @file-removed="handleFileRemoved"
       />

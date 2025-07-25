@@ -9,6 +9,7 @@ export { useWarehouseStore } from './warehouse'
 export { useUsersStore } from './users'
 export { useReportsStore } from './reports'
 export { useStockMovementStore } from './stockMovement'
+export { usePromoterStore } from './promoter'
 
 // Import store utilities
 import { useAuthStore } from './auth'
@@ -18,6 +19,7 @@ import { useWarehouseStore } from './warehouse'
 import { useUsersStore } from './users'
 import { useReportsStore } from './reports'
 import { useStockMovementStore } from './stockMovement'
+import { usePromoterStore } from './promoter'
 
 /**
  * Composite store hook that provides access to all stores
@@ -31,7 +33,8 @@ export const useStores = () => {
         warehouse: useWarehouseStore(),
         users: useUsersStore(),
         reports: useReportsStore(),
-        stockMovement: useStockMovementStore()
+        stockMovement: useStockMovementStore(),
+        promoter: usePromoterStore()
     }
 }
 

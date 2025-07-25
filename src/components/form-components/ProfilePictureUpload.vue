@@ -231,8 +231,13 @@ const uploadFile = async (file) => {
     }
 
     // Update image URL with the server response
-    if (result.url || result.profilePictureUrl) {
-      imageUrl.value = result.url || result.profilePictureUrl
+    console.log('ProfilePictureUpload: Upload handler result:', result)
+    const newUrl = result.url || result.profilePictureUrl || result.profileImagePath || result.filePath || result.data?.url || result.data?.profilePictureUrl
+    
+    if (newUrl) {
+      console.log('ProfilePictureUpload: Setting image URL to:', newUrl)
+      
+      imageUrl.value = newUrl
       emit('update:modelValue', imageUrl.value)
       emit('upload-success', result)
       
@@ -307,8 +312,16 @@ const removePicture = async () => {
   }
 }
 
-const handleImageError = () => {
+const handleImageError = (event) => {
+  console.error('Failed to load profile picture')
+  console.error('Failed URL was:', event?.target?.src || imageUrl.value)
+  console.error('Current imageUrl value:', imageUrl.value)
+  console.error('Props modelValue:', props.modelValue)
   imageLoadError.value = true
+  
+  // Log the base URLs being used
+  console.log('API Base URL:', import.meta.env.VITE_API_BASE_URL)
+  console.log('S3 Bucket URL:', import.meta.env.VITE_AWS_S3_BUCKET)
 }
 
 const compressImage = async (file) => {

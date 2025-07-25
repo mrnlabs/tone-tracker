@@ -438,6 +438,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useToaster } from '@/composables/useToaster'
 import { useActivationStore } from '@/stores/activation'
+import { useAuthStore } from '@/stores/auth'
 import leadService from '@/services/leadService'
 import { LEAD_STATUSES, LEAD_STATUS_LABELS } from '@/utils/constants'
 import { BaseButton } from '@/components'
@@ -484,6 +485,7 @@ const exportFormat = ref('xlsx')
 
 // Stores
 const activationStore = useActivationStore()
+const authStore = useAuthStore()
 const toaster = useToaster()
 
 // Computed properties
@@ -506,7 +508,16 @@ const loadLeads = async (page = 0) => {
       size: 20
     }
     
-    const response = await leadService.getLeads(params)
+    let response
+    // Use role-specific endpoints
+    if (authStore.userRole === 'PROMOTER') {
+      // For promoters, use the new my-activations endpoint
+      response = await leadService.getMyActivationLeads(params)
+    } else {
+      // For other roles, use the standard endpoint
+      response = await leadService.getLeads(params)
+    }
+    
     leads.value = response.content || response.data || []
     totalRecords.value = response.totalElements || response.total || 0
     currentPage.value = page

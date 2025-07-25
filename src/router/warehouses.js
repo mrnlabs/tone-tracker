@@ -8,7 +8,7 @@ export const warehouseRoutes = [
     component: () => import('@/views/warehouses/Warehouses.vue'),
     meta: {
       requiresAuth: true,
-      roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER'],
+      roles: ['ADMIN', 'WAREHOUSE_MANAGER'],
       title: 'Warehouse Management'
     }
   },
@@ -28,7 +28,7 @@ export const warehouseRoutes = [
     component: () => import('@/views/warehouses/WarehouseDetails.vue'),
     meta: {
       requiresAuth: true,
-      roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER'],
+      roles: ['ADMIN', 'WAREHOUSE_MANAGER'],
       title: 'Warehouse Details'
     }
   },
@@ -48,7 +48,7 @@ export const warehouseRoutes = [
     component: () => import('@/views/warehouses/WarehouseInventory.vue'),
     meta: {
       requiresAuth: true,
-      roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER'],
+      roles: ['ADMIN', 'WAREHOUSE_MANAGER'],
       title: 'Warehouse Inventory'
     }
   },
@@ -58,7 +58,7 @@ export const warehouseRoutes = [
     component: () => import('@/views/warehouses/InventoryManagement.vue'),
     meta: {
       requiresAuth: true,
-      roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER'],
+      roles: ['ADMIN', 'WAREHOUSE_MANAGER'],
       title: 'Inventory Management'
     }
   },
@@ -78,7 +78,7 @@ export const warehouseRoutes = [
     component: () => import('@/views/warehouses/WarehouseReports.vue'),
     meta: {
       requiresAuth: true,
-      roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER'],
+      roles: ['ADMIN', 'WAREHOUSE_MANAGER'],
       title: 'Warehouse Reports'
     }
   },
@@ -108,7 +108,7 @@ export const warehouseRoutes = [
     component: () => import('@/views/warehouses/StockTransfers.vue'),
     meta: {
       requiresAuth: true,
-      roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER'],
+      roles: ['ADMIN', 'WAREHOUSE_MANAGER'],
       title: 'Stock Transfers'
     }
   }
