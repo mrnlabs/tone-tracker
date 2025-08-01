@@ -189,7 +189,8 @@
             :value="leads"
             :loading="tableLoading"
             :paginator="true"
-            :rows="20"
+            :rows="10"
+            :rowsPerPageOptions="[5, 10, 20, 50]"
             :totalRecords="totalRecords"
             :lazy="true"
             @page="onPageChange"
@@ -197,62 +198,144 @@
             sortMode="multiple"
             removableSort
             :rowHover="true"
+            responsiveLayout="scroll"
             class="leads-table"
           >
-            <Column field="name" header="Name" sortable>
+            <Column field="fullName" header="Customer" sortable>
               <template #body="{ data }">
-                <div class="name-cell">
-                  <strong>{{ data.name }} {{ data.surname }}</strong>
-                  <small>{{ data.email }}</small>
+                <div class="name-cell has-tooltip">
+                  <strong>{{ data.fullName }}</strong>
+                  <small>{{ data.displayContact }}</small>
+                  <div class="custom-tooltip">
+                    <div class="tooltip-section">
+                      <h4>Demographics</h4>
+                      <p><strong>Gender:</strong> {{ leadService.getGenderLabel(data.customerGender) }}</p>
+                      <p><strong>Age Group:</strong> {{ leadService.getAgeGroupLabel(data.ageGroup) }}</p>
+                      <p v-if="data.address"><strong>Address:</strong> {{ data.address }}</p>
+                    </div>
+                    <div class="tooltip-section" v-if="data.decisionMakerStatus">
+                      <h4>Decision Maker</h4>
+                      <p>{{ data.decisionMakerStatus }}</p>
+                    </div>
+                  </div>
                 </div>
               </template>
             </Column>
             
-            <Column field="phone" header="Phone" sortable>
+            <Column field="email" header="Email" sortable>
               <template #body="{ data }">
-                {{ leadService.formatPhoneNumber(data.phone) }}
-              </template>
-            </Column>
-            
-            <Column field="customerGender" header="Gender" sortable>
-              <template #body="{ data }">
-                {{ leadService.getGenderLabel(data.customerGender) }}
-              </template>
-            </Column>
-            
-            <Column field="ageGroup" header="Age Group" sortable>
-              <template #body="{ data }">
-                {{ leadService.getAgeGroupLabel(data.ageGroup) }}
+                <div class="email-cell has-tooltip">
+                  <span>{{ data.email }}</span>
+                  <div class="custom-tooltip">
+                    <div class="tooltip-section">
+                      <h4>Contact Preferences</h4>
+                      <p><strong>Marketing Opt-in:</strong> {{ data.optIn === null ? 'Not Set' : (data.optIn ? 'Yes' : 'No') }}</p>
+                      <p><strong>WhatsApp Opt-in:</strong> {{ data.whatsappOptIn === null ? 'Not Set' : (data.whatsappOptIn ? 'Yes' : 'No') }}</p>
+                    </div>
+                    <div class="tooltip-section" v-if="data.customerFeedback">
+                      <h4>Customer Feedback</h4>
+                      <p>{{ data.customerFeedback }}</p>
+                    </div>
+                  </div>
+                </div>
               </template>
             </Column>
             
             <Column field="customerType" header="Type" sortable>
               <template #body="{ data }">
-                {{ leadService.getCustomerTypeLabel(data.customerType) }}
+                <div class="has-tooltip">
+                  <Tag
+                    :value="leadService.getCustomerTypeLabel(data.customerType)"
+                    :severity="getCustomerTypeSeverity(data.customerType)"
+                  />
+                  <div class="custom-tooltip">
+                    <div class="tooltip-section" v-if="data.usageContext">
+                      <h4>Usage Context</h4>
+                      <p>{{ data.usageContext }}</p>
+                    </div>
+                    <div class="tooltip-section" v-if="data.competitorMentions">
+                      <h4>Competitor Mentions</h4>
+                      <p>{{ data.competitorMentions }}</p>
+                    </div>
+                    <div class="tooltip-section" v-if="data.priceSensitivity">
+                      <h4>Price Sensitivity</h4>
+                      <p>{{ data.priceSensitivity }}</p>
+                    </div>
+                  </div>
+                </div>
               </template>
             </Column>
             
-            <Column field="optedIn" header="Marketing Opt-in" sortable>
+            <Column field="brandAwarenessLevel" header="Brand Awareness" sortable>
               <template #body="{ data }">
-                <Tag
-                  :value="data.optedIn ? 'Yes' : 'No'"
-                  :severity="data.optedIn ? 'success' : 'secondary'"
-                />
+                <div class="has-tooltip">
+                  <div v-if="data.brandAwarenessLevel" class="awareness-level">
+                    <i v-for="n in 5" :key="n" 
+                       class="pi" 
+                       :class="n <= data.brandAwarenessLevel ? 'pi-star-fill' : 'pi-star'"
+                       :style="{ color: n <= data.brandAwarenessLevel ? '#fbbf24' : '#d1d5db' }"
+                    />
+                  </div>
+                  <span v-else class="awareness-level">{{ data.productAwareness ? 'Aware' : 'Not set' }}</span>
+                  <div class="custom-tooltip" v-if="data.productAwareness || data.brandAwarenessComments">
+                    <div class="tooltip-section">
+                      <h4>Product & Brand Awareness</h4>
+                      <p><strong>Product Aware:</strong> {{ data.productAwareness ? 'Yes' : 'No' }}</p>
+                      <p v-if="data.brandAwarenessLevel"><strong>Level:</strong> {{ getBrandAwarenessLabel(data.brandAwarenessLevel) }}</p>
+                      <p v-if="data.brandAwarenessComments"><strong>Comments:</strong> {{ data.brandAwarenessComments }}</p>
+                    </div>
+                  </div>
+                </div>
               </template>
             </Column>
             
-            <Column field="whatsAppOptedIn" header="WhatsApp Opt-in" sortable>
+            <Column field="purchaseIntentLevel" header="Purchase Intent" sortable>
               <template #body="{ data }">
-                <Tag
-                  :value="data.whatsAppOptedIn ? 'Yes' : 'No'"
-                  :severity="data.whatsAppOptedIn ? 'success' : 'secondary'"
-                />
+                <div class="has-tooltip">
+                  <div v-if="data.purchaseIntentLevel" class="intent-level">
+                    <i v-for="n in 5" :key="n" 
+                       class="pi" 
+                       :class="n <= data.purchaseIntentLevel ? 'pi-heart-fill' : 'pi-heart'"
+                       :style="{ color: n <= data.purchaseIntentLevel ? '#ef4444' : '#d1d5db' }"
+                    />
+                  </div>
+                  <span v-else class="intent-level">{{ data.repeatPurchaseIntent }}</span>
+                  <div class="custom-tooltip" v-if="data.repeatPurchaseIntent || data.purchaseIntentComments">
+                    <div class="tooltip-section">
+                      <h4>Purchase Intent Details</h4>
+                      <p><strong>Repeat Purchase:</strong> {{ leadService.getRepeatPurchaseLabel(data.repeatPurchaseIntent) }}</p>
+                      <p v-if="data.purchaseIntentLevel"><strong>Intent Level:</strong> {{ getPurchaseIntentLabel(data.purchaseIntentLevel) }}</p>
+                      <p v-if="data.purchaseIntentComments"><strong>Comments:</strong> {{ data.purchaseIntentComments }}</p>
+                    </div>
+                  </div>
+                </div>
               </template>
             </Column>
             
-            <Column field="repeatPurchaseIntent" header="Repeat Purchase" sortable>
+            <Column field="followUpRequired" header="Follow-up" sortable>
               <template #body="{ data }">
-                {{ leadService.getRepeatPurchaseLabel(data.repeatPurchaseIntent) }}
+                <div class="has-tooltip">
+                  <Tag
+                    v-if="data.followUpRequired"
+                    value="Required"
+                    severity="warning"
+                  />
+                  <span v-else>-</span>
+                  <div class="custom-tooltip" v-if="data.followUpNotes || data.promoterObservations || data.engagementQuality">
+                    <div class="tooltip-section" v-if="data.followUpNotes">
+                      <h4>Follow-up Notes</h4>
+                      <p>{{ data.followUpNotes }}</p>
+                    </div>
+                    <div class="tooltip-section" v-if="data.promoterObservations">
+                      <h4>Promoter Observations</h4>
+                      <p>{{ data.promoterObservations }}</p>
+                    </div>
+                    <div class="tooltip-section" v-if="data.engagementQuality">
+                      <h4>Engagement Quality</h4>
+                      <p>{{ getEngagementQualityLabel(data.engagementQuality) }}</p>
+                    </div>
+                  </div>
+                </div>
               </template>
             </Column>
             
@@ -313,7 +396,8 @@
         v-model:visible="showDetailsDialog"
         header="Lead Details"
         :modal="true"
-        :style="{ width: '600px' }"
+        :style="{ width: '90vw', maxWidth: '800px' }"
+        :maximizable="true"
       >
         <div v-if="selectedLead" class="lead-details">
           <div class="detail-grid">
@@ -355,22 +439,117 @@
             <div class="detail-item">
               <label>Marketing Opt-in</label>
               <Tag
-                :value="selectedLead.optedIn ? 'Yes' : 'No'"
-                :severity="selectedLead.optedIn ? 'success' : 'secondary'"
+                :value="selectedLead.optIn === null ? 'Not Set' : (selectedLead.optIn ? 'Yes' : 'No')"
+                :severity="selectedLead.optIn === null ? 'warning' : (selectedLead.optIn ? 'success' : 'secondary')"
               />
             </div>
             
             <div class="detail-item">
               <label>WhatsApp Opt-in</label>
               <Tag
-                :value="selectedLead.whatsAppOptedIn ? 'Yes' : 'No'"
-                :severity="selectedLead.whatsAppOptedIn ? 'success' : 'secondary'"
+                :value="selectedLead.whatsappOptIn === null ? 'Not Set' : (selectedLead.whatsappOptIn ? 'Yes' : 'No')"
+                :severity="selectedLead.whatsappOptIn === null ? 'warning' : (selectedLead.whatsappOptIn ? 'success' : 'secondary')"
               />
+            </div>
+            
+            <div class="detail-item">
+              <label>Product Awareness</label>
+              <Tag
+                :value="selectedLead.productAwareness ? 'Yes' : 'No'"
+                :severity="selectedLead.productAwareness ? 'success' : 'secondary'"
+              />
+            </div>
+            
+            <div class="detail-item">
+              <label>Brand Awareness Level</label>
+              <div v-if="selectedLead.brandAwarenessLevel" class="awareness-level">
+                <i v-for="n in 5" :key="n" 
+                   class="pi" 
+                   :class="n <= selectedLead.brandAwarenessLevel ? 'pi-star-fill' : 'pi-star'"
+                   :style="{ color: n <= selectedLead.brandAwarenessLevel ? '#fbbf24' : '#d1d5db' }"
+                />
+                <span class="level-text">{{ getBrandAwarenessLabel(selectedLead.brandAwarenessLevel) }}</span>
+              </div>
+              <span v-else>-</span>
+            </div>
+            
+            <div class="detail-item full-width" v-if="selectedLead.brandAwarenessComments">
+              <label>Brand Awareness Comments</label>
+              <span>{{ selectedLead.brandAwarenessComments }}</span>
             </div>
             
             <div class="detail-item">
               <label>Repeat Purchase Intent</label>
               <span>{{ leadService.getRepeatPurchaseLabel(selectedLead.repeatPurchaseIntent) }}</span>
+            </div>
+            
+            <div class="detail-item">
+              <label>Purchase Intent Level</label>
+              <div v-if="selectedLead.purchaseIntentLevel" class="intent-level">
+                <i v-for="n in 5" :key="n" 
+                   class="pi" 
+                   :class="n <= selectedLead.purchaseIntentLevel ? 'pi-heart-fill' : 'pi-heart'"
+                   :style="{ color: n <= selectedLead.purchaseIntentLevel ? '#ef4444' : '#d1d5db' }"
+                />
+                <span class="level-text">{{ getPurchaseIntentLabel(selectedLead.purchaseIntentLevel) }}</span>
+              </div>
+              <span v-else>-</span>
+            </div>
+            
+            <div class="detail-item full-width" v-if="selectedLead.purchaseIntentComments">
+              <label>Purchase Intent Comments</label>
+              <span>{{ selectedLead.purchaseIntentComments }}</span>
+            </div>
+            
+            <div class="detail-item" v-if="selectedLead.priceSensitivity">
+              <label>Price Sensitivity</label>
+              <span>{{ selectedLead.priceSensitivity }}</span>
+            </div>
+            
+            <div class="detail-item" v-if="selectedLead.competitorMentions">
+              <label>Competitor Mentions</label>
+              <span>{{ selectedLead.competitorMentions }}</span>
+            </div>
+            
+            <div class="detail-item" v-if="selectedLead.usageContext">
+              <label>Usage Context</label>
+              <span>{{ selectedLead.usageContext }}</span>
+            </div>
+            
+            <div class="detail-item" v-if="selectedLead.decisionMakerStatus">
+              <label>Decision Maker Status</label>
+              <span>{{ selectedLead.decisionMakerStatus }}</span>
+            </div>
+            
+            <div class="detail-item">
+              <label>Engagement Quality</label>
+              <div v-if="selectedLead.engagementQuality" class="engagement-level">
+                <i v-for="n in 5" :key="n" 
+                   class="pi" 
+                   :class="n <= selectedLead.engagementQuality ? 'pi-thumbs-up-fill' : 'pi-thumbs-up'"
+                   :style="{ color: n <= selectedLead.engagementQuality ? '#10b981' : '#d1d5db' }"
+                />
+                <span class="level-text">{{ getEngagementQualityLabel(selectedLead.engagementQuality) }}</span>
+              </div>
+              <span v-else>-</span>
+            </div>
+            
+            <div class="detail-item full-width" v-if="selectedLead.promoterObservations">
+              <label>Promoter Observations</label>
+              <span>{{ selectedLead.promoterObservations }}</span>
+            </div>
+            
+            <div class="detail-item">
+              <label>Follow-up Required</label>
+              <Tag
+                :value="selectedLead.followUpRequired ? 'Yes' : 'No'"
+                :severity="selectedLead.followUpRequired ? 'warning' : 'secondary'"
+              />
+            </div>
+            
+            <div class="detail-item full-width" v-if="selectedLead.followUpNotes">
+              <label>Follow-up Notes</label>
+              <span>{{ selectedLead.followUpNotes }}</span>
             </div>
             
             <div class="detail-item">
@@ -430,6 +609,25 @@
           </BaseButton>
         </template>
       </Dialog>
+
+      <!-- Edit Lead Dialog -->
+      <Dialog
+        v-model:visible="showEditDialog"
+        header="Edit Lead"
+        :modal="true"
+        :style="{ width: '90vw', maxWidth: '900px' }"
+        :maximizable="true"
+      >
+        <LeadCaptureForm
+          v-if="editingLead"
+          :initial-data="editingLead"
+          :lead-id="editingLead.id"
+          :activation-id="editingLead.activationId"
+          :edit-mode="true"
+          @lead-updated="onLeadUpdated"
+          @form-reset="onFormReset"
+        />
+      </Dialog>
     </div>
   </DashboardLayout>
 </template>
@@ -440,7 +638,16 @@ import { useToaster } from '@/composables/useToaster'
 import { useActivationStore } from '@/stores/activation'
 import { useAuthStore } from '@/stores/auth'
 import leadService from '@/services/leadService'
-import { LEAD_STATUSES, LEAD_STATUS_LABELS } from '@/utils/constants'
+import { 
+  LEAD_STATUSES, 
+  LEAD_STATUS_LABELS,
+  LEAD_BRAND_AWARENESS_LABELS,
+  LEAD_BRAND_AWARENESS_LEVELS,
+  LEAD_PURCHASE_INTENT_LABELS,
+  LEAD_PURCHASE_INTENT_LEVELS,
+  LEAD_ENGAGEMENT_QUALITY_LABELS,
+  LEAD_ENGAGEMENT_QUALITY_LEVELS
+} from '@/utils/constants'
 import { BaseButton } from '@/components'
 import LeadCaptureForm from '@/components/leads/LeadCaptureForm.vue'
 import DashboardLayout from '@/components/general/DashboardLayout.vue'
@@ -456,6 +663,7 @@ import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
 import RadioButton from 'primevue/radiobutton'
+import Tooltip from 'primevue/tooltip'
 
 // Reactive data
 const loading = ref(false)
@@ -464,7 +672,9 @@ const exportLoading = ref(false)
 const showCaptureDialog = ref(false)
 const showDetailsDialog = ref(false)
 const showExportDialog = ref(false)
+const showEditDialog = ref(false)
 const selectedLead = ref(null)
+const editingLead = ref(null)
 
 // Filters
 const filters = ref({
@@ -499,13 +709,13 @@ const statusOptions = computed(() => {
 const activationOptions = computed(() => activationStore.activations)
 
 // Methods
-const loadLeads = async (page = 0) => {
+const loadLeads = async (page = 0, size = 10) => {
   tableLoading.value = true
   try {
     const params = {
       ...buildFilterParams(),
       page,
-      size: 20
+      size
     }
     
     let response
@@ -596,7 +806,7 @@ const debounceSearch = () => {
 }
 
 const onPageChange = (event) => {
-  loadLeads(event.page)
+  loadLeads(event.page, event.rows)
 }
 
 const onSort = () => {
@@ -609,8 +819,8 @@ const viewLead = (lead) => {
 }
 
 const editLead = (lead) => {
-  // TODO: Implement edit functionality
-  toaster.info('Edit functionality coming soon')
+  editingLead.value = lead
+  showEditDialog.value = true
 }
 
 const confirmDeleteLead = (lead) => {
@@ -626,6 +836,12 @@ const onLeadCaptured = (lead) => {
 
 const onFormReset = () => {
   // Handle form reset if needed
+}
+
+const onLeadUpdated = (lead) => {
+  showEditDialog.value = false
+  toaster.success('Lead updated successfully!')
+  refreshLeads()
 }
 
 const exportLeads = async () => {
@@ -670,6 +886,30 @@ const formatPeriod = () => {
   const start = formatDate(filters.value.dateRange[0])
   const end = formatDate(filters.value.dateRange[1])
   return `${start} - ${end}`
+}
+
+const getBrandAwarenessLabel = (level) => {
+  const key = Object.keys(LEAD_BRAND_AWARENESS_LEVELS).find(k => LEAD_BRAND_AWARENESS_LEVELS[k] === level)
+  return LEAD_BRAND_AWARENESS_LABELS[LEAD_BRAND_AWARENESS_LEVELS[key]] || '-'
+}
+
+const getPurchaseIntentLabel = (level) => {
+  const key = Object.keys(LEAD_PURCHASE_INTENT_LEVELS).find(k => LEAD_PURCHASE_INTENT_LEVELS[k] === level)
+  return LEAD_PURCHASE_INTENT_LABELS[LEAD_PURCHASE_INTENT_LEVELS[key]] || '-'
+}
+
+const getEngagementQualityLabel = (level) => {
+  const key = Object.keys(LEAD_ENGAGEMENT_QUALITY_LEVELS).find(k => LEAD_ENGAGEMENT_QUALITY_LEVELS[k] === level)
+  return LEAD_ENGAGEMENT_QUALITY_LABELS[LEAD_ENGAGEMENT_QUALITY_LEVELS[key]] || '-'
+}
+
+const getCustomerTypeSeverity = (type) => {
+  const severityMap = {
+    'SHOPPER': 'info',
+    'RETAILER': 'success',
+    'DISTRIBUTOR': 'warning'
+  }
+  return severityMap[type] || 'secondary'
 }
 
 // Lifecycle
@@ -833,16 +1073,109 @@ onMounted(async () => {
       .name-cell {
         strong {
           display: block;
+          font-size: 0.875rem;
         }
         
         small {
           color: #6b7280;
+          font-size: 0.75rem;
         }
+      }
+      
+      .email-cell {
+        font-size: 0.875rem;
+        color: #374151;
       }
       
       .action-buttons {
         display: flex;
         gap: 0.25rem;
+      }
+      
+      .awareness-level,
+      .intent-level,
+      .engagement-level {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.125rem;
+        
+        .level-text {
+          margin-left: 0.5rem;
+          font-size: 0.875rem;
+          color: #6b7280;
+        }
+      }
+      
+      // Custom Tooltip Styles
+      .has-tooltip {
+        position: relative;
+        cursor: help;
+        
+        .custom-tooltip {
+          position: absolute;
+          top: 100%;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #1f2937;
+          color: white;
+          padding: 0.75rem;
+          border-radius: 0.5rem;
+          font-size: 0.75rem;
+          line-height: 1.4;
+          z-index: 1000;
+          min-width: 200px;
+          max-width: 300px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+          opacity: 0;
+          visibility: hidden;
+          transition: all 0.2s ease-in-out;
+          
+          // Arrow pointing up
+          &::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 6px solid #1f2937;
+          }
+          
+          .tooltip-section {
+            margin-bottom: 0.5rem;
+            
+            &:last-child {
+              margin-bottom: 0;
+            }
+            
+            h4 {
+              font-size: 0.75rem;
+              font-weight: 600;
+              color: #fbbf24;
+              margin: 0 0 0.25rem 0;
+              padding-bottom: 0.25rem;
+              border-bottom: 1px solid #374151;
+            }
+            
+            p {
+              margin: 0.125rem 0;
+              font-size: 0.7rem;
+              
+              strong {
+                color: #d1d5db;
+              }
+            }
+          }
+        }
+        
+        &:hover .custom-tooltip {
+          opacity: 1;
+          visibility: visible;
+          transform: translateX(-50%) translateY(8px);
+        }
       }
     }
   }

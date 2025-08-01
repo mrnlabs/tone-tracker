@@ -45,21 +45,22 @@
                 <i class="pi pi-chart-line"></i>
               </div>
               <div class="report-details">
-                <h3>Activation Performance</h3>
-                <p>Track activation campaign performance, sales metrics, and ROI analysis.</p>
+                <h3>Live Metrics Dashboard</h3>
+                <p>Real-time activation performance monitoring, alerts, and system health.</p>
                 <ul class="report-features">
-                  <li>Campaign effectiveness</li>
-                  <li>Sales performance</li>
-                  <li>Team productivity</li>
-                  <li>ROI calculations</li>
+                  <li>Real-time performance data</li>
+                  <li>System alerts and notifications</li>
+                  <li>Promoter performance overview</li>
+                  <li>System health monitoring</li>
                 </ul>
               </div>
               <div class="report-actions">
                 <BaseButton
-                  variant="secondary"
-                  disabled
+                  variant="primary"
+                  icon="pi pi-arrow-right"
+                  @click="navigateToLiveMetrics"
                 >
-                  Coming Soon
+                  View Dashboard
                 </BaseButton>
               </div>
             </div>
@@ -103,21 +104,22 @@
                 <i class="pi pi-shopping-cart"></i>
               </div>
               <div class="report-details">
-                <h3>Sales Analytics</h3>
-                <p>Detailed sales performance, customer insights, and revenue tracking.</p>
+                <h3>Performance Reports</h3>
+                <p>Individual and team performance tracking with detailed analytics.</p>
                 <ul class="report-features">
-                  <li>Revenue trends</li>
-                  <li>Customer analysis</li>
-                  <li>Product performance</li>
-                  <li>Sales forecasting</li>
+                  <li>Daily performance summaries</li>
+                  <li>Weekly trend analysis</li>
+                  <li>Performance scoring</li>
+                  <li>Export capabilities</li>
                 </ul>
               </div>
               <div class="report-actions">
                 <BaseButton
-                  variant="secondary"
-                  disabled
+                  variant="primary"
+                  icon="pi pi-arrow-right"
+                  @click="navigateToPromoterReports"
                 >
-                  Coming Soon
+                  View Reports
                 </BaseButton>
               </div>
             </div>
@@ -161,21 +163,52 @@
                 <i class="pi pi-briefcase"></i>
               </div>
               <div class="report-details">
-                <h3>Client Analytics</h3>
-                <p>Client engagement, satisfaction metrics, and business insights.</p>
+                <h3>ROI Analysis</h3>
+                <p>Investment performance analysis with cost breakdown and profitability insights.</p>
                 <ul class="report-features">
-                  <li>Client satisfaction</li>
-                  <li>Engagement metrics</li>
-                  <li>Business value</li>
-                  <li>Growth opportunities</li>
+                  <li>Investment performance tracking</li>
+                  <li>Cost breakdown analysis</li>
+                  <li>Profit margin calculations</li>
+                  <li>Benchmark comparisons</li>
+                </ul>
+              </div>
+              <div class="report-actions">
+                <BaseButton
+                  variant="primary"
+                  icon="pi pi-arrow-right"
+                  @click="navigateToROIAnalysis"
+                >
+                  View Analysis
+                </BaseButton>
+              </div>
+            </div>
+          </template>
+        </Card>
+
+        <!-- Reports Overview Dashboard -->
+        <Card class="report-card">
+          <template #content>
+            <div class="report-content">
+              <div class="report-icon">
+                <i class="pi pi-th-large"></i>
+              </div>
+              <div class="report-details">
+                <h3>Reports Overview</h3>
+                <p>Comprehensive dashboard with quick access to all available reports and analytics.</p>
+                <ul class="report-features">
+                  <li>Role-based report access</li>
+                  <li>Recent reports history</li>
+                  <li>Quick export options</li>
+                  <li>Report scheduling</li>
                 </ul>
               </div>
               <div class="report-actions">
                 <BaseButton
                   variant="secondary"
-                  disabled
+                  icon="pi pi-arrow-right"
+                  @click="navigateToReportsOverview"
                 >
-                  Coming Soon
+                  View Overview
                 </BaseButton>
               </div>
             </div>
@@ -197,34 +230,53 @@ import Card from 'primevue/card'
 const router = useRouter()
 const authStore = useAuthStore()
 
+// User role for easier access
+const userRole = computed(() => authStore.user?.role)
+
 // Computed permissions
 const canViewStockReports = computed(() => {
-  return authStore.isAdmin || authStore.canManageWarehouse
+  return ['ADMIN', 'WAREHOUSE_MANAGER'].includes(userRole.value)
 })
 
 const canViewActivationReports = computed(() => {
-  return authStore.isAdmin || authStore.canManageActivations
+  return ['ADMIN', 'ACTIVATION_MANAGER'].includes(userRole.value)
 })
 
 const canViewWarehouseReports = computed(() => {
-  return authStore.isAdmin || authStore.canManageWarehouse
+  return ['ADMIN', 'WAREHOUSE_MANAGER'].includes(userRole.value)
 })
 
 const canViewSalesReports = computed(() => {
-  return authStore.isAdmin || authStore.canManageActivations || authStore.isPromoter
+  return ['ADMIN', 'ACTIVATION_MANAGER', 'PROMOTER'].includes(userRole.value)
 })
 
 const canViewUserReports = computed(() => {
-  return authStore.isAdmin
+  return userRole.value === 'ADMIN'
 })
 
 const canViewClientReports = computed(() => {
-  return authStore.isAdmin || authStore.canManageActivations
+  return ['ADMIN', 'CLIENT'].includes(userRole.value)
 })
 
 // Navigation methods
 const navigateToStockMovementReport = () => {
   router.push('/reports/stock-movements')
+}
+
+const navigateToLiveMetrics = () => {
+  router.push('/reports/live-metrics')
+}
+
+const navigateToPromoterReports = () => {
+  router.push('/reports/promoter-reports')
+}
+
+const navigateToROIAnalysis = () => {
+  router.push('/reports/roi-analysis')
+}
+
+const navigateToReportsOverview = () => {
+  router.push('/reports/overview')
 }
 </script>
 

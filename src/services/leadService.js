@@ -328,8 +328,8 @@ class LeadService {
 
         if (!leadData.phone || leadData.phone.trim().length === 0) {
             errors.phone = 'Phone number is required'
-        } else if (leadData.phone.length < 7 || leadData.phone.length > 20) {
-            errors.phone = 'Phone number must be between 7-20 characters'
+        } else if (!/^[+]?[0-9\s\-()]{7,20}$/.test(leadData.phone)) {
+            errors.phone = 'Phone number must match format: +1234567890 or (123) 456-7890'
         }
 
         if (!leadData.email || leadData.email.trim().length === 0) {
@@ -347,6 +347,27 @@ class LeadService {
 
         if (leadData.customerFeedback && leadData.customerFeedback.length > 2000) {
             errors.customerFeedback = 'Customer feedback must be 2000 characters or less'
+        }
+
+        // Brand awareness validation
+        if (leadData.brandAwarenessLevel !== undefined && leadData.brandAwarenessLevel !== null) {
+            if (leadData.brandAwarenessLevel < 1 || leadData.brandAwarenessLevel > 5) {
+                errors.brandAwarenessLevel = 'Brand awareness level must be between 1 and 5'
+            }
+        }
+
+        // Purchase intent level validation
+        if (leadData.purchaseIntentLevel !== undefined && leadData.purchaseIntentLevel !== null) {
+            if (leadData.purchaseIntentLevel < 1 || leadData.purchaseIntentLevel > 5) {
+                errors.purchaseIntentLevel = 'Purchase intent level must be between 1 and 5'
+            }
+        }
+
+        // Engagement quality validation
+        if (leadData.engagementQuality !== undefined && leadData.engagementQuality !== null) {
+            if (leadData.engagementQuality < 1 || leadData.engagementQuality > 5) {
+                errors.engagementQuality = 'Engagement quality must be between 1 and 5'
+            }
         }
 
         return {
@@ -605,6 +626,58 @@ class LeadService {
             5: 'Excellent interaction'
         }
         return labels[level] || `Level ${level}`
+    }
+
+    /**
+     * Get gender distribution for an activation
+     * @param {number} activationId - Activation ID
+     * @returns {Promise} Gender distribution data
+     */
+    async getGenderDistribution(activationId) {
+        try {
+            const response = await api.get(`/leads/activation/${activationId}/gender-distribution`)
+            return response
+        } catch (error) {
+            console.error('Error fetching gender distribution:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Get comprehensive daily report for an activation
+     * @param {number} activationId - Activation ID
+     * @param {string} date - Date in YYYY-MM-DD format (optional, defaults to today)
+     * @returns {Promise} Daily report data
+     */
+    async getDailyReport(activationId, date = null) {
+        try {
+            const reportDate = date || new Date().toISOString().split('T')[0]
+            const response = await api.get(`/reports/daily/comprehensive/${activationId}`, {
+                params: { date: reportDate }
+            })
+            return response
+        } catch (error) {
+            console.error('Error fetching daily report:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Get recent reports for an activation
+     * @param {number} activationId - Activation ID
+     * @param {number} limit - Number of reports to fetch (default: 10)
+     * @returns {Promise} Recent reports data
+     */
+    async getRecentReports(activationId, limit = 10) {
+        try {
+            const response = await api.get(`/reports/recent/${activationId}`, {
+                params: { limit }
+            })
+            return response
+        } catch (error) {
+            console.error('Error fetching recent reports:', error)
+            throw error
+        }
     }
 
     /**

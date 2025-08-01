@@ -213,7 +213,7 @@ const routes = [
         meta: {
             requiresAuth: true,
             title: 'Reports - Activation Tracker',
-            roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT']
+            roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT', 'PROMOTER']
         }
     },
     {
@@ -224,6 +224,46 @@ const routes = [
             requiresAuth: true,
             title: 'Stock Movement Report - Activation Tracker',
             roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
+        }
+    },
+    {
+        path: '/reports/live-metrics',
+        name: 'live-metrics',
+        component: () => import('@/views/reports/LiveMetrics.vue'),
+        meta: {
+            requiresAuth: true,
+            title: 'Live Metrics Dashboard - Activation Tracker',
+            roles: ['ADMIN', 'ACTIVATION_MANAGER']
+        }
+    },
+    {
+        path: '/reports/promoter-reports',
+        name: 'promoter-reports',
+        component: () => import('@/views/reports/PromoterReports.vue'),
+        meta: {
+            requiresAuth: true,
+            title: 'Performance Reports - Activation Tracker',
+            roles: ['ADMIN', 'ACTIVATION_MANAGER', 'PROMOTER']
+        }
+    },
+    {
+        path: '/reports/roi-analysis',
+        name: 'roi-analysis',
+        component: () => import('@/views/reports/ROIAnalysis.vue'),
+        meta: {
+            requiresAuth: true,
+            title: 'ROI Analysis - Activation Tracker',
+            roles: ['ADMIN', 'CLIENT']
+        }
+    },
+    {
+        path: '/reports/overview',
+        name: 'reports-overview',
+        component: () => import('@/views/reports/ReportsOverview.vue'),
+        meta: {
+            requiresAuth: true,
+            title: 'Reports Overview - Activation Tracker',
+            roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT', 'PROMOTER']
         }
     },
     
