@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import promoterService from '@/services/promoterService'
+import { useAuthStore } from './auth'
 
 export const usePromoterStore = defineStore('promoter', {
   state: () => ({
@@ -136,6 +137,11 @@ export const usePromoterStore = defineStore('promoter', {
     async fetchDashboardStats() {
       this.loading.dashboard = true
       try {
+        const authStore = useAuthStore()
+        const promoterId = authStore.userId
+        if (!promoterId) {
+          throw new Error('User ID not found')
+        }
         const stats = await promoterService.getDashboardStats()
         this.dashboardStats = stats
       } catch (error) {
@@ -148,7 +154,12 @@ export const usePromoterStore = defineStore('promoter', {
 
     async fetchTodaySchedule() {
       try {
-        const schedule = await promoterService.getTodaySchedule()
+        const authStore = useAuthStore()
+        const promoterId = authStore.userId
+        if (!promoterId) {
+          throw new Error('User ID not found')
+        }
+        const schedule = await promoterService.getTodaySchedule(promoterId)
         this.todayActivations = schedule
       } catch (error) {
         this.error = error.response?.data?.message || 'Failed to load today\'s schedule'
@@ -171,7 +182,12 @@ export const usePromoterStore = defineStore('promoter', {
 
     async fetchRecentActivations() {
       try {
-        const activations = await promoterService.getPromoterActivations(null, { 
+        const authStore = useAuthStore()
+        const promoterId = authStore.userId
+        if (!promoterId) {
+          throw new Error('User ID not found')
+        }
+        const activations = await promoterService.getPromoterActivations(promoterId, { 
           status: 'completed',
           limit: 10,
           sortBy: 'date',

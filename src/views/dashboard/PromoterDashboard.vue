@@ -209,6 +209,13 @@
               class="p-button-outlined action-btn"
           />
           <Button
+              @click="captureLeads"
+              icon="pi pi-users"
+              label="Capture Leads"
+              class="p-button-outlined action-btn"
+              :disabled="!activeActivation"
+          />
+          <Button
               @click="$router.push('/profile')"
               icon="pi pi-user"
               label="Update Profile"
@@ -311,11 +318,13 @@ import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { usePromoterStore } from '@/stores/promoter'
 import { useToast } from 'primevue/usetoast'
+import { useRouter } from 'vue-router'
 import { format } from 'date-fns'
 
 const authStore = useAuthStore()
 const promoterStore = usePromoterStore()
 const toast = useToast()
+const router = useRouter()
 
 const promoterName = computed(() => {
   return authStore.user?.firstName || 'Promoter'
@@ -326,6 +335,13 @@ const stats = computed(() => promoterStore.dashboardStats)
 const todayActivations = computed(() => promoterStore.todayActivations)
 const recentActivations = computed(() => promoterStore.recentActivations)
 const loading = computed(() => promoterStore.loading.dashboard)
+
+// Get the currently active activation (checked in but not checked out)
+const activeActivation = computed(() => {
+  return todayActivations.value.find(activation => 
+    activation.checkedIn && !activation.checkedOut
+  )
+})
 
 // Checkout dialog state
 const showCheckoutDialog = ref(false)
@@ -570,6 +586,21 @@ const getStatusClass = (status) => {
     'Cancelled': 'status-cancelled'
   }
   return classes[status] || 'status-default'
+}
+
+const captureLeads = () => {
+  if (!activeActivation.value) {
+    toast.add({
+      severity: 'warn',
+      summary: 'No Active Activation',
+      detail: 'Please check in to an activation first to capture leads',
+      life: 5000
+    })
+    return
+  }
+  
+  // Navigate to the activation details page with the lead management tab
+  router.push(`/activations/${activeActivation.value.id}?tab=lead-management`)
 }
 </script>
 

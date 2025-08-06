@@ -38,7 +38,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout.vue'
 import AdminDashboard from '@/components/dashboard/AdminDashboard.vue'
 import ActivationManagerDashboard from '@/components/dashboard/ActivationManagerDashboard.vue'
 import WarehouseManagerDashboard from '@/components/dashboard/WarehouseManagerDashboard.vue'
-import PromoterDashboard from '@/components/dashboard/PromoterDashboard.vue'
+import PromoterDashboard from '@/views/dashboard/PromoterDashboard.vue'
 import ClientDashboard from '@/components/dashboard/ClientDashboard.vue'
 
 // PrimeVue components

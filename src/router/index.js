@@ -150,13 +150,13 @@ const routes = [
         }
     },
     {
-        path: '/activations/briefs',
-        name: 'activation-briefs',
-        component: () => import('@/views/activations/ActivationBriefs.vue'),
+        path: '/activations/calendar',
+        name: 'activation-calendar',
+        component: () => import('@/views/activations/ActivationCalendar.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Activation Briefs - Activation Tracker',
-            roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT', 'PROMOTER']
+            title: 'Activation Calendar - Activation Tracker',
+            roles: ['ACTIVATION_MANAGER', 'PROMOTER']
         }
     },
 
@@ -264,6 +264,28 @@ const routes = [
             requiresAuth: true,
             title: 'Reports Overview - Activation Tracker',
             roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT', 'PROMOTER']
+        }
+    },
+    
+    // Lead Management Routes
+    {
+        path: '/leads',
+        name: 'lead-management',
+        component: () => import('@/views/leads/LeadManagement.vue'),
+        meta: {
+            requiresAuth: true,
+            title: 'Lead Management - Activation Tracker',
+            roles: ['PROMOTER', 'ADMIN', 'ACTIVATION_MANAGER']
+        }
+    },
+    {
+        path: '/capture-lead',
+        name: 'capture-lead',
+        component: () => import('@/views/leads/CaptureLeadPage.vue'),
+        meta: {
+            requiresAuth: true,
+            title: 'Capture Lead - Activation Tracker',
+            roles: ['PROMOTER']
         }
     },
     

@@ -107,7 +107,7 @@
                   <Dropdown
                     id="clientId"
                     v-model="formData.clientId"
-                    :options="clientOptions"
+                    :options="clientOptions || []"
                     optionValue="id"
                     optionLabel="name"
                     :class="{ 'p-invalid': errors.clientId }"
@@ -256,7 +256,7 @@
                   <Dropdown
                     id="activationManagerId"
                     v-model="formData.activationManagerId"
-                    :options="managerOptions"
+                    :options="managerOptions || []"
                     optionValue="id"
                     optionLabel="name"
                     :class="{ 'p-invalid': errors.activationManagerId }"
@@ -270,7 +270,7 @@
                   <MultiSelect
                     id="assignedPromoterIds"
                     v-model="formData.assignedPromoterIds"
-                    :options="promoterOptions"
+                    :options="promoterOptions || []"
                     optionValue="id"
                     optionLabel="name"
                     placeholder="Select promoters for this activation"
@@ -409,6 +409,8 @@ const toast = useToast()
 const isLoading = ref(true)
 const isSubmitting = ref(false)
 const loadError = ref('')
+const isUploadingBrief = ref(false)
+const briefUploadProgress = ref(0)
 
 // Current step and original data
 const currentStep = ref(1)
@@ -536,6 +538,9 @@ const uploadBriefDocumentFromComponent = async () => {
     isUploadingBrief.value = true
     briefUploadProgress.value = 0
 
+    // Upload using real backend service (confirmed working with brief-documents/{uuid}.pdf format)
+    console.log('Uploading brief document:', briefDocument.value.file.name)
+    
     const result = await fileService.uploadFile(
       briefDocument.value.file,
       (progress) => {
@@ -549,7 +554,10 @@ const uploadBriefDocumentFromComponent = async () => {
       }
     )
 
-    return result.filePath || result.path || result.url
+    const filePath = result.filePath || result.path || result.url
+    console.log('Brief upload completed, path:', filePath)
+    
+    return filePath
   } catch (error) {
     console.error('Brief upload failed:', error)
     toast.add({

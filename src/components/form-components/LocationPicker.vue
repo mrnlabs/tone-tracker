@@ -367,7 +367,8 @@ const extractAddressComponents = (components) => {
 
 // Click outside to close suggestions
 const handleClickOutside = (event) => {
-  if (!autocompleteInput.value?.contains(event.target)) {
+  const inputElement = autocompleteInput.value?.$el || autocompleteInput.value
+  if (inputElement && !inputElement.contains(event.target)) {
     showSuggestions.value = false
   }
 }
@@ -398,8 +399,9 @@ onMounted(() => {
   
   // Add keyboard event listener
   nextTick(() => {
-    if (autocompleteInput.value) {
-      autocompleteInput.value.addEventListener('keydown', handleKeydown)
+    const inputElement = autocompleteInput.value?.$el || autocompleteInput.value
+    if (inputElement) {
+      inputElement.addEventListener('keydown', handleKeydown)
     }
   })
   

@@ -154,9 +154,15 @@ const navigationItems = [
     children: [
       { label: 'All Activations', path: '/activations', icon: 'pi pi-calendar' },
       { label: 'Create Activation', path: '/activations/create', icon: 'pi pi-plus', roles: ['ADMIN'] },
-      { label: 'Activation Briefs', path: '/activations/briefs', icon: 'pi pi-file-pdf' },
-      { label: 'Performance', path: '/activations/performance', icon: 'pi pi-chart-line' }
+      { label: 'Activation Calendar', path: '/activations/calendar', icon: 'pi pi-calendar-plus', roles: ['ACTIVATION_MANAGER', 'PROMOTER'] }
     ]
+  },
+  {
+    id: 'capture-lead',
+    label: 'Capture Lead',
+    icon: 'pi pi-user-plus',
+    path: '/capture-lead',
+    roles: ['PROMOTER']
   },
   {
     id: 'clients',

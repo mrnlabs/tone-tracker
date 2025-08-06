@@ -839,6 +839,85 @@ export const useActivationStore = defineStore('activations', () => {
         await fetchActivations()
     }
 
+    /**
+     * Get activations by manager for calendar view
+     */
+    const getActivationsByManager = async (managerId) => {
+        try {
+            isLoading.value = true
+            error.value = null
+            
+            console.log('Fetching activations for manager:', managerId)
+            
+            const response = await activationService.getActivationsByManager(managerId)
+            
+            // Handle response structure
+            let activationsData = response.data || response.content || response
+            if (!Array.isArray(activationsData)) {
+                activationsData = []
+            }
+            
+            return activationsData
+            
+        } catch (err) {
+            console.error('Error fetching activations by manager:', err)
+            error.value = err.message || 'Failed to fetch manager activations'
+            
+            // Return empty array for calendar to handle gracefully
+            return []
+        } finally {
+            isLoading.value = false
+        }
+    }
+
+    /**
+     * Get activations by promoter for calendar view
+     */
+    const getActivationsByPromoter = async (promoterId) => {
+        try {
+            isLoading.value = true
+            error.value = null
+            
+            console.log('Fetching activations for promoter:', promoterId)
+            
+            // Try the current user activations endpoint first
+            let response
+            try {
+                response = await activationService.getCurrentUserActivations()
+            } catch (currentUserError) {
+                console.log('Current user endpoint failed, trying promoter assignments:', currentUserError)
+                try {
+                    response = await promoterService.getPromoterAssignments(promoterId)
+                    
+                    // Extract activations from assignments if needed
+                    if (response.data && response.data.length > 0 && response.data[0].activation) {
+                        response.data = response.data.map(assignment => assignment.activation)
+                    }
+                } catch (promoterError) {
+                    console.log('Promoter assignments failed, trying my activations:', promoterError)
+                    response = await activationService.getMyActivations()
+                }
+            }
+            
+            // Handle response structure
+            let activationsData = response.data || response.content || response
+            if (!Array.isArray(activationsData)) {
+                activationsData = []
+            }
+            
+            return activationsData
+            
+        } catch (err) {
+            console.error('Error fetching activations by promoter:', err)
+            error.value = err.message || 'Failed to fetch promoter activations'
+            
+            // Return empty array for calendar to handle gracefully
+            return []
+        } finally {
+            isLoading.value = false
+        }
+    }
+
     // Return store interface
     return {
         // State
@@ -886,7 +965,9 @@ export const useActivationStore = defineStore('activations', () => {
         clearCache,
         clearError,
         getActivationByCode,
-        searchActivations
+        searchActivations,
+        getActivationsByManager,
+        getActivationsByPromoter
     }
 })
 

@@ -470,50 +470,50 @@ const toaster = useToaster()
 
 // Computed options
 const genderOptions = computed(() => {
-  return Object.entries(LEAD_GENDER_LABELS).map(([key, label]) => ({
-    value: LEAD_GENDERS[key],
+  return Object.entries(LEAD_GENDER_LABELS).map(([value, label]) => ({
+    value,
     label
   }))
 })
 
 const ageGroupOptions = computed(() => {
-  return Object.entries(LEAD_AGE_GROUP_LABELS).map(([key, label]) => ({
-    value: LEAD_AGE_GROUPS[key],
+  return Object.entries(LEAD_AGE_GROUP_LABELS).map(([value, label]) => ({
+    value,
     label
   }))
 })
 
 const customerTypeOptions = computed(() => {
-  return Object.entries(LEAD_CUSTOMER_TYPE_LABELS).map(([key, label]) => ({
-    value: LEAD_CUSTOMER_TYPES[key],
+  return Object.entries(LEAD_CUSTOMER_TYPE_LABELS).map(([value, label]) => ({
+    value,
     label
   }))
 })
 
 const repeatPurchaseOptions = computed(() => {
-  return Object.entries(LEAD_REPEAT_PURCHASE_LABELS).map(([key, label]) => ({
-    value: LEAD_REPEAT_PURCHASE_INTENT[key],
+  return Object.entries(LEAD_REPEAT_PURCHASE_LABELS).map(([value, label]) => ({
+    value,
     label
   }))
 })
 
 const brandAwarenessOptions = computed(() => {
-  return Object.entries(LEAD_BRAND_AWARENESS_LABELS).map(([key, label]) => ({
-    value: LEAD_BRAND_AWARENESS_LEVELS[key],
+  return Object.entries(LEAD_BRAND_AWARENESS_LABELS).map(([value, label]) => ({
+    value: parseInt(value),
     label
   }))
 })
 
 const purchaseIntentOptions = computed(() => {
-  return Object.entries(LEAD_PURCHASE_INTENT_LABELS).map(([key, label]) => ({
-    value: LEAD_PURCHASE_INTENT_LEVELS[key],
+  return Object.entries(LEAD_PURCHASE_INTENT_LABELS).map(([value, label]) => ({
+    value: parseInt(value),
     label
   }))
 })
 
 const engagementQualityOptions = computed(() => {
-  return Object.entries(LEAD_ENGAGEMENT_QUALITY_LABELS).map(([key, label]) => ({
-    value: LEAD_ENGAGEMENT_QUALITY_LEVELS[key],
+  return Object.entries(LEAD_ENGAGEMENT_QUALITY_LABELS).map(([value, label]) => ({
+    value: parseInt(value),
     label
   }))
 })

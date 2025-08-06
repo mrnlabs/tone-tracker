@@ -109,8 +109,7 @@ const quickActions = computed(() => {
       { label: 'Stock Report', path: '/reports/inventory', icon: 'pi pi-chart-line' }
     ],
     PROMOTER: [
-      { label: 'My Activations', path: '/activations', icon: 'pi pi-calendar' },
-      { label: 'Check In/Out', path: '/promoter/checkin', icon: 'pi pi-clock' }
+      { label: 'My Activations', path: '/activations', icon: 'pi pi-calendar' }
     ],
     CLIENT: [
       { label: 'My Activations', path: '/activations', icon: 'pi pi-calendar' },

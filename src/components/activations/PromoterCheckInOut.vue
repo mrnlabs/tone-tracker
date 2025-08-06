@@ -130,13 +130,6 @@
           
           <Column header="Actions">
             <template #body="{ data }">
-              <!-- DEBUG: Show user ID comparison -->
-              <div style="font-size: 10px; color: red; margin-bottom: 4px;">
-                DEBUG: promoterId={{ data.promoterId }} (type: {{ typeof data.promoterId }}), 
-                userId={{ authStore.userId }} (type: {{ typeof authStore.userId }}), 
-                match={{ data.promoterId == authStore.userId }}
-              </div>
-              
               <!-- TEMPORARILY: Show checkout button for ALL Active records for testing -->
               <BaseButton
                 v-if="!data.checkOutTime"

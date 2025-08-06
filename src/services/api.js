@@ -856,6 +856,11 @@ const apiService = new ApiService()
 
     async getActivationImages(activationId) {
         return await apiService.get(`/files/entity/activation/${activationId}`)
+    },
+
+    async getActivationsByManager(managerId) {
+        // Get activations managed by a specific activation manager
+        return await apiService.getPaginated(`/activations/manager/${managerId}`)
     }
 }
 
