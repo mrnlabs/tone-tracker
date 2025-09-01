@@ -1,5 +1,5 @@
-// Service Worker for Activation Tracker PWA
-const CACHE_NAME = 'activation-tracker-v1'
+// Service Worker for Activation Monitor PWA
+const CACHE_NAME = 'activation-monitor-v1'
 const STATIC_CACHE = 'static-v1'
 const DYNAMIC_CACHE = 'dynamic-v1'
 
@@ -304,7 +304,7 @@ self.addEventListener('push', event => {
   }
   
   event.waitUntil(
-    self.registration.showNotification('Activation Tracker', options)
+    self.registration.showNotification('Activation Monitor', options)
   )
 })
 

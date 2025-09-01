@@ -283,7 +283,7 @@
                   <div class="review-item full-width">
                     <label>Brief Description:</label>
                     <div class="brief-preview">
-                      <div v-if="formData.briefDescription" v-html="formData.briefDescription" class="brief-content"></div>
+                      <div v-if="formData.briefDescription" v-html="sanitizeHTML(formData.briefDescription)" class="brief-content"></div>
                       <span v-else class="no-content">Not provided</span>
                     </div>
                   </div>
@@ -406,6 +406,7 @@ import DashboardLayout from '@/components/general/DashboardLayout.vue'
 import LocationPicker from '@/components/form-components/LocationPicker.vue'
 import RichTextEditor from '@/components/form-components/RichTextEditor.vue'
 import FileUpload from '@/components/form-components/FileUpload.vue'
+import { sanitizeHTML } from '@/utils/sanitizer'
 
 const route = useRoute()
 const router = useRouter()

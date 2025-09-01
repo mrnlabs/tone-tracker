@@ -6,7 +6,7 @@
       <div class="login-header">
         <div class="logo-section">
           <i class="pi pi-chart-line logo-icon"></i>
-          <h1 class="app-title">Activation Tracker</h1>
+          <h1 class="app-title">Activation Monitor</h1>
         </div>
         <p class="app-subtitle">
           Sign in to access your dashboard
@@ -94,7 +94,7 @@
       <!-- Divider -->
       <div class="divider">
         <hr class="divider-line">
-        <span class="divider-text">New to Activation Tracker?</span>
+        <span class="divider-text">New to Activation Monitor?</span>
         <hr class="divider-line">
       </div>
 
@@ -112,7 +112,7 @@
     <!-- Footer -->
     <div class="login-footer">
       <p class="footer-text">
-        © {{ currentYear }} Activation Tracker. All rights reserved.
+        © {{ currentYear }} Activation Monitor. All rights reserved.
       </p>
       <div class="footer-links">
         <a href="/privacy" class="footer-link">Privacy Policy</a>

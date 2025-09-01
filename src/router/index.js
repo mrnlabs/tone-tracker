@@ -22,7 +22,7 @@ const routes = [
         component: Login,
         meta: {
             requiresAuth: false,
-            title: 'Login - Activation Tracker'
+            title: 'Login - Activation Monitor'
         }
     },
     {
@@ -31,7 +31,7 @@ const routes = [
         component: ForgotPassword,
         meta: {
             requiresAuth: false,
-            title: 'Forgot Password - Activation Tracker'
+            title: 'Forgot Password - Activation Monitor'
         }
     },
     {
@@ -40,7 +40,7 @@ const routes = [
         component: ResetPassword,
         meta: {
             requiresAuth: false,
-            title: 'Reset Password - Activation Tracker'
+            title: 'Reset Password - Activation Monitor'
         }
     },
 
@@ -51,7 +51,7 @@ const routes = [
         component: Dashboard,
         meta: {
             requiresAuth: true,
-            title: 'Dashboard - Activation Tracker'
+            title: 'Dashboard - Activation Monitor'
             // No roles restriction - accessible to all authenticated users
         }
     },
@@ -63,7 +63,7 @@ const routes = [
         component: () => import('@/views/clients/Clients.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Clients - Activation Tracker',
+            title: 'Clients - Activation Monitor',
             roles: ['ADMIN']
         }
     },
@@ -73,7 +73,7 @@ const routes = [
         component: () => import('@/views/clients/CreateClient.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Add New Client - Activation Tracker',
+            title: 'Add New Client - Activation Monitor',
             roles: ['ADMIN']
         }
     },
@@ -83,7 +83,7 @@ const routes = [
         component: () => import('@/views/clients/ClientDetails.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Client Details - Activation Tracker',
+            title: 'Client Details - Activation Monitor',
             roles: ['ADMIN', 'CLIENT']
         }
     },
@@ -93,7 +93,7 @@ const routes = [
         component: () => import('@/views/clients/EditClient.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Edit Client - Activation Tracker',
+            title: 'Edit Client - Activation Monitor',
             roles: ['ADMIN']
         }
     },
@@ -105,7 +105,7 @@ const routes = [
         component: () => import('@/views/activations/Activations.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Activations - Activation Tracker',
+            title: 'Activations - Activation Monitor',
             roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT', 'PROMOTER']
         }
     },
@@ -115,7 +115,7 @@ const routes = [
         component: () => import('@/views/activations/CreateActivation.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Create Activation - Activation Tracker',
+            title: 'Create Activation - Activation Monitor',
             roles: ['ADMIN']
         }
     },
@@ -125,7 +125,7 @@ const routes = [
         component: () => import('@/views/activations/ActivationDetails.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Activation Details - Activation Tracker',
+            title: 'Activation Details - Activation Monitor',
             roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT', 'PROMOTER']
         }
     },
@@ -135,7 +135,7 @@ const routes = [
         component: () => import('@/views/activations/EditActivation.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Edit Activation - Activation Tracker',
+            title: 'Edit Activation - Activation Monitor',
             roles: ['ADMIN']
         }
     },
@@ -145,7 +145,7 @@ const routes = [
         component: () => import('@/views/activations/ActivationTeam.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Manage Team - Activation Tracker',
+            title: 'Manage Team - Activation Monitor',
             roles: ['ADMIN', 'ACTIVATION_MANAGER']
         }
     },
@@ -155,7 +155,7 @@ const routes = [
         component: () => import('@/views/activations/ActivationCalendar.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Activation Calendar - Activation Tracker',
+            title: 'Activation Calendar - Activation Monitor',
             roles: ['ACTIVATION_MANAGER', 'PROMOTER']
         }
     },
@@ -167,7 +167,7 @@ const routes = [
         component: () => import('@/views/promoters/Promoters.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Promoters - Activation Tracker',
+            title: 'Promoters - Activation Monitor',
             roles: ['ADMIN', 'ACTIVATION_MANAGER']
         }
     },
@@ -177,7 +177,7 @@ const routes = [
         component: () => import('@/views/promoters/CreatePromoter.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Add New Promoter - Activation Tracker',
+            title: 'Add New Promoter - Activation Monitor',
             roles: ['ADMIN', 'ACTIVATION_MANAGER']
         }
     },
@@ -187,7 +187,7 @@ const routes = [
         component: () => import('@/views/promoters/PromoterDetails.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Promoter Details - Activation Tracker',
+            title: 'Promoter Details - Activation Monitor',
             roles: ['ADMIN', 'ACTIVATION_MANAGER', 'PROMOTER']
         }
     },
@@ -197,7 +197,7 @@ const routes = [
         component: () => import('@/views/promoters/EditPromoter.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Edit Promoter - Activation Tracker',
+            title: 'Edit Promoter - Activation Monitor',
             roles: ['ADMIN', 'ACTIVATION_MANAGER']
         }
     },
@@ -212,7 +212,7 @@ const routes = [
         component: () => import('@/views/reports/Reports.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Reports - Activation Tracker',
+            title: 'Reports - Activation Monitor',
             roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT', 'PROMOTER']
         }
     },
@@ -222,7 +222,7 @@ const routes = [
         component: () => import('@/views/reports/StockMovementReport.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Stock Movement Report - Activation Tracker',
+            title: 'Stock Movement Report - Activation Monitor',
             roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
         }
     },
@@ -232,7 +232,7 @@ const routes = [
         component: () => import('@/views/reports/LiveMetrics.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Live Metrics Dashboard - Activation Tracker',
+            title: 'Live Metrics Dashboard - Activation Monitor',
             roles: ['ADMIN', 'ACTIVATION_MANAGER']
         }
     },
@@ -242,7 +242,7 @@ const routes = [
         component: () => import('@/views/reports/PromoterReports.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Performance Reports - Activation Tracker',
+            title: 'Performance Reports - Activation Monitor',
             roles: ['ADMIN', 'ACTIVATION_MANAGER', 'PROMOTER']
         }
     },
@@ -252,7 +252,7 @@ const routes = [
         component: () => import('@/views/reports/ROIAnalysis.vue'),
         meta: {
             requiresAuth: true,
-            title: 'ROI Analysis - Activation Tracker',
+            title: 'ROI Analysis - Activation Monitor',
             roles: ['ADMIN', 'CLIENT']
         }
     },
@@ -262,7 +262,7 @@ const routes = [
         component: () => import('@/views/reports/ReportsOverview.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Reports Overview - Activation Tracker',
+            title: 'Reports Overview - Activation Monitor',
             roles: ['ADMIN', 'ACTIVATION_MANAGER', 'CLIENT', 'PROMOTER']
         }
     },
@@ -274,7 +274,7 @@ const routes = [
         component: () => import('@/views/leads/LeadManagement.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Lead Management - Activation Tracker',
+            title: 'Lead Management - Activation Monitor',
             roles: ['PROMOTER', 'ADMIN', 'ACTIVATION_MANAGER']
         }
     },
@@ -284,7 +284,7 @@ const routes = [
         component: () => import('@/views/leads/CaptureLeadPage.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Capture Lead - Activation Tracker',
+            title: 'Capture Lead - Activation Monitor',
             roles: ['PROMOTER']
         }
     },
@@ -296,7 +296,7 @@ const routes = [
         component: () => import('@/views/stock-movements/StockMovements.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Stock Movements - Activation Tracker',
+            title: 'Stock Movements - Activation Monitor',
             roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
         }
     },
@@ -306,7 +306,7 @@ const routes = [
         component: () => import('@/views/stock-movements/CreateStockMovement.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Record Stock Movement - Activation Tracker',
+            title: 'Record Stock Movement - Activation Monitor',
             roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
         }
     },
@@ -316,7 +316,7 @@ const routes = [
         component: () => import('@/views/stock-movements/StockMovementDetails.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Stock Movement Details - Activation Tracker',
+            title: 'Stock Movement Details - Activation Monitor',
             roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'ACTIVATION_MANAGER']
         }
     },
@@ -326,7 +326,7 @@ const routes = [
         component: () => import('@/views/stock-movements/EditStockMovement.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Edit Stock Movement - Activation Tracker',
+            title: 'Edit Stock Movement - Activation Monitor',
             roles: ['ADMIN', 'WAREHOUSE_MANAGER']
         }
     },
@@ -337,7 +337,7 @@ const routes = [
         component: () => import('@/views/users/Users.vue'),
         meta: {
             requiresAuth: true,
-            title: 'User Management - Activation Tracker',
+            title: 'User Management - Activation Monitor',
             roles: ['ADMIN']
         }
     },
@@ -347,7 +347,7 @@ const routes = [
         component: () => import('@/views/users/CreateUser.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Add New User - Activation Tracker',
+            title: 'Add New User - Activation Monitor',
             roles: ['ADMIN']
         }
     },
@@ -357,7 +357,7 @@ const routes = [
         component: () => import('@/views/users/UserDetails.vue'),
         meta: {
             requiresAuth: true,
-            title: 'User Details - Activation Tracker',
+            title: 'User Details - Activation Monitor',
             roles: ['ADMIN']
         }
     },
@@ -367,7 +367,7 @@ const routes = [
         component: () => import('@/views/users/EditUser.vue'),
         meta: {
             requiresAuth: true,
-            title: 'Edit User - Activation Tracker',
+            title: 'Edit User - Activation Monitor',
             roles: ['ADMIN']
         }
     },
@@ -379,7 +379,7 @@ const routes = [
         component: () => import('@/views/dashboard/Profile.vue'),
         meta: {
             requiresAuth: true,
-            title: 'My Profile - Activation Tracker'
+            title: 'My Profile - Activation Monitor'
         }
     },
 
@@ -412,7 +412,7 @@ router.beforeEach((to, from, next) => {
     console.log(`🚦 Router Guard: Navigating to ${to.path}`)
 
     // Set page title
-    document.title = to.meta.title || 'Activation Tracker'
+    document.title = to.meta.title || 'Activation Monitor'
 
     // Check if route requires authentication
     if (to.meta.requiresAuth) {

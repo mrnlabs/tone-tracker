@@ -1,7 +1,8 @@
 {
-  "name": "client-activation",
-  "version": "0.0.0",
+  "name": "activation-monitor",
+  "version": "1.0.0",
   "private": true,
+  "description": "Professional activation monitoring and management system",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -22,6 +23,7 @@
   "dependencies": {
     "@googlemaps/js-api-loader": "^1.16.10",
     "@primevue/themes": "^4.0.0-rc.2",
+    "@types/dompurify": "^3.0.5",
     "@vuelidate/core": "^2.0.3",
     "@vuelidate/validators": "^2.0.4",
     "@vueuse/core": "^10.11.0",
@@ -30,6 +32,7 @@
     "axios": "^1.7.2",
     "chart.js": "^4.4.3",
     "chartjs-adapter-date-fns": "^3.0.0",
+    "dompurify": "^3.2.6",
     "firebase": "^10.12.2",
     "html2pdf.js": "^0.10.2",
     "jquery": "^3.7.1",

@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Architecture
 
-This is a Vue 3 activation tracking application built with:
+This is a Vue 3 activation monitoring application built with:
 - **Frontend**: Vue 3 + Vite + PrimeVue UI components
 - **State Management**: Pinia stores
 - **Routing**: Vue Router with role-based access control
@@ -70,7 +70,7 @@ This is a Vue 3 activation tracking application built with:
 
 ## Important Notes
 
-- The project appears to be named "tone-tracker" but the package.json shows "client-activation", indicating it's an activation tracking system
+- The project is named "Activation Monitor" - a professional activation monitoring and management system
 - Role-based access control is implemented throughout the application
 - The codebase includes comprehensive error handling and loading states
 - Store synchronization ensures data consistency across different parts of the application

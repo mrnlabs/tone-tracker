@@ -4,6 +4,9 @@
 
 import axios from 'axios'
 import { API_ENDPOINTS, STORAGE_KEYS, ERROR_MESSAGES } from '@/utils/constants'
+import { createLogger } from '@/utils/logger'
+
+const logger = createLogger('API')
 
 /**
  * API Client Configuration
@@ -188,7 +191,7 @@ class ApiService {
             apiError.message = error.message || 'An unexpected error occurred'
         }
 
-        console.error('API Error:', apiError)
+        logger.error('API Error:', apiError)
         return apiError
     }
 
@@ -431,7 +434,7 @@ const apiService = new ApiService()
         try {
             await apiService.post(API_ENDPOINTS.LOGOUT)
         } catch (error) {
-            console.warn('Logout API call failed:', error)
+            logger.warn('Logout API call failed:', error)
         } finally {
             apiService.clearAuthTokens()
         }
@@ -466,13 +469,13 @@ const apiService = new ApiService()
 
     async uploadProfilePicture(userId, formData) {
         const userIdPath = userId === 'current' ? 'current' : userId
-        console.log('API: Uploading profile picture to:', `/users/${userIdPath}/profile-picture`)
+        logger.debug('Uploading profile picture to:', `/users/${userIdPath}/profile-picture`)
         const response = await apiService.post(`/users/${userIdPath}/profile-picture`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }
         })
-        console.log('API: Raw upload response:', response)
+        logger.debug('Upload response received')
         return response
     },
 
@@ -596,7 +599,7 @@ const apiService = new ApiService()
             const response = await apiService.get(`/users/${userId}/images`)
             return response.data || response || []
         } catch (error) {
-            console.warn(`Failed to get images for user ${userId}:`, error)
+            logger.warn(`Failed to get images for user ${userId}`)
             // Fallback to files by entity
             return await fileService.getFilesByEntity('PROMOTER', userId)
         }
@@ -638,9 +641,9 @@ const apiService = new ApiService()
             ...params,
             sort: params.sort || ['startDate,desc']
         }
-        console.log('getClientActivations URL:', url, 'params:', activationParams)
+        logger.debug('getClientActivations', { url })
         const result = await apiService.getPaginated(url, activationParams)
-        console.log('getClientActivations result:', result)
+        logger.debug('getClientActivations result received')
         return result
     },
 
@@ -652,7 +655,6 @@ const apiService = new ApiService()
     async getClientContacts(clientId, params = {}) {
         // Direct hardcoded endpoint to bypass any import issues
         const url = `/contacts/by-client/${clientId}`
-        console.log('getClientContacts using hardcoded url:', url)
         return await apiService.getPaginated(url, params)
     },
 
@@ -660,38 +662,32 @@ const apiService = new ApiService()
         // Add clientId to the contact data for the backend
         const dataWithClientId = { ...contactData, clientId }
         const url = '/contacts'
-        console.log('createClientContact using hardcoded url:', url)
         return await apiService.post(url, dataWithClientId)
     },
 
     async updateClientContact(clientId, contactId, contactData) {
         const dataWithClientId = { ...contactData, clientId }
         const url = `/contacts/${contactId}`
-        console.log('updateClientContact using hardcoded url:', url)
         return await apiService.put(url, dataWithClientId)
     },
 
     async deleteClientContact(clientId, contactId) {
         const url = `/contacts/${contactId}`
-        console.log('deleteClientContact using hardcoded url:', url)
         return await apiService.delete(url)
     },
 
     async setPrimaryContact(clientId, contactId) {
         const url = `/contacts/${contactId}/set-primary`
-        console.log('setPrimaryContact using hardcoded url:', url)
         return await apiService.post(url, {})
     },
 
     async getPrimaryContact(clientId) {
         const url = `/contacts/primary/${clientId}`
-        console.log('getPrimaryContact using hardcoded url:', url)
         return await apiService.get(url)
     },
 
     async searchClientContacts(clientId, searchTerm, params = {}) {
         const url = `/contacts/search/${clientId}`
-        console.log('searchClientContacts using hardcoded url:', url)
         return await apiService.getPaginated(url, { ...params, search: searchTerm })
     }
 }
@@ -731,7 +727,7 @@ const apiService = new ApiService()
                 return userActivation
             }
         } catch (error) {
-            console.log('Failed to get activation through user activations:', error)
+            logger.debug('Failed to get activation through user activations')
         }
 
         try {
@@ -752,7 +748,7 @@ const apiService = new ApiService()
                 }
             }
         } catch (error) {
-            console.log('Failed to get activation through promoter assignments:', error)
+            logger.debug('Failed to get activation through promoter assignments')
         }
 
         // Final fallback to direct endpoint
@@ -905,7 +901,7 @@ const apiService = new ApiService()
             closingStock,
             activationId
         }
-        console.log('updateStock payload:', payload)
+        logger.debug('updateStock', { movementType: payload.movementType })
         return await apiService.post(`/stocks/${itemId}/movements`, payload)
     },
 
@@ -983,31 +979,15 @@ const warehouseService = {
         return await apiService.post(`/stocks/${stockId}/deactivate`)
     },
     async assignWarehouseManager(warehouseId, managerId) {
-        console.log('=== API SERVICE DEBUG ===')
-        console.log('assignWarehouseManager called with:')
-        console.log('- warehouseId:', warehouseId, 'Type:', typeof warehouseId)
-        console.log('- managerId:', managerId, 'Type:', typeof managerId)
-        
         const endpoint = `/warehouses/${warehouseId}/assign-manager/${managerId}`
-        console.log('- Full endpoint:', endpoint)
-        console.log('- Request method: PUT')
-        console.log('- Request body: (none - path parameters only)')
-        console.log('=== END API SERVICE DEBUG ===')
+        logger.debug('assignWarehouseManager', { warehouseId, managerId, endpoint })
         
         return await apiService.put(endpoint)
     },
     
     async removeWarehouseManager(warehouseId) {
-        console.log('=== REMOVE WAREHOUSE MANAGER DEBUG ===')
-        console.log('removeWarehouseManager called with:')
-        console.log('- warehouseId:', warehouseId, 'Type:', typeof warehouseId)
-        
         const endpoint = `/warehouses/${warehouseId}/remove-manager`
-        console.log('- Full endpoint:', endpoint)
-        console.log('- Base URL:', apiService.client.defaults.baseURL)
-        console.log('- Full URL:', `${apiService.client.defaults.baseURL}${endpoint}`)
-        console.log('- Request method: DELETE')
-        console.log('=== END REMOVE MANAGER DEBUG ===')
+        logger.debug('removeWarehouseManager', { warehouseId, endpoint })
         
         return await apiService.delete(endpoint)
     }
@@ -1107,15 +1087,15 @@ const warehouseService = {
                 ? `${s3BucketUrl}${cleanPath}`
                 : `${s3BucketUrl}/${cleanPath}`;
             
-            console.log('Constructed S3 URL:', s3Url);
+            logger.debug('Constructed S3 URL');
             return s3Url;
             
         } catch (error) {
-            console.error('Failed to construct S3 URL:', error);
+            logger.error('Failed to construct S3 URL');
             
             // Fallback to API endpoint if direct S3 construction fails
             try {
-                console.log('Falling back to API endpoint for S3 URL...');
+                logger.debug('Falling back to API endpoint for S3 URL...');
                 const response = await apiService.get(`/files/s3-url?path=${encodeURIComponent(filePath)}`);
                 
                 // Return S3 signed URL from API
@@ -1129,7 +1109,7 @@ const warehouseService = {
                 
                 throw new Error('No valid S3 URL returned from API');
             } catch (apiError) {
-                console.error('API fallback also failed:', apiError);
+                logger.error('API fallback also failed');
                 throw new Error('Failed to access file from S3 bucket');
             }
         }
@@ -1140,7 +1120,7 @@ const warehouseService = {
         const s3BucketUrl = import.meta.env.VITE_AWS_S3_BUCKET;
         
         if (!s3BucketUrl) {
-            console.warn('S3 bucket URL not configured');
+            logger.warn('S3 bucket URL not configured');
             return null;
         }
         
@@ -1163,7 +1143,7 @@ const warehouseService = {
             const response = await apiService.get(`/files/by-entity?entityType=${entityType}&entityId=${entityId}`)
             return response.data || response || []
         } catch (error) {
-            console.warn(`Failed to get files for ${entityType} ${entityId}:`, error)
+            logger.warn(`Failed to get files for ${entityType} ${entityId}`)
             return []
         }
     },
@@ -1173,7 +1153,7 @@ const warehouseService = {
             const response = await apiService.put(`/files/${fileId}/metadata`, metadata)
             return response.data || response
         } catch (error) {
-            console.error(`Failed to update file metadata for ${fileId}:`, error)
+            logger.error(`Failed to update file metadata for ${fileId}`)
             throw error
         }
     }

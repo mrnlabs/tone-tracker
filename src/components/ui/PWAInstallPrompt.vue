@@ -8,7 +8,7 @@
               <img src="/android-chrome-192x192.png" alt="App Icon">
             </div>
             <div class="app-info">
-              <h3 class="app-name">Activation Tracker</h3>
+              <h3 class="app-name">Activation Monitor</h3>
               <p class="app-description">Install for better experience</p>
             </div>
             <button 

@@ -18,7 +18,7 @@
             </div>
             <div>
               <h1 class="font-bold text-gray-900 text-sm">Activation</h1>
-              <p class="text-xs text-gray-500">Tracker</p>
+              <p class="text-xs text-gray-500">Monitor</p>
             </div>
           </div>
           <button
@@ -32,21 +32,6 @@
       </div>
 
       <!-- User Profile -->
-      <div class="p-4 border-b border-gray-100">
-        <div class="flex items-center space-x-3">
-          <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-            <i class="pi pi-user text-blue-600"></i>
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-gray-900 truncate">
-              {{ currentUser.name }}
-            </p>
-            <p class="text-xs text-gray-500 capitalize">
-              {{ formatRole(currentUser.role) }}
-            </p>
-          </div>
-        </div>
-      </div>
 
       <!-- Navigation -->
       <nav class="flex-1 overflow-y-auto py-4">

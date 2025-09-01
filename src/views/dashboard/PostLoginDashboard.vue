@@ -128,14 +128,14 @@ const loadClientData = async () => {
 
 const getDashboardTitle = () => {
   const titles = {
-    [USER_ROLES.ADMIN]: 'Admin Dashboard - Activation Tracker',
-    [USER_ROLES.ACTIVATION_MANAGER]: 'Activation Manager Dashboard - Activation Tracker',
-    [USER_ROLES.WAREHOUSE_MANAGER]: 'Warehouse Manager Dashboard - Activation Tracker',
-    [USER_ROLES.PROMOTER]: 'My Dashboard - Activation Tracker',
-    [USER_ROLES.CLIENT]: 'Client Dashboard - Activation Tracker'
+    [USER_ROLES.ADMIN]: 'Admin Dashboard - Activation Monitor',
+    [USER_ROLES.ACTIVATION_MANAGER]: 'Activation Manager Dashboard - Activation Monitor',
+    [USER_ROLES.WAREHOUSE_MANAGER]: 'Warehouse Manager Dashboard - Activation Monitor',
+    [USER_ROLES.PROMOTER]: 'My Dashboard - Activation Monitor',
+    [USER_ROLES.CLIENT]: 'Client Dashboard - Activation Monitor'
   }
 
-  return titles[userRole.value] || 'Dashboard - Activation Tracker'
+  return titles[userRole.value] || 'Dashboard - Activation Monitor'
 }
 
 // Watchers

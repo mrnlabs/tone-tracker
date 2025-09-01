@@ -1,5 +1,5 @@
 // src/stores/index.js
-// Centralized store exports and setup for the Activation Tracking System
+// Centralized store exports and setup for the Activation Monitoring System
 
 // Import all stores
 export { useAuthStore } from './auth'
@@ -255,7 +255,7 @@ export const useStorePerformance = () => {
  * Handle data persistence and restoration
  */
 export const useStoreHydration = () => {
-    const STORAGE_KEY = 'activation_tracker_store_cache'
+    const STORAGE_KEY = 'activation_monitor_store_cache'
 
     /**
      * Save critical store data to localStorage

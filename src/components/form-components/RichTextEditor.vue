@@ -127,6 +127,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { sanitizeHTML } from '@/utils/sanitizer'
 
 const props = defineProps({
   modelValue: {
@@ -207,7 +208,8 @@ const formattedContent = computed(() => {
   html = html.replace(/^- (.*$)/gim, '<li>$1</li>')
   html = html.replace(/^(\d+)\. (.*$)/gim, '<li>$1. $2</li>')
   
-  return html
+  // Sanitize the HTML before returning
+  return sanitizeHTML(html)
 })
 
 // Insert formatting at cursor position

@@ -1670,6 +1670,7 @@ import DashboardLayout from '@/components/general/DashboardLayout.vue'
 import { StockMovementList, RecordSale, LeadCommentForm } from '@/components'
 import LeadCaptureForm from '@/components/leads/LeadCaptureForm.vue'
 import PromoterCheckInOut from '@/components/activations/PromoterCheckInOut.vue'
+import { sanitizeHTML } from '@/utils/sanitizer'
 import Chart from 'primevue/chart'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -3342,12 +3343,7 @@ const formatBriefDescription = (text) => {
   
   let html = text
   
-  // Escape HTML first to prevent XSS
-  html = html.replace(/&/g, '&amp;')
-             .replace(/</g, '&lt;')
-             .replace(/>/g, '&gt;')
-  
-  // Process markdown in order (most specific first)
+  // Process markdown (sanitizer will handle escaping)
   
   // Headers (need to handle line breaks properly)
   html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>')
@@ -3382,7 +3378,8 @@ const formatBriefDescription = (text) => {
   html = html.replace(/<br>\s*(<\/?(h[1-6]|ul|li)[^>]*>)/g, '$1')
   html = html.replace(/(<\/?(h[1-6]|ul|li)[^>]*>)\s*<br>/g, '$1')
   
-  return html
+  // Sanitize the final HTML to prevent XSS
+  return sanitizeHTML(html)
 }
 
 const getBriefDocumentName = (path) => {

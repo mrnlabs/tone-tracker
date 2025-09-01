@@ -1,6 +1,6 @@
 {
-  "name": "Activation Tracker",
-  "short_name": "ActivationTracker",
+  "name": "Activation Monitor",
+  "short_name": "ActivationMonitor",
   "description": "Professional activation tracking and management system",
   "start_url": "/",
   "scope": "/",
@@ -125,7 +125,7 @@
   },
   "protocols": [
     {
-      "protocol": "web+activationtracker",
+      "protocol": "web+activationmonitor",
       "url": "/activation/%s"
     }
   ],
